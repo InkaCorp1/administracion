@@ -8,6 +8,6 @@ if (typeof SUPABASE_URL === 'undefined') {
 }
 
 if (typeof APP_VERSION === 'undefined') {
-    var APP_VERSION = '29.1.4';
+    var APP_VERSION = '29.1.11';
     window.APP_VERSION = APP_VERSION;
 }

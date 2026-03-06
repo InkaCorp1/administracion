@@ -3,6 +3,9 @@
  */
 
 let liteCreditosData = [];
+let currentLiteViewingCredito = null;
+let currentLiteViewingAmortizacion = [];
+let currentLiteDebtSummary = null;
 
 async function initCreditosModule() {
     await fetchLiteCreditos();
@@ -313,6 +316,9 @@ function closeLiteSearch(event, btn) {
 async function showLiteCreditDetails(id) {
     const c = liteCreditosData.find(item => item.id_credito === id);
     if (!c) return;
+    currentLiteViewingCredito = c;
+    currentLiteViewingAmortizacion = [];
+    currentLiteDebtSummary = null;
 
     document.getElementById('lite-det-codigo').textContent = c.codigo_credito;
     document.getElementById('lite-det-socio').textContent = c.socio?.nombre || 'Socio No Encontrado';
@@ -457,6 +463,12 @@ async function showLiteCreditDetails(id) {
 
     document.getElementById('lite-det-fecha').textContent = `Desembolso: ${c.fecha_desembolso ? window.formatDate(c.fecha_desembolso) : '--/--/----'}`;
 
+    const btnPdf = document.getElementById('btn-pdf-credito-mobile');
+    if (btnPdf) {
+        btnPdf.style.display = 'flex';
+        btnPdf.onclick = () => window.generateCreditoEstadoPDFMobile(btnPdf);
+    }
+
     // Botón Pagar en Modal
     const btnPagar = document.getElementById('btn-pagar-credito');
     if (btnPagar) {
@@ -474,6 +486,338 @@ async function showLiteCreditDetails(id) {
 
 let currentPaymentCuotas = []; 
 let currentSelectedReceiptFile = null;
+
+function formatMoneyLite(amount) {
+    return '$' + parseFloat(amount || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function formatDateShortLite(dateString) {
+    return window.formatDate(dateString, {
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit'
+    });
+}
+
+function formatDateMediumLite(dateString) {
+    return window.formatDate(dateString, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    }).replace('.', '');
+}
+
+function getLiteEcuadorDateString() {
+    if (typeof getEcuadorDateString === 'function') return getEcuadorDateString();
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Guayaquil',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+    return formatter.format(new Date());
+}
+
+async function fetchLiteCreditoAmortizacion(creditoId) {
+    const supabase = window.getSupabaseClient();
+    const { data, error } = await supabase
+        .from('ic_creditos_amortizacion')
+        .select('*')
+        .eq('id_credito', creditoId)
+        .order('numero_cuota', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+}
+
+async function fetchLiteCreditoPdfData(creditoId) {
+    const supabase = window.getSupabaseClient();
+    const { data, error } = await supabase
+        .from('ic_creditos')
+        .select(`
+            id_credito,
+            codigo_credito,
+            capital,
+            estado_credito,
+            fecha_desembolso,
+            fecha_primer_pago,
+            plazo,
+            cuotas_pagadas,
+            cuota_base,
+            cuota_con_ahorro,
+            ahorro_programado_total,
+            socio:ic_socios!id_socio (
+                nombre,
+                cedula,
+                whatsapp
+            )
+        `)
+        .eq('id_credito', creditoId)
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+function buildLiteDebtSummary(cuotas = []) {
+    const fechaCorte = getLiteEcuadorDateString();
+    const fechaLimite = window.parseDate(fechaCorte);
+
+    if (fechaLimite) fechaLimite.setHours(23, 59, 59, 999);
+
+    let cuotasVencidas = 0;
+    let montoCuotasVencidas = 0;
+    let moraTotalAcumulada = 0;
+
+    cuotas.forEach(cuota => {
+        const isNotPaid = cuota.estado_cuota !== 'PAGADO' && cuota.estado_cuota !== 'CONDONADO';
+        const vencimiento = window.parseDate(cuota.fecha_vencimiento);
+
+        if (isNotPaid && vencimiento && (!fechaLimite || vencimiento <= fechaLimite)) {
+            cuotasVencidas += 1;
+            montoCuotasVencidas += parseFloat(cuota.cuota_total || 0);
+            moraTotalAcumulada += calcularMoraLite(cuota.fecha_vencimiento, fechaCorte).montoMora || 0;
+        }
+    });
+
+    return {
+        fechaCorte,
+        cuotasVencidas,
+        montoCuotasVencidas,
+        moraTotalAcumulada,
+        totalAlDia: montoCuotasVencidas + moraTotalAcumulada
+    };
+}
+
+async function generateCreditoEstadoPDFMobile(btn) {
+    if (!currentLiteViewingCredito) {
+        if (window.Swal) Swal.fire('Info', 'Primero abre un crédito para generar el PDF.', 'info');
+        return;
+    }
+
+    const triggerBtn = btn || document.getElementById('btn-pdf-credito-mobile');
+    const originalHtml = triggerBtn ? triggerBtn.innerHTML : '';
+
+    try {
+        if (!window.jspdf?.jsPDF) {
+            throw new Error('La librería PDF no está disponible en móvil');
+        }
+
+        if (triggerBtn) {
+            triggerBtn.disabled = true;
+            triggerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+        }
+
+        const creditoPdfData = await fetchLiteCreditoPdfData(currentLiteViewingCredito.id_credito);
+        currentLiteViewingCredito = { ...currentLiteViewingCredito, ...creditoPdfData };
+
+        let cuotas = Array.isArray(currentLiteViewingAmortizacion) ? [...currentLiteViewingAmortizacion] : [];
+        if (cuotas.length === 0) {
+            cuotas = await fetchLiteCreditoAmortizacion(currentLiteViewingCredito.id_credito);
+        }
+
+        if (!cuotas.length) {
+            throw new Error('No hay tabla de amortización disponible para este crédito');
+        }
+
+        currentLiteViewingAmortizacion = cuotas;
+        currentLiteDebtSummary = buildLiteDebtSummary(cuotas);
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 15;
+        const gap = 6;
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('es-EC');
+        const timeStr = now.toLocaleTimeString('es-EC');
+        const credito = currentLiteViewingCredito;
+        const socioNombre = credito.socio?.nombre || 'Socio';
+        const estadoLabel = MOBILE_ESTADO_CONFIG[credito.estado_credito]?.label || credito.estado_credito || 'N/A';
+        const cuotasPagadas = credito.cuotas_pagadas || 0;
+        const progreso = `${cuotasPagadas}/${credito.plazo}`;
+        const logoUrl = 'https://i.ibb.co/3mC22Hc4/inka-corp.png';
+
+        const drawInfoCards = (items, startY, fillColor = [248, 250, 252], borderColor = [226, 232, 240], textColor = [15, 23, 42]) => {
+            const cols = 4;
+            const cardWidth = (pageWidth - (margin * 2) - (gap * (cols - 1))) / cols;
+            const cardHeight = 18;
+
+            items.forEach((item, index) => {
+                const col = index % cols;
+                const row = Math.floor(index / cols);
+                const x = margin + (col * (cardWidth + gap));
+                const y = startY + (row * (cardHeight + gap));
+
+                doc.setFillColor(...fillColor);
+                doc.setDrawColor(...borderColor);
+                doc.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'FD');
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8);
+                doc.setTextColor(100, 116, 139);
+                doc.text(item.label.toUpperCase(), x + 4, y + 6);
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.setTextColor(...textColor);
+                const valueLines = doc.splitTextToSize(item.value, cardWidth - 8);
+                doc.text(valueLines.slice(0, 2), x + 4, y + 12);
+            });
+
+            return startY + (Math.ceil(items.length / cols) * (cardHeight + gap));
+        };
+
+        try {
+            doc.addImage(logoUrl, 'PNG', margin, 10, 18, 18);
+        } catch (e) {
+            console.warn('Logo no disponible para PDF de crédito móvil');
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.setTextColor(11, 78, 50);
+        doc.text('INKA CORP', margin + 23, 17);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        doc.text('ESTADO DE PAGOS DEL CRÉDITO', margin + 23, 23);
+
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`Generado: ${dateStr} | ${timeStr}`, pageWidth - margin, 17, { align: 'right' });
+        doc.text(`Fecha de corte: ${window.formatDate(currentLiteDebtSummary.fechaCorte)}`, pageWidth - margin, 22, { align: 'right' });
+
+        doc.setDrawColor(242, 187, 58);
+        doc.setLineWidth(0.5);
+        doc.line(margin, 30, pageWidth - margin, 30);
+
+        let yPos = 36;
+        yPos = drawInfoCards([
+            { label: 'Código', value: credito.codigo_credito || '-' },
+            { label: 'Socio', value: socioNombre },
+            { label: 'Estado', value: estadoLabel },
+            { label: 'Progreso', value: `${progreso} cuotas` },
+            { label: 'Capital', value: formatMoneyLite(credito.capital) },
+            { label: 'Cuota Base', value: formatMoneyLite(credito.cuota_base || credito.cuota_con_ahorro) },
+            { label: 'Cuota Total', value: formatMoneyLite(credito.cuota_con_ahorro) },
+            { label: 'Ahorro Programado', value: formatMoneyLite(credito.ahorro_programado_total || 0) }
+        ], yPos);
+
+        if (currentLiteDebtSummary.cuotasVencidas > 0) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(185, 28, 28);
+            doc.text('RESUMEN PARA ESTAR AL DÍA', margin, yPos + 2);
+
+            yPos = drawInfoCards([
+                { label: 'Cuotas Vencidas', value: `${currentLiteDebtSummary.cuotasVencidas} cuota(s)` },
+                { label: 'Capital Exigible', value: formatMoneyLite(currentLiteDebtSummary.montoCuotasVencidas) },
+                { label: 'Mora Acumulada', value: formatMoneyLite(currentLiteDebtSummary.moraTotalAcumulada) },
+                { label: 'Total Para Ponerse al Día', value: formatMoneyLite(currentLiteDebtSummary.totalAlDia) }
+            ], yPos + 6, [254, 242, 242], [248, 113, 113], [127, 29, 29]);
+        }
+
+        const tableData = cuotas.map(cuota => {
+            const isNotPaid = cuota.estado_cuota !== 'PAGADO' && cuota.estado_cuota !== 'CONDONADO';
+            const moraInfo = isNotPaid ? calcularMoraLite(cuota.fecha_vencimiento, currentLiteDebtSummary.fechaCorte) : { montoMora: 0, diasMora: 0 };
+            const totalFinal = parseFloat(cuota.cuota_total || 0) + moraInfo.montoMora;
+            const estadoPdf = moraInfo.montoMora > 0 && ['PENDIENTE', 'VENCIDO', 'PARCIAL'].includes(cuota.estado_cuota)
+                ? `ATRASADO ${moraInfo.diasMora}D`
+                : cuota.estado_cuota;
+
+            return [
+                cuota.numero_cuota,
+                formatDateShortLite(cuota.fecha_vencimiento),
+                formatMoneyLite(cuota.pago_capital),
+                formatMoneyLite(cuota.pago_interes),
+                formatMoneyLite(cuota.cuota_base),
+                formatMoneyLite(cuota.ahorro_programado),
+                formatMoneyLite(cuota.cuota_total),
+                formatMoneyLite(moraInfo.montoMora),
+                formatMoneyLite(totalFinal),
+                formatMoneyLite(cuota.saldo_capital),
+                estadoPdf
+            ];
+        });
+
+        doc.autoTable({
+            startY: yPos + 4,
+            head: [['#', 'VENCIMIENTO', 'CAPITAL', 'INTERÉS', 'CUOTA', 'AHORRO', 'SUBTOTAL', 'MORA', 'TOTAL', 'SALDO', 'ESTADO']],
+            body: tableData,
+            theme: 'striped',
+            styles: { fontSize: 7.2, cellPadding: 2.2, valign: 'middle' },
+            headStyles: {
+                fillColor: [11, 78, 50],
+                textColor: [242, 187, 58],
+                fontStyle: 'bold',
+                halign: 'center'
+            },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 10 },
+                1: { halign: 'center', cellWidth: 24 },
+                2: { halign: 'right', cellWidth: 21 },
+                3: { halign: 'right', cellWidth: 21 },
+                4: { halign: 'right', cellWidth: 21 },
+                5: { halign: 'right', cellWidth: 19 },
+                6: { halign: 'right', cellWidth: 21 },
+                7: { halign: 'right', cellWidth: 17 },
+                8: { halign: 'right', cellWidth: 21, fontStyle: 'bold' },
+                9: { halign: 'right', cellWidth: 21 },
+                10: { halign: 'center', cellWidth: 24 }
+            },
+            margin: { left: margin, right: margin },
+            didParseCell: function(data) {
+                if (data.section !== 'body') return;
+
+                if (data.column.index === 7 && data.cell.raw !== '$0.00') {
+                    data.cell.styles.textColor = [185, 28, 28];
+                    data.cell.styles.fontStyle = 'bold';
+                }
+
+                if (data.column.index === 10) {
+                    const value = String(data.cell.raw || '');
+                    if (value.startsWith('ATRASADO')) {
+                        data.cell.styles.fillColor = [254, 226, 226];
+                        data.cell.styles.textColor = [153, 27, 27];
+                        data.cell.styles.fontStyle = 'bold';
+                    } else if (value === 'PAGADO') {
+                        data.cell.styles.fillColor = [220, 252, 231];
+                        data.cell.styles.textColor = [21, 128, 61];
+                        data.cell.styles.fontStyle = 'bold';
+                    } else if (value === 'PENDIENTE') {
+                        data.cell.styles.fillColor = [254, 249, 195];
+                        data.cell.styles.textColor = [133, 77, 14];
+                    }
+                }
+            },
+            didDrawPage: function() {
+                doc.setFontSize(8);
+                doc.setTextColor(148, 163, 184);
+                doc.text(`Página ${doc.internal.getNumberOfPages()}`, margin, pageHeight - 8);
+                doc.text('Sistema Administrativo INKA CORP', pageWidth - margin, pageHeight - 8, { align: 'right' });
+            }
+        });
+
+        const safeCodigo = String(credito.codigo_credito || 'CREDITO').replace(/[^a-zA-Z0-9_-]+/g, '_');
+        const safeSocio = String(socioNombre || 'SOCIO').replace(/[^a-zA-Z0-9_-]+/g, '_');
+        doc.save(`Estado_Credito_${safeCodigo}_${safeSocio}.pdf`);
+
+        if (window.Swal) Swal.fire('Éxito', 'Estado PDF generado correctamente', 'success');
+    } catch (error) {
+        console.error('Error generando PDF del crédito móvil:', error);
+        if (window.Swal) Swal.fire('Error', error.message || 'No se pudo generar el PDF del crédito', 'error');
+    } finally {
+        if (triggerBtn) {
+            triggerBtn.disabled = false;
+            triggerBtn.innerHTML = originalHtml || '<i class="fas fa-file-pdf"></i> Descargar Estado PDF';
+        }
+    }
+}
+
+window.generateCreditoEstadoPDFMobile = generateCreditoEstadoPDFMobile;
 
 /**
  * Abre el modal de pago completo para móvil

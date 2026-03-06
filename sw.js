@@ -3,8 +3,8 @@
  * PWA Offline Support
  */
 
-const CACHE_NAME = 'inkacorp-v29.1.9';
-const STATIC_CACHE = 'inkacorp-static-v29.1.9';
+const CACHE_NAME = 'inkacorp-v29.1.11';
+const STATIC_CACHE = 'inkacorp-static-v29.1.11';
 
 // Archivos esenciales para cachear (Shell de la app)
 const ESSENTIAL_FILES = [
@@ -28,6 +28,8 @@ const MODULE_FILES = [
     'js/modules/socios_edit.js',
     'js/modules/solicitud_credito.js',
     'js/modules/creditos.js',
+    'views/creditos.html',
+    'css/creditos.css',
     'mobile/js/modules/creditos.js',
     'js/modules/creditos_preferenciales.js',
     'js/modules/polizas.js',
@@ -45,8 +47,7 @@ const MODULE_FILES = [
 
 // Instalación del Service Worker
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing v27.0.0...');
-    // self.skipWaiting(); // No forzar activación automática para mostrar changelog
+    console.log('[SW] Installing v29.1.11...');
     const allFiles = [...ESSENTIAL_FILES, ...MODULE_FILES];
     event.waitUntil(
         caches.open(STATIC_CACHE)
@@ -61,6 +62,7 @@ self.addEventListener('install', (event) => {
                     })
                 );
             })
+            .then(() => self.skipWaiting())
     );
 });
 
@@ -73,7 +75,7 @@ self.addEventListener('message', (event) => {
 
 // Activación - limpiar caches antiguos
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating v27.0.0...');
+    console.log('[SW] Activating v29.1.11...');
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
@@ -103,7 +105,7 @@ self.addEventListener('fetch', (event) => {
         (event.request.method === 'GET' && event.request.headers.get('accept')?.includes('text/html'));
 
     const isSameOrigin = url.origin === self.location.origin;
-    const networkRequest = isSameOrigin ? new Request(event.request, { cache: 'no-store' }) : event.request;
+    const networkRequest = isSameOrigin ? new Request(event.request, { cache: 'reload' }) : event.request;
 
     event.respondWith(
         fetch(networkRequest)

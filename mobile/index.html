@@ -27,7 +27,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     
     <!-- Core Config/JS -->
-    <script src="../js/config.js"></script>
+    <script src="../js/config.js?v=29.1.11"></script>
     <script src="../js/auth.js"></script>
     <script>
         /**
@@ -264,6 +264,9 @@
 
                 <!-- Acciones -->
                 <div class="lite-actions-group">
+                    <button class="lite-btn-action secondary" id="btn-pdf-credito-mobile" style="display:none; background: linear-gradient(135deg, #0B4E32 0%, #14532d 100%); color: #fff; border: none;">
+                        <i class="fas fa-file-pdf"></i> Descargar Estado PDF
+                    </button>
                     <button class="lite-btn-action success" id="btn-pagar-credito" style="display:none;">
                         <i class="fas fa-hand-holding-usd"></i> Pagar Cuota
                     </button>
@@ -474,9 +477,10 @@
         // Registro de Service Worker para Móvil
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('../sw.js')
+                navigator.serviceWorker.register('../sw.js?v=29.1.11', { updateViaCache: 'none' })
                     .then((registration) => {
                         console.log('[PWA] Service Worker registrado (Móvil)');
+                        registration.update().catch((err) => console.warn('[PWA] No se pudo forzar update inicial móvil:', err));
 
                         // Recarga cuando el nuevo SW tome el control
                         let refreshing = false;
@@ -522,7 +526,7 @@
                         };
 
                         // Verificar actualizaciones periódicamente
-                        setInterval(() => registration.update(), 60 * 60 * 1000);
+                        setInterval(() => registration.update().catch(() => {}), 5 * 60 * 1000);
                     });
             });
         }

@@ -891,6 +891,51 @@
     color: #10B981;
 }
 
+.credito-pdf-section {
+    background: linear-gradient(135deg, rgba(11, 78, 50, 0.2) 0%, rgba(242, 187, 58, 0.08) 100%);
+    border-color: rgba(242, 187, 58, 0.25);
+}
+
+.credito-pdf-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.credito-pdf-copy {
+    margin: 0.35rem 0 0;
+    color: var(--gray-300);
+    line-height: 1.6;
+    font-size: 0.92rem;
+    max-width: 720px;
+}
+
+.credito-pdf-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.credito-pdf-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--gray-300);
+    font-size: 0.82rem;
+}
+
+#btn-generar-estado-credito-pdf {
+    white-space: nowrap;
+    box-shadow: 0 12px 24px rgba(11, 78, 50, 0.2);
+}
+
 /* Pago Info Box */
 .pago-info-box {
     background: rgba(0, 184, 148, 0.08);
@@ -1143,6 +1188,16 @@
     .creditos-hero {
         padding: 1.5rem;
         border-radius: 1rem;
+    }
+
+    .credito-pdf-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #btn-generar-estado-credito-pdf {
+        width: 100%;
+        justify-content: center;
     }
 
 /* ==========================================
