@@ -543,6 +543,7 @@ async function fetchLiteCreditoPdfData(creditoId) {
             fecha_primer_pago,
             plazo,
             cuotas_pagadas,
+            ahorro_programado_cuota,
             cuota_base,
             cuota_con_ahorro,
             ahorro_programado_total,
@@ -703,7 +704,7 @@ async function generateCreditoEstadoPDFMobile(btn) {
             { label: 'Capital', value: formatMoneyLite(credito.capital) },
             { label: 'Cuota Base', value: formatMoneyLite(credito.cuota_base || credito.cuota_con_ahorro) },
             { label: 'Cuota Total', value: formatMoneyLite(credito.cuota_con_ahorro) },
-            { label: 'Ahorro Programado', value: formatMoneyLite(credito.ahorro_programado_total || 0) }
+            { label: 'Ahorro Cobrado', value: formatMoneyLite((credito.ahorro_programado_cuota || 0) * cuotasPagadas) }
         ], yPos);
 
         if (currentLiteDebtSummary.cuotasVencidas > 0) {

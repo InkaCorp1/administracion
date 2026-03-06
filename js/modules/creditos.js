@@ -1054,8 +1054,8 @@ async function viewCredito(creditoId, btn = null) {
     // Ahorro
     const ahorroAcumulado = credito.ahorro_programado_cuota * cuotasPagadas;
     const ahorroPendiente = credito.ahorro_programado_total - ahorroAcumulado;
-    document.getElementById('det-ahorro-total').textContent = formatMoney(credito.ahorro_programado_total);
-    document.getElementById('det-ahorro-acumulado').textContent = formatMoney(ahorroAcumulado);
+    document.getElementById('det-ahorro-total').textContent = formatMoney(ahorroAcumulado);
+    document.getElementById('det-ahorro-acumulado').textContent = formatMoney(credito.ahorro_programado_total);
     document.getElementById('det-ahorro-pendiente').textContent = formatMoney(ahorroPendiente);
 
     // Configurar botón de registrar pago
@@ -1391,7 +1391,7 @@ async function generateCreditoEstadoPDF() {
             { label: 'Capital', value: formatMoney(credito.capital) },
             { label: 'Cuota Base', value: formatMoney(credito.cuota_base) },
             { label: 'Cuota Total', value: formatMoney(credito.cuota_con_ahorro) },
-            { label: 'Ahorro Programado', value: formatMoney(credito.ahorro_programado_total) }
+            { label: 'Ahorro Cobrado', value: formatMoney((credito.ahorro_programado_cuota || 0) * cuotasPagadas) }
         ], yPos);
 
         if (currentViewingDebtSummary.cuotasVencidas > 0) {

@@ -3,8 +3,8 @@
  * PWA Offline Support
  */
 
-const CACHE_NAME = 'inkacorp-v29.1.11';
-const STATIC_CACHE = 'inkacorp-static-v29.1.11';
+const CACHE_NAME = 'inkacorp-v29.2.0';
+const STATIC_CACHE = 'inkacorp-static-v29.2.0';
 
 // Archivos esenciales para cachear (Shell de la app)
 const ESSENTIAL_FILES = [
@@ -47,7 +47,7 @@ const MODULE_FILES = [
 
 // Instalación del Service Worker
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing v29.1.11...');
+    console.log('[SW] Installing v29.2.0...');
     const allFiles = [...ESSENTIAL_FILES, ...MODULE_FILES];
     event.waitUntil(
         caches.open(STATIC_CACHE)
@@ -75,7 +75,7 @@ self.addEventListener('message', (event) => {
 
 // Activación - limpiar caches antiguos
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating v29.1.11...');
+    console.log('[SW] Activating v29.2.0...');
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(

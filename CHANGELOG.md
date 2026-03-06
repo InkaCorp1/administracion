@@ -1,5 +1,12 @@
 # CHANGELOG - INKA CORP
 
+## [29.2.0] - 2026-03-05
+### Añadido
+- **Estados de Crédito en PDF (PC y Móvil):** Ya se pueden generar documentos PDF del estado de pagos directamente desde el detalle del crédito, incluyendo tabla de amortización y resumen para ponerse al día cuando existe mora.
+
+### Corregido
+- **Ahorro Programado en Créditos:** El valor destacado ahora prioriza el ahorro efectivamente cobrado en cuotas pagadas para evitar confusiones con proyecciones totales futuras.
+
 ## [29.0.0] - 2026-02-23
 ### Añadido
 - **Rediseño del Simulador (Móvil):** Interfaz completa en modo oscuro "Premium" con gradientes, sombras elevadas y tarjetas de resultados de lujo.

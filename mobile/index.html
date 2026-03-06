@@ -27,7 +27,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     
     <!-- Core Config/JS -->
-    <script src="../js/config.js?v=29.1.11"></script>
+    <script src="../js/config.js?v=29.2.0"></script>
     <script src="../js/auth.js"></script>
     <script>
         /**
@@ -477,7 +477,7 @@
         // Registro de Service Worker para Móvil
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('../sw.js?v=29.1.11', { updateViaCache: 'none' })
+                navigator.serviceWorker.register('../sw.js?v=29.2.0', { updateViaCache: 'none' })
                     .then((registration) => {
                         console.log('[PWA] Service Worker registrado (Móvil)');
                         registration.update().catch((err) => console.warn('[PWA] No se pudo forzar update inicial móvil:', err));
