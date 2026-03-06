@@ -1,0 +1,31 @@
+﻿<div class="section-header">
+    <h2 class="section-title">
+        <i class="fas fa-hand-holding-usd"></i>
+        <span>Desembolsos Pendientes</span>
+    </h2>
+    <span class="section-badge" id="desembolsos-count">0</span>
+</div>
+
+<!-- Aviso de Caja Cerrada (Oculto por defecto, se activa dinámicamente) -->
+<div id="caja-cerrada-alert-mobile" class="mobile-caja-status-alert" style="display: none;">
+    <div class="alert-content">
+        <div class="alert-icon">
+            <i class="fas fa-lock"></i>
+        </div>
+        <div class="alert-text">
+            <h3>CAJA CERRADA</h3>
+            <p>Debe abrir su caja para procesar los desembolsos.</p>
+            <button class="alert-btn" onclick="loadMobileView('caja')">
+                ABRIR CAJA <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        <div class="alert-badge" id="alert-desembolsos-count">0</div>
+    </div>
+</div>
+
+<div id="desembolsos-container" class="desembolsos-container">
+    <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Buscando solicitudes...</p>
+    </div>
+</div>

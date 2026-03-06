@@ -1,0 +1,28 @@
+<div class="mobile-socios-module">
+    <div class="mobile-socios-toolbar">
+        <div class="mobile-socios-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="mobile-socios-search" placeholder="Buscar por nombre o cédula...">
+        </div>
+    </div>
+
+    <div id="mobile-socios-list" class="mobile-socios-list">
+        <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Cargando socios...</p>
+        </div>
+    </div>
+</div>
+
+<div id="mobile-socio-detail-modal" class="mobile-socio-modal hidden">
+    <div class="mobile-socio-modal-backdrop" data-close-socio-modal></div>
+    <div class="mobile-socio-modal-card">
+        <div class="mobile-socio-modal-header">
+            <h3 id="mobile-socio-modal-name">Detalle del Socio</h3>
+            <button class="mobile-modal-close" data-close-socio-modal>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="mobile-socio-modal-body" class="mobile-socio-modal-body"></div>
+    </div>
+</div>

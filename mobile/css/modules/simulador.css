@@ -1,0 +1,317 @@
+
+.simulador-container {
+    padding-bottom: 30px;
+}
+
+.simulator-card {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    margin-bottom: 1.25rem;
+}
+
+.sim-input-group {
+    margin-bottom: 1.25rem;
+    flex: 1;
+}
+
+.sim-input-group label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sim-input-group input, 
+.sim-input-group select {
+    width: 100%;
+    padding: 14px 15px;
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--bg-main);
+    transition: all 0.2s;
+}
+
+.sim-input-group input:focus, 
+.sim-input-group select:focus {
+    border-color: var(--success);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.sim-row {
+    display: flex;
+    gap: 15px;
+}
+
+/* Resultados Luxury */
+.sim-result-card {
+    background: var(--bg-card);
+    border-radius: 24px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    margin-bottom: 1.5rem;
+    animation: slideUp 0.3s ease-out;
+}
+
+.sim-result-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.25rem;
+    color: var(--success);
+    font-weight: 800;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.sim-result-main {
+    text-align: center;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: 24px;
+    color: white;
+    margin-bottom: 1.5rem;
+    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05);
+}
+
+.main-res-item .label {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    opacity: 0.8;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.main-res-item .value {
+    display: block;
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: var(--gold);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.main-res-item .subtext {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-top: 5px;
+}
+
+.sim-result-grid-luxury {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 1.25rem;
+}
+
+.sim-res-item {
+    background: var(--bg-main);
+    padding: 12px 15px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.sim-res-item .label {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.sim-res-item .value {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.sim-res-item.highlight {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.sim-res-item.highlight .value {
+    color: var(--success);
+}
+
+.sim-info-note {
+    background: rgba(242, 187, 58, 0.08);
+    border: 1px solid rgba(242, 187, 58, 0.2);
+    padding: 12px;
+    border-radius: 14px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--gold);
+    margin-bottom: 1.5rem;
+}
+
+.sim-pdf-action button {
+    width: 100%;
+    height: 54px;
+    border-radius: 27px;
+    background: var(--error);
+    color: white;
+    border: none;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.25);
+    transition: transform 0.2s;
+}
+
+.sim-pdf-action button:active {
+    transform: scale(0.98);
+}
+
+/* Table Card */
+.sim-table-card {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+}
+
+.sim-table-card.hidden {
+    display: none !important;
+}
+
+.sim-result-card.hidden {
+    display: none !important;
+}
+
+.sim-mobile-table-wrapper {
+    overflow-x: auto;
+}
+
+.sim-mobile-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sim-mobile-table th {
+    text-align: left;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    padding: 12px 8px;
+    text-transform: uppercase;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sim-mobile-table td {
+    padding: 14px 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.text-gold { color: var(--gold-dark); }
+.text-primary { color: var(--primary); }
+
+/* Toggle y Inputs Adicionales */
+.sim-toggle-wrapper {
+    padding: 0 1rem 1rem;
+}
+.sim-toggle {
+    display: flex;
+    background: var(--bg-main);
+    padding: 6px;
+    border-radius: 18px;
+    border: 1px solid var(--border-color);
+}
+.sim-toggle-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 12px;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sim-toggle-btn.active {
+    background: var(--bg-card);
+    color: var(--success);
+    box-shadow: var(--shadow-sm);
+}
+.input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.input-container i {
+    position: absolute;
+    left: 14px;
+    color: var(--success);
+    opacity: 0.8;
+}
+.input-container input {
+    padding-left: 42px !important;
+}
+.sim-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 1.5rem;
+}
+.sim-btn-calculate {
+    flex: 1;
+    height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+    color: white;
+    border: none;
+    font-weight: 800;
+    font-size: 1rem;
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.sim-btn-calculate:active {
+    transform: scale(0.97);
+}
+.sim-btn-clear {
+    width: 56px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    transition: all 0.2s;
+}
+.sim-btn-clear:active {
+    background: #2d3748;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}

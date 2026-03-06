@@ -1,0 +1,503 @@
+<div class="caja-wrapper">
+    <!-- Alertas de Acciones Pendientes (Incoming Transfer) -->
+    <div id="transfer-alert-container" class="transfer-alert-v2 hidden">
+        <div class="alert-content">
+            <div class="alert-icon pulse"><i class="fas fa-hand-holding-usd"></i></div>
+            <div class="alert-text">
+                <strong>Transferencia Pendiente</strong>
+                <p id="transfer-alert-msg">Has recibido una transferencia de dinero de un compañero.</p>
+            </div>
+            <button class="btn-alert-action" onclick="showAceptarTransferModal()">
+                VER Y ACEPTAR
+            </button>
+        </div>
+    </div>
+
+    <!-- Header del Módulo -->
+    <div class="module-header-v2">
+        <div class="header-info">
+            <h1><i class="fas fa-cash-register"></i> Control de Caja</h1>
+            <p>Gestión centralizada de ingresos, egresos y arqueos diarios.</p>
+        </div>
+        <div class="header-status-box">
+            <div class="header-actions-row">
+                <button class="btn-pdf-header" onclick="showReportePdfModal()">
+                    <i class="fas fa-file-pdf"></i> REPORTE PDF
+                </button>
+                <button id="btn-transferencia-caja" class="btn-pdf-header btn-transfer" onclick="showTransferModal()">
+                    <i class="fas fa-exchange-alt"></i> TRANSFERIR
+                </button>
+                <div id="caja-status-badge" class="badge-status-v2 status-closed">
+                    <i class="fas fa-lock"></i> CAJA CERRADA
+                </div>
+            </div>
+            <div id="caja-current-date" class="current-date-v2">---</div>
+        </div>
+    </div>
+
+    <!-- Selector de Usuarios (Admin Only) -->
+    <div id="caja-user-selector" class="user-selector-v2 hidden">
+        <!-- Rendered by JS -->
+    </div>
+
+    <!-- Filtros y Acciones Principales -->
+    <div class="caja-actions-bar">
+        <div class="filters-group">
+            <div class="filter-item">
+                <label>Desde</label>
+                <input type="date" id="filter-caja-inicio" class="input-v2">
+            </div>
+            <div class="filter-item">
+                <label>Hasta</label>
+                <input type="date" id="filter-caja-fin" class="input-v2">
+            </div>
+            <button class="btn-icon-v2" onclick="loadCajaData()" title="Refrescar">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+
+        <div class="actions-group">
+            <button id="btn-abrir-caja" class="btn-v2 btn-primary" onclick="showAperturaModal()">
+                <i class="fas fa-door-open"></i> ABRIR CAJA
+            </button>
+            <button id="btn-cerrar-caja" class="btn-v2 btn-danger hidden" onclick="showCierreModal()">
+                <i class="fas fa-door-closed"></i> CERRAR CAJA
+            </button>
+            <button class="btn-v2 btn-secondary" onclick="showHistorialSesiones()">
+                <i class="fas fa-history"></i> HISTORIAL
+            </button>
+            <div class="btn-group-v2">
+                <button id="btn-ingreso-manual" class="btn-v2 btn-success hidden" onclick="showMovimientoManualModal('INGRESO')">
+                    <i class="fas fa-plus-circle"></i> INGRESO
+                </button>
+                <button id="btn-egreso-manual" class="btn-v2 btn-warning hidden" onclick="showMovimientoManualModal('EGRESO')">
+                    <i class="fas fa-minus-circle"></i> EGRESO
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Indicadores de Caja -->
+    <div class="stats-session-info">
+        <h3><i class="fas fa-wallet"></i> Resumen del Turno Actual (Hoy)</h3>
+        <p>Estos valores reflejan únicamente la sesión de caja abierta actualmente.</p>
+    </div>
+    <div class="caja-stats-grid">
+        <div class="stat-card-v2">
+            <div class="stat-icon income"><i class="fas fa-arrow-down"></i></div>
+            <div class="stat-details">
+                <span class="label">Total Ingresos</span>
+                <span id="caja-total-ingresos" class="value text-success">$0.00</span>
+            </div>
+        </div>
+        <div class="stat-card-v2">
+            <div class="stat-icon expense"><i class="fas fa-arrow-up"></i></div>
+            <div class="stat-details">
+                <span class="label">Total Egresos</span>
+                <span id="caja-total-egresos" class="value text-danger">$0.00</span>
+            </div>
+        </div>
+        <div class="stat-card-v2 highlight">
+            <div class="stat-icon balance"><i class="fas fa-wallet"></i></div>
+            <div class="stat-details">
+                <span class="label">Saldo en Caja</span>
+                <span id="caja-saldo-actual" class="value text-gold">$0.00</span>
+            </div>
+        </div>
+        <div class="stat-card-v2">
+            <div class="stat-icon initial"><i class="fas fa-coins"></i></div>
+            <div class="stat-details">
+                <span class="label">Saldo Inicial</span>
+                <span id="caja-saldo-inicial" class="value">$0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Movimientos -->
+    <div class="caja-table-container card-v2">
+        <div class="table-header">
+            <h3><i class="fas fa-list-ul"></i> <span id="caja-movimientos-title">Movimientos Recientes</span></h3>
+            <div class="table-legend">
+                <span class="legend-item"><i class="fas fa-circle text-success"></i> Ingreso</span>
+                <span class="legend-item"><i class="fas fa-circle text-danger"></i> Egreso</span>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table-v2 movements-table-dashboard">
+                <thead>
+                    <tr>
+                        <th>Fecha/Hora</th>
+                        <th>Categoría</th>
+                        <th>Descripción</th>
+                        <th>Método</th>
+                        <th class="text-right">Monto</th>
+                        <th class="text-center">Comprobante</th>
+                    </tr>
+                </thead>
+                <tbody id="caja-movimientos-body">
+                    <!-- Dinámico -->
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <div class="empty-state">
+                                <i class="fas fa-receipt"></i>
+                                <p>No hay movimientos registrados en este periodo.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     MODALES 
+     ========================================== -->
+
+<!-- Modal Apertura de Caja -->
+<div id="modal-apertura-caja" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal('modal-apertura-caja')"></div>
+    <div class="modal-card mini">
+        <div class="modal-header">
+            <h2><i class="fas fa-door-open"></i> Apertura de Caja</h2>
+            <button class="modal-close" onclick="closeModal('modal-apertura-caja')"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="form-apertura-caja" onsubmit="handleAperturaCaja(event)">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label required">Saldo Inicial de Caja</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-university"></i>
+                        <input type="number" step="0.01" value="0.00" name="saldo_inicial" class="input-v2" required>
+                    </div>
+                    <small>Ingrese el monto total disponible en el sistema al iniciar este turno.</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Observaciones</label>
+                    <textarea name="observaciones" class="input-v2" rows="2" placeholder="Opcional..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-v2 btn-secondary" onclick="closeModal('modal-apertura-caja')">CANCELAR</button>
+                <button type="submit" class="btn-v2 btn-primary">CONFIRMAR APERTURA</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Movimiento Manual (Ingreso/Egreso Externo) -->
+<div id="modal-movimiento-manual" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal('modal-movimiento-manual')"></div>
+    <div class="modal-card">
+        <div class="modal-header">
+            <h2 id="manual-modal-title"><i class="fas fa-exchange-alt"></i> Movimiento de Caja</h2>
+            <button class="modal-close" onclick="closeModal('modal-movimiento-manual')"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="form-movimiento-manual" onsubmit="handleMovimientoManual(event)">
+            <input type="hidden" id="manual-tipo" name="tipo_movimiento">
+            <div class="modal-body">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label required">Monto</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                            <input type="number" step="0.01" name="monto" class="input-v2" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Método de Movimiento</label>
+                        <input type="hidden" name="metodo_pago" id="manual-metodo-pago" value="TRANSFERENCIA">
+                        <div class="methods-selector-v2">
+                            <button type="button" class="method-chip active" onclick="selectManualMethod(this, 'TRANSFERENCIA')">
+                                <i class="fas fa-random"></i>
+                                <span>Transferencia</span>
+                            </button>
+                            <button type="button" class="method-chip" onclick="selectManualMethod(this, 'BANCOS')">
+                                <i class="fas fa-mobile-alt"></i>
+                                <span>Bancos / App</span>
+                            </button>
+                            <button type="button" class="method-chip" onclick="selectManualMethod(this, 'DEPOSITO')">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                                <span>Depósito</span>
+                            </button>
+                            <button type="button" class="method-chip" onclick="selectManualMethod(this, 'CHEQUE')">
+                                <i class="fas fa-money-check-alt"></i>
+                                <span>Cheque</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label required">Descripción / Motivo</label>
+                    <input type="text" name="descripcion" class="input-v2" placeholder="Ej: Inyección de capital por socio..." required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label required">Comprobante de Respaldo</label>
+                    <div class="upload-area-v2" onclick="document.getElementById('manual-comprobante').click()">
+                        <input type="file" id="manual-comprobante" accept="image/*,application/pdf" class="hidden" onchange="previewFile(event, 'preview-manual')">
+                        <div id="preview-manual" class="upload-placeholder">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Toca para subir foto o PDF del comprobante</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-v2 btn-secondary" onclick="closeModal('modal-movimiento-manual')">CANCELAR</button>
+                <button type="submit" id="btn-save-manual" class="btn-v2 btn-primary">REGISTRAR MOVIMIENTO</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Cierre de Caja (Arqueo) -->
+<div id="modal-cierre-caja" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal('modal-cierre-caja')"></div>
+    <div class="modal-card mini">
+        <div class="modal-header">
+            <h2><i class="fas fa-door-closed"></i> Cierre de Caja</h2>
+            <button class="modal-close" onclick="closeModal('modal-cierre-caja')"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="form-cierre-caja" onsubmit="handleCierreCaja(event)">
+            <div class="modal-body">
+                <div class="cierre-resumen">
+                    <div class="resumen-row">
+                        <span>Saldo Previsto:</span>
+                        <strong id="cierre-saldo-previsto">$0.00</strong>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label required">Saldo Real de Cierre (Cuentas)</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-university"></i>
+                        <input type="number" step="0.01" name="saldo_final" class="input-v2" required>
+                    </div>
+                    <small>Ingrese el saldo consolidado en cuentas al finalizar este turno.</small>
+                </div>
+                <!-- 
+                <div class="form-group">
+                    <label class="form-label">Diferencia Detectada</label>
+                    <div id="cierre-diferencia" class="diferencia-badge">---</div>
+                </div>
+                 -->
+                <div class="form-group">
+                    <label class="form-label">Observaciones de Cierre</label>
+                    <textarea name="observaciones" class="input-v2" rows="2" placeholder="Justifique diferencias si existen..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-v2 btn-secondary" onclick="closeModal('modal-cierre-caja')">CANCELAR</button>
+                <button type="submit" class="btn-v2 btn-danger">CONFIRMAR CIERRE</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Historial de Sesiones -->
+<div id="modal-historial-sesiones" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal('modal-historial-sesiones')"></div>
+    <div class="modal-card">
+        <div class="modal-header">
+            <h2><i class="fas fa-history"></i> Historial de Aperturas y Cierres</h2>
+            <button class="modal-close" onclick="closeModal('modal-historial-sesiones')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body p-0" style="max-height: 70vh; overflow-y: auto;">
+            <table class="table-v2 history-table-sessions">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Apertura / Cierre</th>
+                        <th class="text-right">Inicial / Final</th>
+                        <th class="text-center">Estado</th>
+                        <th>Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody id="historial-sesiones-body">
+                    <!-- Dinámico -->
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-v2 btn-secondary" onclick="closeModal('modal-historial-sesiones')">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reporte PDF -->
+<div id="modal-reporte-pdf" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal('modal-reporte-pdf')"></div>
+    <div class="modal-card" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2><i class="fas fa-file-pdf"></i> Generar Reporte PDF</h2>
+            <button class="modal-close" onclick="closeModal('modal-reporte-pdf')"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="form-reporte-pdf" onsubmit="handleGenerarReportePdf(event)">
+            <div class="modal-body">
+                <p class="mb-4">Configure los filtros para el informe de caja.</p>
+                
+                <div class="form-row-reports">
+                    <div class="form-group mb-4">
+                        <label class="form-label">Desde</label>
+                        <input type="date" name="fecha_inicio" id="reporte-inicio" class="input-v2" required>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label class="form-label">Hasta</label>
+                        <input type="date" name="fecha_fin" id="reporte-fin" class="input-v2" required>
+                    </div>
+                </div>
+
+                <div class="form-group mb-4" id="reporte-user-group">
+                    <label class="form-label">Usuario</label>
+                    <select name="id_usuario" id="reporte-usuario" class="input-v2">
+                        <option value="all">TODOS LOS USUARIOS</option>
+                        <!-- Dinámico -->
+                    </select>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label class="form-label">Tipo de Movimiento</label>
+                    <select name="tipo_movimiento" class="input-v2">
+                        <option value="TODOS">TODOS LOS MOVIMIENTOS</option>
+                        <option value="INGRESO">SOLO INGRESOS</option>
+                        <option value="EGRESO">SOLO EGRESOS</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label class="form-label">Formato del Reporte</label>
+                    <div class="reports-options-grid">
+                        <label class="report-option active">
+                            <input type="radio" name="formato" value="DETALLADO" checked onchange="updateReportOptionStyle(this)">
+                            <div class="option-icon"><i class="fas fa-list-alt"></i></div>
+                            <span>Detallado</span>
+                        </label>
+                        <label class="report-option">
+                            <input type="radio" name="formato" value="RESUMIDO" onchange="updateReportOptionStyle(this)">
+                            <div class="option-icon"><i class="fas fa-chart-pie"></i></div>
+                            <span>Resumido</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-v2 btn-secondary" onclick="closeModal('modal-reporte-pdf')">CANCELAR</button>
+                <button type="submit" class="btn-v2 btn-info">
+                    <i class="fas fa-magic"></i> GENERAR REPORTE
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Transferencia entre Cajas (Enviar) -->
+<div id="modal-transferencia-caja" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal('modal-transferencia-caja')"></div>
+    <div class="modal-card modal-transfer-v2">
+        <div class="modal-header">
+            <h2><i class="fas fa-exchange-alt"></i> Transferir a Compañero</h2>
+            <button class="modal-close" onclick="closeModal('modal-transferencia-caja')"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="form-transferencia-caja" onsubmit="handleEnviarTransferencia(event)">
+            <div class="modal-body">
+                <!-- Banner de Saldo Arriba -->
+                <div class="transfer-balance-banner mb-4">
+                    <div class="balance-icon"><i class="fas fa-wallet"></i></div>
+                    <div class="balance-text">
+                        <span>Tu Saldo Disponible:</span>
+                        <strong id="transfer-current-balance" class="text-gold">$0.00</strong>
+                    </div>
+                </div>
+
+                <!-- Contenedor Grid para PC -->
+                <div class="transfer-grid">
+                    <!-- Columna Izquierda: Datos -->
+                    <div class="transfer-column">
+                        <div class="alert-info-v2 mb-4">
+                            <i class="fas fa-info-circle"></i>
+                            <p>Se registrará un EGRESO en tu caja y un INGRESO en la del compañero al aceptar.</p>
+                        </div>
+                        
+                        <div class="form-group mb-4">
+                            <label class="form-label">Destinatario</label>
+                            <select id="transfer-destino" class="input-v2" required>
+                                <option value="">Seleccione un compañero...</option>
+                                <!-- Dinámico -->
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label class="form-label">Monto a Transferir ($)</label>
+                            <input type="number" id="transfer-monto" class="input-v2 monto-input-lg" step="0.01" min="0.01" required placeholder="0.00">
+                            <div id="transfer-limit-msg" class="input-help-text text-danger hidden">
+                                <i class="fas fa-exclamation-triangle"></i> El monto supera tu saldo actual.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Motivo y Evidencia -->
+                    <div class="transfer-column">
+                        <div class="form-group mb-4">
+                            <label class="form-label">Observaciones / Motivo</label>
+                            <textarea id="transfer-descripcion" class="input-v2" rows="3" placeholder="Ej: Pago de cuota compartida, ajuste de caja..."></textarea>
+                        </div>
+
+                        <div class="form-group mb-0">
+                            <label class="form-label">Comprobante de Traspaso</label>
+                            <div class="file-upload-wrapper-v2">
+                                <input type="file" id="transfer-comprobante" class="file-upload-input" accept="image/*" onchange="updateFileName(this)">
+                                <div class="file-upload-design">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span id="file-name-display">Haz clic o arrastra una imagen</span>
+                                    <small>JPG, PNG, WEBP (Máx 5MB)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-v2 btn-secondary" onclick="closeModal('modal-transferencia-caja')">CANCELAR</button>
+                <button type="submit" id="btn-confirm-transfer" class="btn-v2 btn-primary">
+                    <i class="fas fa-paper-plane"></i> ENVIAR DINERO
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Aceptar Transferencia (Recibir) -->
+<div id="modal-aceptar-transferencia" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal('modal-aceptar-transferencia')"></div>
+    <div class="modal-card modal-transfer-v2" style="max-width: 550px !important;">
+        <div class="modal-header">
+            <h2><i class="fas fa-hand-holding-usd"></i> Transferencia Recibida</h2>
+            <button class="modal-close" onclick="closeModal('modal-aceptar-transferencia')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="transfer-info-card mb-4">
+                <div class="info-row"><span>De:</span> <strong id="recibir-origen">---</strong></div>
+                <div class="info-row"><span>Monto:</span> <strong id="recibir-monto" class="text-success" style="font-size: 1.5rem;">$0.00</strong></div>
+                <div class="info-row"><span>Motivo:</span> <p id="recibir-descripcion" class="mt-1 text-gray-400 italic">---</p></div>
+            </div>
+            
+            <div id="recibir-comprobante-container" class="mb-4 hidden">
+                <label class="form-label mb-2">Comprobante adjunto:</label>
+                <img id="recibir-comprobante-img" src="" class="img-preview-transfer" alt="Comprobante" onclick="window.open(this.src, '_blank')">
+                <a id="recibir-comprobante-link" href="#" target="_blank" class="btn-link mt-2 text-center"><i class="fas fa-search-plus"></i> Ampliar imagen</a>
+            </div>
+
+            <p class="text-alert-info"><i class="fas fa-info-circle"></i> Al aceptar, el monto se sumará a tu caja. Si rechazas, volverá al remitente.</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-v2 btn-danger" onclick="handleProcesarTransferencia('RECHAZADA')">
+                <i class="fas fa-times-circle"></i> RECHAZAR
+            </button>
+            <button type="button" class="btn-v2 btn-success" onclick="handleProcesarTransferencia('ACEPTADA')">
+                <i class="fas fa-check-circle"></i> ACEPTAR E INGRESAR
+            </button>
+        </div>
+    </div>
+</div>
+
+
+

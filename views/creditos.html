@@ -1,0 +1,2639 @@
+<!-- Vista Administración de Créditos - INKA CORP -->
+<div class="content-wrapper creditos-wrapper">
+    <!-- Hero Header del Módulo (Usa "standard-hero" para consistencia global) -->
+    <div class="standard-hero creditos-hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <div class="hero-icon">
+                <i class="fas fa-hand-holding-usd"></i>
+            </div>
+            <h1 class="hero-title">Créditos</h1>
+            <p class="hero-subtitle">Gestión y monitoreo</p>
+        </div>
+
+        <!-- Stats integrados en hero -->
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <span class="hero-value" id="stat-activos">0</span>
+                <span class="hero-label">Activos</span>
+            </div>
+            <div class="hero-stat warning mora-stat">
+                <div class="mora-display">
+                    <div class="mora-item">
+                        <span class="mora-small-label">CANT.</span>
+                        <span class="hero-value" id="stat-mora">0</span>
+                    </div>
+                    <span class="mora-separator">|</span>
+                    <div class="mora-item">
+                        <span class="hero-value" id="stat-mora-pct">0%</span>
+                        <span class="mora-small-label">PORC.</span>
+                    </div>
+                </div>
+                <span class="hero-label">Mora</span>
+            </div>
+            <div class="hero-stat highlight">
+                <span class="hero-value" id="stat-cartera">$0</span>
+                <span class="hero-label">Cartera</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-value" id="stat-ahorro">$0</span>
+                <span class="hero-label">Ahorro</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Herramientas de Filtros -->
+    <div class="creditos-toolbar">
+        <!-- Botón Sincronizar -->
+        <button class="toolbar-btn btn-sync" onclick="refreshCreditosCache()" title="Sincronizar datos">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+
+        <!-- Separador -->
+        <div class="toolbar-separator"></div>
+
+        <!-- Filtro Estado (ordenar por estado: Activos > Morosos > Otros) -->
+        <button id="btn-estado-filter" class="toolbar-btn active" onclick="toggleEstadoFilter()"
+            title="Ordenar por Estado (Activos primero)">
+            <i class="fas fa-filter"></i>
+            <span>Estado</span>
+        </button>
+
+        <!-- Ordenamiento -->
+        <button class="toolbar-btn sort-btn active" data-sort="cuotas" onclick="sortCreditos('cuotas')"
+            title="Ordenar por cuotas pendientes">
+            <span># Cuotas</span>
+            <i class="fas fa-sort-down sort-icon"></i>
+        </button>
+        <button class="toolbar-btn sort-btn" data-sort="monto" onclick="sortCreditos('monto')"
+            title="Ordenar por monto">
+            <span>$ Monto</span>
+            <i class="fas fa-sort sort-icon"></i>
+        </button>
+        <button class="toolbar-btn sort-btn" data-sort="fecha" onclick="sortCreditos('fecha')"
+            title="Ordenar por fecha de otorgamiento">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Fecha</span>
+            <i class="fas fa-sort sort-icon"></i>
+        </button>
+
+        <!-- Separador -->
+        <div class="toolbar-separator"></div>
+
+        <!-- Filtros de País -->
+        <button class="toolbar-btn pais-filter-btn active" data-pais="" onclick="filterByPais('')"
+            title="Todos los países">
+            <span class="globe-emoji">🌎</span>
+        </button>
+        <button class="toolbar-btn pais-filter-btn" data-pais="ECUADOR" onclick="filterByPais('ECUADOR')"
+            title="Ecuador">
+            <img src="https://flagcdn.com/w40/ec.png" alt="EC" class="toolbar-flag">
+        </button>
+        <button class="toolbar-btn pais-filter-btn" data-pais="USA" onclick="filterByPais('USA')"
+            title="Estados Unidos">
+            <img src="https://flagcdn.com/w40/us.png" alt="US" class="toolbar-flag">
+        </button>
+        <button class="toolbar-btn pais-filter-btn" data-pais="PERU" onclick="filterByPais('PERU')" title="Perú">
+            <img src="https://flagcdn.com/w40/pe.png" alt="PE" class="toolbar-flag">
+        </button>
+
+        <div class="toolbar-separator"></div>
+
+        <!-- Búsqueda -->
+        <div class="toolbar-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-creditos" class="search-input-toolbar"
+                placeholder="Buscar por nombre o cédula...">
+        </div>
+    </div>
+
+    <!-- Contadores de Estado (compactos) -->
+    <div class="estado-counters">
+        <span class="estado-counter active" data-estado="" onclick="filterCreditosByEstado('')">
+            <span class="counter-label">Total</span>
+            <span id="count-all" class="counter-value">0</span>
+        </span>
+        <span class="estado-counter" data-estado="ACTIVO" onclick="filterCreditosByEstado('ACTIVO')">
+            <span class="counter-label">Activos</span>
+            <span id="count-activo" class="counter-value success">0</span>
+        </span>
+        <span class="estado-counter" data-estado="MOROSO" onclick="filterCreditosByEstado('MOROSO')">
+            <span class="counter-label">Mora</span>
+            <span id="count-moroso" class="counter-value danger">0</span>
+        </span>
+        <span class="estado-counter" data-estado="CANCELADO" onclick="filterCreditosByEstado('CANCELADO')">
+            <span class="counter-label">Cancelados</span>
+            <span id="count-cancelado" class="counter-value">0</span>
+        </span>
+        <span class="estado-counter" data-estado="PRECANCELADO" onclick="filterCreditosByEstado('PRECANCELADO')">
+            <span class="counter-label">Precancelados</span>
+            <span id="count-precancelado" class="counter-value">0</span>
+        </span>
+
+        <!-- Botón Reportes Mover aquí -->
+        <button class="btn-reporte-global" onclick="openExportCreditosModal()" title="Exportar Reporte">
+            <i class="fas fa-file-pdf"></i>
+            <span>Generar Reporte</span>
+        </button>
+    </div>
+
+    <!-- Contenedor de Secciones por Estado -->
+    <div id="creditos-sections-container" class="creditos-sections-container">
+        <!-- Las secciones se generan dinámicamente -->
+        <div class="loading-placeholder">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Cargando créditos...</span>
+        </div>
+    </div>
+
+    <!-- Mensaje cuando no hay resultados -->
+    <div id="creditos-empty" class="hidden" style="text-align: center; padding: 3rem;">
+        <i class="fas fa-folder-open" style="font-size: 3rem; color: var(--gray-600); margin-bottom: 1rem;"></i>
+        <p style="color: var(--gray-400);">No se encontraron créditos</p>
+    </div>
+</div>
+
+<!-- Modal Ver Detalle de Crédito -->
+<div id="ver-credito-modal" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card">
+        <div class="modal-header"
+            style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);">
+            <h2 class="modal-title" style="color: var(--gold);">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <span id="modal-codigo-credito">Detalle del Crédito</span>
+            </h2>
+            <button class="modal-close" data-close-modal>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Info del Socio -->
+            <div class="credito-detail-section">
+                <h3 class="section-title"><i class="fas fa-user"></i> Información del Socio</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-info-label">Nombre</span>
+                        <span id="det-nombre-socio">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-info-label">Cédula</span>
+                        <span id="det-cedula-socio">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-info-label">WhatsApp</span>
+                        <span id="det-whatsapp-socio">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumen del Crédito -->
+            <div class="credito-detail-section">
+                <h3 class="section-title"><i class="fas fa-coins"></i> Resumen del Crédito</h3>
+                <div class="resumen-grid-detail">
+                    <div class="resumen-item">
+                        <span class="resumen-label">Capital</span>
+                        <span class="resumen-value" id="det-capital">$0.00</span>
+                    </div>
+                    <div class="resumen-item">
+                        <span class="resumen-label">Interés Total</span>
+                        <span class="resumen-value" id="det-interes">$0.00</span>
+                    </div>
+                    <div class="resumen-item">
+                        <span class="resumen-label">Gastos Admin</span>
+                        <span class="resumen-value" id="det-gastos">$0.00</span>
+                    </div>
+                    <div class="resumen-item highlight">
+                        <span class="resumen-label">Cuota Mensual</span>
+                        <span class="resumen-value" id="det-cuota">$0.00</span>
+                    </div>
+                    <div class="resumen-item">
+                        <span class="resumen-label">Ahorro/Cuota</span>
+                        <span class="resumen-value" id="det-ahorro-cuota">$0.00</span>
+                    </div>
+                    <div class="resumen-item highlight">
+                        <span class="resumen-label">Cuota Total</span>
+                        <span class="resumen-value" id="det-cuota-total">$0.00</span>
+                    </div>
+                </div>
+                <div class="progress-container" style="margin-top: 1rem;">
+                    <div class="progress-header">
+                        <span>Progreso: <strong id="det-progreso-text">0/12 cuotas</strong></span>
+                        <span id="det-progreso-pct">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="det-progreso-bar" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fechas -->
+            <div class="credito-detail-section">
+                <h3 class="section-title"><i class="fas fa-calendar-alt"></i> Fechas</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-info-label">Desembolso</span>
+                        <span id="det-fecha-desembolso">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-info-label">Primer Pago</span>
+                        <span id="det-fecha-primer-pago">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-info-label">Fin Crédito</span>
+                        <span id="det-fecha-fin">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-info-label">Día de Pago</span>
+                        <span id="det-dia-pago">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumen de Deuda para Morosos -->
+            <div id="det-deuda-moroso-section" class="credito-detail-section highlight" style="display: none; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.4);">
+                <h3 class="section-title" style="color: #EF4444;"><i class="fas fa-exclamation-triangle"></i> Deuda Actual para Ponerse al Día</h3>
+                <div class="resumen-grid-detail">
+                    <div class="resumen-item" style="background: rgba(239, 68, 68, 0.1);">
+                        <span class="resumen-label" style="color: #EF4444;">Cuotas Vencidas (Neto)</span>
+                        <span class="resumen-value" id="det-monto-cuotas-vencidas" style="color: #EF4444;">$0.00</span>
+                    </div>
+                    <div class="resumen-item" style="background: rgba(239, 68, 68, 0.1);">
+                        <span class="resumen-label" style="color: #EF4444;">Mora Acumulada</span>
+                        <span class="resumen-value" id="det-mora-acumulada-total" style="font-weight: 800; color: #EF4444;">$0.00</span>
+                    </div>
+                    <div class="resumen-item highlight" style="background: #EF4444; border-color: #EF4444;">
+                        <span class="resumen-label" style="color: white;">TOTAL DEUDA ACTUAL PARA PONERSE AL DÍA</span>
+                        <span class="resumen-value" id="det-total-deuda-acumulada" style="font-size: 1.5rem; font-weight: 800; color: white;">$0.00</span>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.75rem; color: #EF4444; text-align: center; border-top: 1px dashed rgba(239, 68, 68, 0.3); padding-top: 0.5rem;">
+                    * Este valor incluye todas las cuotas vencidas y su mora calculada hasta la fecha actual. No incluye cuotas futuras.
+                </div>
+            </div>
+
+            <!-- Tabla de Amortización -->
+            <div class="credito-detail-section">
+                <h3 class="section-title"><i class="fas fa-table"></i> Tabla de Amortización</h3>
+                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <table class="amortizacion-table">
+                        <thead>
+                            <tr>
+                                <th class="hide-mobile">#</th>
+                                <th>Fecha</th>
+                                <th class="hide-mobile">Capital</th>
+                                <th class="hide-mobile">Interés</th>
+                                <th class="hide-mobile">Cuota</th>
+                                <th class="hide-mobile">Ahorro</th>
+                                <th>Total</th>
+                                <th>Saldo</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="amortizacion-table-body">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Ahorro Programado -->
+            <div class="credito-detail-section">
+                <h3 class="section-title"><i class="fas fa-piggy-bank"></i> Ahorro Programado</h3>
+                <div class="ahorro-summary">
+                    <div class="ahorro-item">
+                        <span class="ahorro-label">Total Programado</span>
+                        <span class="ahorro-value" id="det-ahorro-total">$0.00</span>
+                    </div>
+                    <div class="ahorro-item">
+                        <span class="ahorro-label">Acumulado</span>
+                        <span class="ahorro-value success" id="det-ahorro-acumulado">$0.00</span>
+                    </div>
+                    <div class="ahorro-item">
+                        <span class="ahorro-label">Pendiente</span>
+                        <span class="ahorro-value" id="det-ahorro-pendiente">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="btn-anular-credito" class="btn btn-danger btn-round" title="Anular Crédito (Error)" style="display: none; width: 45px; height: 45px; border-radius: 50%; padding: 0; min-width: auto; justify-content: center; align-items: center; margin-right: auto; background: #ef4444; border: none; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);">
+                <i class="fas fa-exclamation-triangle"></i>
+            </button>
+            <button class="btn btn-secondary" data-close-modal>Cerrar</button>
+            <button id="btn-registrar-pago" class="btn btn-success">
+                <i class="fas fa-money-bill-wave"></i>
+                Registrar Pago
+            </button>
+        </div>
+    </div>
+</div>
+
+    <!-- Modal Registrar Pago (Rediseñado) -->
+    <div id="registrar-pago-modal" class="modal hidden">
+        <div class="modal-backdrop" data-close-modal></div>
+        <div class="modal-card modal-pago-redesign">
+            <div class="modal-header">
+                <div class="modal-header-title">
+                    <div class="header-icon-green">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <h2>Registrar Pago</h2>
+                </div>
+                <button class="modal-close" data-close-modal>
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body modal-pago-body">
+                <!-- Panel Izquierdo -->
+                <div class="pago-panel-left">
+                    <div class="luxury-credit-card">
+                        <div class="card-chip">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                        <div class="card-content">
+                            <div class="card-section">
+                                <span class="card-label-static">CÓDIGO DE CRÉDITO</span>
+                                <div class="card-value gold-text" id="pago-credito-codigo">-</div>
+                            </div>
+                            <span class="card-label-static">CLIENTE</span>
+                            <div class="card-user">
+                                <div class="user-icon-circle">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <span class="card-value" id="pago-socio-nombre">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <i class="fas fa-credit-card card-type-icon"></i>
+
+                    <div class="selection-box">
+                        <label class="section-label" for="pago-cuotas-select">SELECCIONAR CUOTAS</label>
+                        <select id="pago-cuotas-select" class="custom-select-light">
+                            <!-- Se llena dinámicamente -->
+                        </select>
+                    </div>
+
+                    <div class="summary-card-light">
+                        <div class="summary-item">
+                            <div class="summary-label">
+                                <i class="fas fa-calendar-alt"></i> Vencimiento
+                            </div>
+                            <div class="summary-value" id="pago-fecha-vencimiento">-</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">
+                                <i class="fas fa-receipt"></i> Cuota Base
+                            </div>
+                            <div class="summary-value" id="pago-monto-cuota">$0.00</div>
+                        </div>
+
+                        <!-- Mora Alert Box -->
+                        <div id="pago-mora-row" class="mora-alert-box" style="display: none;">
+                            <div class="mora-info">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <span>MORA (<span id="pago-dias-mora">0</span> DÍAS × $2)</span>
+                            </div>
+                            <div class="mora-amount" id="pago-monto-mora">$0.00</div>
+                        </div>
+
+                        <div class="summary-total-box">
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="total-label">TOTAL A PAGAR</span>
+                                <label class="convenio-checkbox-container" style="display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--gray-400); cursor: pointer; margin-top: 4px;">
+                                    <input type="checkbox" id="pago-convenio-toggle" style="width: 14px; height: 14px; accent-color: var(--primary);">
+                                    CONVENIO DE PAGO
+                                </label>
+                            </div>
+                            <span class="total-amount" id="pago-total-final">$0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Comprobante Section -->
+                    <div class="attachment-section">
+                        <label class="section-label" for="pago-comprobante-camera"><i class="fas fa-camera"></i>
+                            COMPROBANTE <span style="color: #ef4444;">*</span></label>
+                        <div class="comprobante-drop-zone" id="pago-comprobante-dropzone">
+                            <div id="pago-upload-controls" class="upload-controls">
+                                <button type="button" class="upload-btn camera"
+                                    onclick="document.getElementById('pago-comprobante-camera').click()">
+                                    <i class="fas fa-camera"></i>
+                                </button>
+                                <button type="button" class="upload-btn gallery"
+                                    onclick="document.getElementById('pago-comprobante-gallery').click()">
+                                    <i class="fas fa-image"></i>
+                                </button>
+                            </div>
+                            <div id="pago-preview-wrapper" class="preview-wrapper hidden">
+                                <img id="pago-comprobante-preview" src="" alt="Vista previa">
+                                <button type="button" class="remove-btn" onclick="clearComprobantePreview()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <!-- Inputs ocultos -->
+                            <input type="file" id="pago-comprobante-camera" accept="image/*" capture="environment"
+                                class="hidden" onchange="handleComprobanteSelect(this)">
+                            <input type="file" id="pago-comprobante-gallery" accept="image/*" class="hidden"
+                                onchange="handleComprobanteSelect(this)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel Derecho -->
+                <div class="pago-panel-right">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label-light" for="pago-fecha"><i class="fas fa-calendar-day"></i> Fecha
+                                de Pago *</label>
+                            <input type="date" id="pago-fecha" class="input-light">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label-light" for="pago-monto"><i class="fas fa-money-bill-alt"></i> Monto
+                                a Registrar
+                                *</label>
+                            <div class="input-with-symbol">
+                                <span class="prefix">$</span>
+                                <input type="number" id="pago-monto" class="input-light highlight-text" step="0.01">
+                            </div>
+                            <div id="pago-monto-min-hint" style="display: none; font-size: 0.75rem; color: var(--gold); margin-top: 4px; font-weight: 600;">
+                                <i class="fas fa-info-circle"></i> Mínimo permitido (Base): <span id="pago-monto-min-valor">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label-light" for="pago-metodo"><i class="fas fa-credit-card"></i> Método de
+                            Pago *</label>
+                        <select id="pago-metodo" class="select-light">
+                            <option value="EFECTIVO">Efectivo</option>
+                            <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+                            <option value="DEPOSITO">Depósito</option>
+                            <option value="CHEQUE">Cheque</option>
+                            <option value="OTRO">Otro</option>
+                        </select>
+                    </div>
+
+                        <div class="form-group">
+                            <label class="form-label-light" for="pago-referencia"><i class="fas fa-hashtag"></i>
+                                Referencia *</label>
+                            <input type="text" id="pago-referencia" class="input-light" placeholder="# de transacción">
+                        </div>
+
+                    <div class="form-group">
+                        <label class="form-label-light" for="pago-observaciones"><i class="fas fa-pen"></i>
+                            Observaciones</label>
+                        <textarea id="pago-observaciones" class="textarea-light" rows="4"
+                            placeholder="Notas adicionales..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+        <div class="modal-footer footer-light">
+            <button class="btn-light-secondary" data-close-modal>
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button id="btn-confirmar-pago" class="btn-light-success">
+                <i class="fas fa-check-circle"></i> Confirmar Pago
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Detalle de Pago -->
+<div id="ver-pago-detalle-modal" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card" style="max-width: 500px;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+            <h2 class="modal-title" style="color: white;">
+                <i class="fas fa-receipt"></i> Detalle de Pago
+            </h2>
+            <button class="modal-close" data-close-modal>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="pago-detalle-content">
+                <!-- Se llena dinámicamente -->
+                <div class="loading-placeholder">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Cargando detalle...</span>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-close-modal>Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Estilos para Mora con Cantidad y Porcentaje */
+    .mora-stat {
+        min-width: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mora-display {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .mora-item {
+        display: flex;
+        align-items: baseline;
+        gap: 0.2rem;
+    }
+
+    .mora-item .creditos-hero-value {
+        font-size: 1.75rem;
+    }
+
+    .mora-small-label {
+        font-size: 0.6rem;
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .mora-separator {
+        color: rgba(255, 255, 255, 0.4);
+        font-weight: 200;
+        font-size: 1.75rem;
+        line-height: 1;
+        margin: 0 0.25rem;
+    }
+
+    /* Barra de Herramientas de Créditos */
+    .creditos-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        background: var(--gray-800);
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .toolbar-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.5rem 0.75rem;
+        background: var(--gray-900);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        color: var(--gray-400);
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .toolbar-btn:hover {
+        border-color: var(--gold);
+        color: var(--gold);
+    }
+
+    .toolbar-btn.active {
+        background: rgba(212, 175, 55, 0.15);
+        border-color: var(--gold);
+        color: var(--gold);
+    }
+
+    .toolbar-btn.btn-sync {
+        background: rgba(16, 185, 129, 0.15);
+        border-color: rgba(16, 185, 129, 0.3);
+        color: #10B981;
+    }
+
+    .toolbar-btn.btn-sync:hover {
+        background: rgba(16, 185, 129, 0.25);
+        border-color: #10B981;
+    }
+
+    .toolbar-separator {
+        width: 1px;
+        height: 24px;
+        background: var(--border-color);
+        margin: 0 0.25rem;
+    }
+
+    .pais-emoji {
+        font-size: 1.25rem;
+        line-height: 1;
+    }
+
+    .toolbar-search {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-left: auto;
+        position: relative;
+    }
+
+    .toolbar-search i {
+        color: var(--gray-500);
+    }
+
+    .search-input-toolbar {
+        padding: 0.5rem 0.75rem;
+        padding-left: 0.5rem;
+        background: var(--gray-900);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        color: var(--white);
+        font-size: 0.85rem;
+        width: 220px;
+    }
+
+    .search-input-toolbar:focus {
+        outline: none;
+        border-color: var(--gold);
+    }
+
+    .search-input-toolbar::placeholder {
+        color: var(--gray-500);
+    }
+
+    /* Contadores de Estado */
+    .estado-counters {
+        display: flex;
+        gap: 1rem;
+        padding: 0.5rem 0;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        align-items: center; /* Alinea botón y contadores */
+        width: 100%;
+    }
+
+    .estado-counter {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        padding: 0.4rem 0.8rem;
+        background: var(--gray-800);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .estado-counter:hover {
+        border-color: var(--gray-600);
+    }
+
+    .estado-counter.active {
+        border-color: var(--gold);
+        background: rgba(212, 175, 55, 0.05);
+    }
+
+    /* Botón Reporte Global (Cápsula) */
+    .btn-reporte-global {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.5rem 1.25rem;
+        background: #0E5936;
+        color: white;
+        border: 1px solid rgba(242, 187, 58, 0.3);
+        border-radius: 9999px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-left: auto; /* Empuja el botón a la derecha */
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-reporte-global:hover {
+        background: #083d25;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(11, 78, 50, 0.3);
+        border-color: var(--gold);
+    }
+
+    .btn-reporte-global i {
+        color: var(--gold);
+        font-size: 1rem;
+    }
+
+    .counter-label {
+        color: var(--gray-500);
+    }
+
+    .counter-value {
+        font-weight: 700;
+        color: var(--white);
+        padding: 0.15rem 0.5rem;
+        background: var(--gray-800);
+        border-radius: 0.25rem;
+    }
+
+    .counter-value.success {
+        color: #10B981;
+        background: rgba(16, 185, 129, 0.15);
+    }
+
+    .counter-value.danger {
+        color: #EF4444;
+        background: rgba(239, 68, 68, 0.15);
+    }
+
+    /* Emoji del Globo */
+    .globe-emoji {
+        font-size: 1.3rem;
+        line-height: 1;
+    }
+
+    /* Imágenes de Banderas en Toolbar - tamaño fijo consistente */
+    .toolbar-flag {
+        width: 24px;
+        height: 16px;
+        object-fit: cover;
+        border-radius: 2px;
+    }
+
+    /* Botones de país ajustados - menos padding para que la bandera ocupe más */
+    .pais-filter-btn {
+        padding: 0.4rem 0.45rem;
+        min-width: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Imágenes de Banderas en Tabla - solo bandera, sin código */
+    .pais-flag-img {
+        width: 22px;
+        height: 15px;
+        object-fit: cover;
+        vertical-align: middle;
+        border-radius: 2px;
+    }
+
+    .col-pais {
+        white-space: nowrap;
+    }
+
+    /* Resumen del Crédito - Info Boxes */
+    .credit-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .credit-info-box {
+        background: rgba(0, 184, 148, 0.08);
+        border: 1.5px solid rgba(0, 184, 148, 0.3);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        text-align: center;
+        transition: transform 0.2s ease;
+    }
+
+    .credit-info-box:hover {
+        transform: translateY(-2px);
+        border-color: rgba(0, 184, 148, 0.5);
+    }
+
+    .credit-info-label {
+        font-size: 0.75rem;
+        color: var(--gray-400);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
+    .credit-info-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--gold);
+    }
+
+    /* Highlighted boxes */
+    .credit-info-box.highlight {
+        background: rgba(255, 193, 7, 0.12);
+        border-color: rgba(255, 193, 7, 0.4);
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #FFFFFF;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--gray-400);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Estado Tabs */
+    .estado-tab {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        background: var(--gray-800);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        color: var(--gray-400);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+
+    .estado-tab:hover {
+        border-color: var(--border-color-hover);
+        color: var(--white);
+    }
+
+    .estado-tab.active {
+        background: rgba(212, 175, 55, 0.15);
+        border-color: var(--gold);
+        color: var(--gold);
+    }
+
+    .estado-count {
+        padding: 0.125rem 0.5rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 9999px;
+        font-size: 0.75rem;
+    }
+
+    .estado-tab.active .estado-count {
+        background: rgba(212, 175, 55, 0.3);
+    }
+
+    /* Badges con mejor sombreado */
+    .badge-activo {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    .badge-moroso, .badge-atrasado, .badge-vencido {
+        background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    .badge-cancelado {
+        background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(107, 114, 128, 0.3);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    .badge-precancelado {
+        background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    .badge-pausado {
+        background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    .badge-pendiente {
+        background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+        color: white;
+        box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    /* Paises Row */
+    .pais-container-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 3px 8px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .pais-flag-img-row {
+        width: 18px;
+        height: 12px;
+        object-fit: cover;
+        border-radius: 1px;
+    }
+
+    .pais-code-row {
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: var(--gray-300);
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .btn-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 0.5rem;
+        border: 1px solid var(--border-color);
+        background: var(--card-bg);
+        color: var(--gray-300);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+        background: var(--gold);
+        color: var(--primary-dark);
+        border-color: var(--gold);
+        transform: scale(1.05);
+    }
+
+    .btn-icon i {
+        font-size: 0.875rem;
+    }
+
+    .btn-ver-credito {
+        background: rgba(242, 187, 58, 0.15);
+        border-color: rgba(242, 187, 58, 0.3);
+        color: var(--gold);
+    }
+
+    .btn-ver-credito:hover {
+        background: var(--gold);
+        color: var(--primary-dark);
+    }
+
+    /* Detail Sections */
+    .credito-detail-section {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--gold);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .detail-item label,
+    .detail-item .detail-info-label {
+        font-size: 0.75rem;
+        color: var(--gray-400);
+        text-transform: uppercase;
+    }
+
+    .detail-item span {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #FFFFFF;
+    }
+
+    .resumen-grid-detail {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 1rem;
+    }
+
+    .resumen-item {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+        text-align: center;
+    }
+
+    .resumen-item.highlight {
+        background: rgba(212, 175, 55, 0.1);
+        border-color: var(--gold);
+    }
+
+    .resumen-item .resumen-label {
+        display: block;
+        font-size: 0.7rem;
+        color: var(--gray-400);
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+
+    .resumen-item .resumen-value {
+        display: block;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #FFFFFF;
+    }
+
+    .resumen-item.highlight .resumen-value {
+        color: var(--gold);
+    }
+
+    /* Progress */
+    .progress-container {
+        margin-top: 1rem;
+    }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--gray-400);
+    }
+
+    .progress-header strong {
+        color: #FFFFFF;
+    }
+
+    .progress-bar {
+        height: 8px;
+        background: var(--gray-700);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--gold) 0%, #D4AF37 100%);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+
+    /* Amortización Table */
+    .amortizacion-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .amortizacion-table thead {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--gray-800);
+        /* Dark background for header */
+    }
+
+    .amortizacion-table thead th {
+        background: var(--gray-800);
+        /* Ensure dark */
+        color: var(--gray-300);
+        padding: 0.75rem 0.5rem;
+        text-align: left;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid var(--primary);
+    }
+
+    .amortizacion-table td {
+        padding: 0.5rem;
+        vertical-align: middle;
+    }
+
+    .btn-pagar-cuota {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        background: var(--gold);
+        color: var(--primary);
+        border: none;
+        border-radius: 0.25rem;
+        cursor: pointer;
+    }
+
+    .btn-pagar-cuota:hover {
+        background: #c9a027;
+    }
+
+    .btn-pagar-cuota:disabled {
+        background: var(--gray-600);
+        color: var(--gray-400);
+        cursor: not-allowed;
+    }
+
+    /* Ahorro Summary */
+    .ahorro-summary {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .ahorro-item {
+        flex: 1;
+        min-width: 120px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .ahorro-label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--gray-400);
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+
+    .ahorro-value {
+        display: block;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #FFFFFF;
+    }
+
+    .ahorro-value.success {
+        color: #10B981;
+    }
+
+    /* Pago Info Box */
+    .pago-info-box {
+        background: rgba(0, 184, 148, 0.08);
+        border: 1px solid rgba(0, 184, 148, 0.25);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .pago-info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .pago-info-row:last-child {
+        border-bottom: none;
+    }
+
+    .pago-info-row span {
+        color: var(--gray-400);
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .pago-info-row strong {
+        color: var(--white);
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .pago-info-row.highlight {
+        background: rgba(255, 193, 7, 0.12);
+        padding: 0.75rem;
+        margin: 0 -1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        border-radius: 0.5rem;
+        border-bottom: none;
+    }
+
+    .pago-info-row.highlight strong {
+        color: var(--gold);
+        font-size: 1.25rem;
+    }
+
+    /* Button Success */
+    .btn-success {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        color: white;
+        border: none;
+    }
+
+    .btn-success:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+
+    .form-label.required::after {
+        content: ' *';
+        color: var(--error-light);
+    }
+
+    /* Upload Comprobante Styles */
+    .comprobante-upload-area {
+        border: 2px dashed var(--border-color);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        text-align: center;
+        transition: all 0.2s ease;
+        background: var(--bg-secondary);
+    }
+
+    .comprobante-upload-area:hover {
+        border-color: var(--gold);
+        background: rgba(212, 175, 55, 0.05);
+    }
+
+    .upload-placeholder {
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem;
+        color: var(--gray-400);
+    }
+
+    .upload-placeholder i {
+        font-size: 2rem;
+        color: var(--gold);
+    }
+
+    .upload-placeholder span {
+        font-size: 0.875rem;
+    }
+
+    .upload-placeholder:hover {
+        color: var(--gold);
+    }
+
+    .upload-preview {
+        position: relative;
+        display: inline-block;
+    }
+
+    .upload-preview img {
+        max-width: 100%;
+        max-height: 150px;
+        border-radius: 0.5rem;
+        object-fit: contain;
+    }
+
+    .btn-clear-preview {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: none;
+        background: #EF4444;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        transition: all 0.2s ease;
+    }
+
+    .btn-clear-preview:hover {
+        background: #DC2626;
+        transform: scale(1.1);
+    }
+
+    .form-hint {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        margin-top: 0.5rem;
+    }
+
+    /* Upload Options - Cámara y Galería */
+    .upload-options {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .upload-option-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, rgba(11, 78, 50, 0.15) 0%, rgba(11, 78, 50, 0.1) 100%);
+        border: 2px solid var(--primary);
+        border-radius: 1rem;
+        color: var(--primary);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        min-width: 100px;
+    }
+
+    .upload-option-btn i {
+        font-size: 1.75rem;
+        color: var(--gold);
+    }
+
+    .upload-option-btn span {
+        font-size: 0.85rem;
+    }
+
+    .upload-option-btn:hover {
+        background: var(--primary);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(11, 78, 50, 0.3);
+    }
+
+    .upload-option-btn:hover i {
+        color: var(--gold);
+    }
+
+    .upload-option-btn:active {
+        transform: translateY(0);
+    }
+
+    .camera-btn {
+        border-color: var(--primary);
+    }
+
+    .gallery-btn {
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.1) 100%);
+        border-color: var(--gold);
+        color: var(--gray-300);
+    }
+
+    .gallery-btn i {
+        color: var(--gold);
+    }
+
+    .gallery-btn:hover {
+        background: var(--gold);
+        color: var(--primary-dark);
+    }
+
+    .gallery-btn:hover i {
+        color: var(--primary-dark);
+    }
+
+    .upload-divider {
+        color: var(--gray-500);
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    /* Responsive para upload options */
+    @media (max-width: 768px) {
+        .upload-options {
+            gap: 0.75rem;
+        }
+
+        .upload-option-btn {
+            flex: 1;
+            min-width: 0;
+            padding: 1rem 0.75rem;
+        }
+
+        .upload-option-btn i {
+            font-size: 1.5rem;
+        }
+
+        .upload-option-btn span {
+            font-size: 0.8rem;
+        }
+
+        .upload-divider {
+            display: none;
+        }
+    }
+
+    /* ==========================================
+       RESPONSIVE - CREDITOS
+       ========================================== */
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .stat-card {
+            padding: 0.875rem;
+            flex-direction: column;
+            text-align: center;
+            gap: 0.5rem;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+        }
+
+        .estado-tabs {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 0.5rem;
+            justify-content: flex-start !important;
+        }
+
+        .estado-tab {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* Hide columns on mobile */
+        .hide-mobile {
+            display: none !important;
+        }
+
+        /* Show elements only on mobile */
+        .show-mobile {
+            display: inline !important;
+        }
+
+        /* Container - prevent overflow */
+        .creditos-wrapper {
+            overflow-x: hidden !important;
+        }
+
+        .table-container {
+            padding: 0 1rem;
+            margin: 0;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 0;
+            margin-bottom: 1rem;
+        }
+
+        .table-responsive {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        /* Hide table structure, use Flex instead */
+        table {
+            display: block;
+            width: 100%;
+            min-width: 0 !important;
+            min-width: unset !important;
+        }
+
+        thead {
+            display: block;
+            width: 100%;
+        }
+
+        thead tr {
+            display: flex;
+            width: 100%;
+            padding: 0.5rem 0.25rem;
+            border-bottom: 1px solid var(--border-color);
+            align-items: center;
+        }
+
+        thead th {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: var(--gray-400);
+            padding: 0.25rem 0.125rem;
+        }
+
+        /* Column widths for visible columns */
+        thead th.col-socio,
+        tbody td.col-socio {
+            flex: 0 0 50%;
+            max-width: 50%;
+        }
+
+        thead th.col-capital,
+        tbody td.col-capital {
+            flex: 0 0 25%;
+            max-width: 25%;
+        }
+
+        thead th.col-pagadas,
+        tbody td.col-pagadas {
+            flex: 0 0 25%;
+            max-width: 25%;
+        }
+
+        tbody {
+            display: block;
+            width: 100%;
+        }
+
+        tbody tr {
+            display: flex;
+            width: 100%;
+            padding: 0.75rem 0.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            align-items: center;
+        }
+
+        tbody td {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.125rem;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Column alignment */
+        th.col-socio,
+        td.col-socio {
+            text-align: left;
+            justify-content: flex-start;
+        }
+
+        th.col-capital,
+        td.col-capital {
+            text-align: right;
+            justify-content: flex-end;
+        }
+
+        th.col-pagadas,
+        td.col-pagadas {
+            text-align: center;
+            justify-content: center;
+        }
+
+        td.col-capital {
+            font-weight: 600;
+            color: var(--gold);
+            font-size: 0.75rem;
+        }
+
+        td.col-pagadas {
+            font-weight: 700;
+            color: var(--white);
+            font-size: 0.85rem;
+        }
+
+        /* Socio name */
+        .socio-nombre {
+            display: block;
+            font-weight: 700; /* Increased weight for better visibility */
+            font-size: 0.85rem; /* Slightly larger */
+            color: var(--white); /* Brighter than text-primary */
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+            line-height: 1.25;
+            max-width: 100%;
+        }
+
+        .socio-info {
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        /* Clickable rows on mobile */
+        .credito-row {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .credito-row:hover {
+            background-color: rgba(242, 187, 58, 0.1);
+        }
+
+        .credito-row:active {
+            background-color: rgba(242, 187, 58, 0.2);
+        }
+
+        .table-header {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .search-wrapper {
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100%;
+        }
+
+        .credito-detail-section {
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .detail-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .resumen-grid-detail {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .resumen-item {
+            padding: 0.625rem;
+        }
+
+        .resumen-item .resumen-value {
+            font-size: 0.9rem;
+        }
+
+        .ahorro-summary {
+            flex-direction: column;
+        }
+
+        .ahorro-item {
+            min-width: unset;
+            padding: 0.75rem;
+        }
+
+        .ahorro-value {
+            font-size: 1rem;
+        }
+
+        /* Amortization table - Mobile optimized */
+        .amortizacion-table {
+            display: block;
+            width: 100%;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .amortizacion-table thead {
+            display: block;
+            width: 100%;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .amortizacion-table thead tr {
+            display: flex;
+            width: 100%;
+            background: var(--gray-800);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            min-height: 44px;
+            /* Altura mínima consistente para header */
+        }
+
+        .amortizacion-table thead th {
+            padding: 0.75rem 0.25rem;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: white !important;
+            /* Cambiado a blanco para mejor visibilidad */
+            background: transparent;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            /* Misma altura que el tr */
+        }
+
+        .amortizacion-table tbody {
+            display: block;
+            width: 100%;
+        }
+
+        .amortizacion-table tbody tr {
+            display: flex;
+            width: 100%;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            align-items: center;
+            min-height: 48px;
+            /* Altura mínima consistente */
+        }
+
+        .amortizacion-table tbody td {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Asegurar centrado */
+            min-height: 48px;
+            /* Igual que la fila */
+        }
+
+        /* Column widths for mobile - 5 visible columns */
+        .amortizacion-table th:nth-child(2),
+        /* FECHA */
+        .amortizacion-table td:nth-child(2) {
+            flex: 0 0 20%;
+            max-width: 20%;
+            justify-content: flex-start;
+            text-align: left;
+        }
+
+        .amortizacion-table th:nth-child(7),
+        /* TOTAL */
+        .amortizacion-table td:nth-child(7) {
+            flex: 0 0 18%;
+            max-width: 18%;
+            justify-content: flex-end;
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .amortizacion-table th:nth-child(8),
+        /* SALDO */
+        .amortizacion-table td:nth-child(8) {
+            flex: 0 0 18%;
+            max-width: 18%;
+            justify-content: flex-end;
+            text-align: right;
+        }
+
+        .amortizacion-table th:nth-child(9),
+        /* ESTADO */
+        .amortizacion-table td:nth-child(9) {
+            flex: 0 0 24%;
+            max-width: 24%;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .amortizacion-table th:nth-child(10),
+        /* ACCIÓN */
+        .amortizacion-table td:nth-child(10) {
+            flex: 0 0 20%;
+            max-width: 20%;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .btn-pagar-cuota {
+            padding: 0.25rem 0.375rem;
+            font-size: 0.65rem;
+            white-space: nowrap;
+        }
+
+        /* FIX: Mantener tabla usable en móvil (scroll horizontal)
+               El bloque anterior intentaba convertir la tabla a flex y ocultaba overflow,
+               lo que en la práctica hace que Créditos no sea responsive. */
+        .creditos-toolbar {
+            width: 100%;
+        }
+
+        .toolbar-search {
+            flex: 1 1 100%;
+            width: 100%;
+            margin-left: 0;
+        }
+
+        .search-input-toolbar {
+            width: 100%;
+        }
+
+        .table-responsive {
+            overflow-x: auto !important;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table-responsive table {
+            display: table;
+            width: 100%;
+            min-width: 980px;
+        }
+
+        .table-responsive thead {
+            display: table-header-group;
+            width: auto;
+        }
+
+        .table-responsive tbody {
+            display: table-row-group;
+            width: auto;
+        }
+
+        .table-responsive tr {
+            display: table-row;
+            width: auto;
+            padding: 0;
+        }
+
+        .table-responsive th,
+        .table-responsive td {
+            display: table-cell;
+            flex: none;
+            max-width: none;
+            overflow: visible;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .stats-grid {
+            gap: 0.375rem;
+        }
+
+        .stat-card {
+            padding: 0.75rem;
+        }
+
+        .stat-icon {
+            width: 32px;
+            height: 32px;
+            font-size: 0.875rem;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+        }
+
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .resumen-grid-detail {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    /* ==========================================
+       CREDITOS HERO SECTION
+       ========================================== */
+    .creditos-wrapper {
+        overflow-x: hidden;
+        box-sizing: border-box;
+    }
+
+    .creditos-hero {
+        position: relative;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        border-radius: 0 0 1.25rem 1.25rem;
+        padding: 1.5rem 1rem 1rem;
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+
+    .hero-bg-creditos {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+        pointer-events: none;
+    }
+
+    .hero-content-creditos {
+        position: relative;
+        text-align: center;
+        z-index: 1;
+        margin-bottom: 1rem;
+    }
+
+    .hero-icon-creditos {
+        width: 56px;
+        height: 56px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.75rem;
+    }
+
+    .hero-icon-creditos i {
+        font-size: 1.5rem;
+        color: var(--gold);
+    }
+
+    .hero-title-creditos {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #FFFFFF;
+        margin-bottom: 0.25rem;
+    }
+
+    .hero-subtitle-creditos {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.75);
+    }
+
+    /* Creditos Hero Stats */
+    .creditos-hero-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        position: relative;
+        z-index: 1;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .creditos-hero-stat {
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(10px);
+        border-radius: 0.75rem;
+        padding: 0.75rem 0.5rem;
+        text-align: center;
+    }
+
+    .creditos-hero-stat.warning {
+        background: rgba(245, 158, 11, 0.2);
+    }
+
+    .creditos-hero-stat.highlight {
+        background: rgba(242, 187, 58, 0.2);
+    }
+
+    .creditos-hero-value {
+        display: block;
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #FFFFFF;
+        line-height: 1.2;
+    }
+
+    .creditos-hero-stat.warning .creditos-hero-value {
+        color: #FBBF24;
+    }
+
+    .creditos-hero-stat.highlight .creditos-hero-value {
+        color: var(--gold);
+    }
+
+    .creditos-hero-label {
+        display: block;
+        font-size: 0.55rem;
+        color: rgba(255, 255, 255, 0.7);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-top: 0.125rem;
+    }
+
+    /* Padding for content below hero */
+    .creditos-wrapper .table-container,
+    .creditos-wrapper .estado-tabs {
+        padding: 0 1rem;
+    }
+
+    @media (min-width: 769px) {
+
+        .creditos-hero {
+            border-radius: 1rem;
+            padding: 2rem;
+        }
+
+        .hero-icon-creditos {
+            width: 70px;
+            height: 70px;
+        }
+
+        .hero-icon-creditos i {
+            font-size: 1.75rem;
+        }
+
+        .hero-title-creditos {
+            font-size: 2rem;
+        }
+
+        .creditos-hero-stats {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .creditos-hero-value {
+            font-size: 1.5rem;
+        }
+
+        .creditos-hero-label {
+            font-size: 0.65rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .creditos-hero-stats {
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+    }
+
+    /* ==========================================
+         * MODAL DE PAGO REDISEÑADO - PC
+         * ========================================== */
+    .modal-pago-redesign {
+        max-width: 900px !important;
+        width: 95%;
+        background: var(--gray-800);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        margin: auto;
+        border: 1px solid var(--border-color);
+    }
+
+    /* Header con Estilo */
+    .modal-pago-redesign .modal-header {
+        background: var(--gray-800);
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.25rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header-title {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .header-icon-green {
+        width: 40px;
+        height: 40px;
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        font-size: 1.2rem;
+    }
+
+    .modal-header-title h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--white);
+        margin: 0;
+    }
+
+    /* Cuerpo del Modal */
+    .modal-pago-body {
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        gap: 2.5rem;
+        padding: 2rem;
+        background: var(--bg-secondary);
+    }
+
+    /* Panel Izquierdo */
+    .pago-panel-left {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    /* Tarjeta de Crédito de Lujo */
+    .luxury-credit-card {
+        background: #1e2a3b;
+        border-radius: 18px;
+        padding: 1.5rem;
+        color: var(--white);
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 15px -3px rgba(30, 42, 59, 0.3);
+        min-height: 180px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .luxury-credit-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 80%;
+        height: 200%;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+        transform: rotate(25deg);
+    }
+
+    .card-chip {
+        color: var(--gray-400);
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
+    }
+
+    .card-section label,
+    .card-section .card-label-static {
+        display: block;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        color: var(--gray-400);
+        margin-bottom: 0.25rem;
+    }
+
+    .gold-text {
+        color: #f2bb3a;
+    }
+
+    .card-user {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+    }
+
+    .user-icon-circle {
+        width: 32px;
+        height: 32px;
+        background: var(--gray-700);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        color: var(--gray-300);
+    }
+
+    .card-type-icon {
+        position: absolute;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        font-size: 2rem;
+        opacity: 0.2;
+    }
+
+    /* Selector de Cuotas */
+    .section-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #FFFFFF !important;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.75rem;
+    }
+
+    .custom-select-light {
+        width: 100%;
+        padding: 0.85rem 1rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #FFFFFF !important;
+        background: #1b212a !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .custom-select-light:hover {
+        border-color: var(--gold) !important;
+        background: var(--gray-800) !important;
+    }
+
+    /* Resumen de Pago */
+    .summary-card-light {
+        background: var(--gray-800);
+        border-radius: 16px;
+        padding: 1.25rem;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .summary-item:last-of-type {
+        border-bottom: none;
+    }
+
+    .summary-label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.9rem;
+        color: var(--gray-300);
+    }
+
+    .summary-label i {
+        width: 20px;
+        text-align: center;
+        color: var(--gray-500);
+    }
+
+    .summary-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--white);
+    }
+
+    /* Alerta de Mora */
+    .mora-alert-box {
+        background: rgba(225, 29, 72, 0.1);
+        border: 1px solid rgba(225, 29, 72, 0.3);
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 1rem 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .mora-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: var(--error);
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    .mora-amount {
+        color: var(--error);
+        font-size: 1.1rem;
+        font-weight: 800;
+    }
+
+    /* Total con Estilo */
+    .summary-total-box {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        margin-top: 0.5rem;
+        border-top: 2px dashed var(--border-color);
+    }
+
+    .total-label {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #10b981;
+    }
+
+    .total-amount {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #10b981;
+    }
+
+    /* Panel Derecho */
+    .pago-panel-right {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+    }
+
+    .form-label-light {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #FFFFFF !important; /* Force white labels */
+        margin-bottom: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .form-label-light i {
+        color: #f2bb3a !important; /* Gold icons */
+        margin-right: 0.5rem;
+        width: 18px;
+        text-align: center;
+    }
+
+    .input-light,
+    .select-light,
+    .textarea-light {
+        width: 100%;
+        padding: 0.85rem 1rem;
+        font-size: 1rem;
+        color: #FFFFFF !important; /* Force white text in input */
+        background: #1b212a !important; /* Force dark background */
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 10px;
+        transition: all 0.2s ease;
+    }
+
+    /* Custom styles for type="date" and "number" and placeholders */
+    .input-light::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+    }
+    
+    .input-light::placeholder,
+    .textarea-light::placeholder {
+        color: var(--gray-400);
+        opacity: 0.7;
+    }
+
+    .input-light:focus,
+    .select-light:focus,
+    .textarea-light:focus {
+        outline: none;
+        border-color: var(--gold) !important;
+        box-shadow: 0 0 0 3px rgba(242, 187, 58, 0.1) !important;
+    }
+
+    .input-with-symbol {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .prefix {
+        position: absolute;
+        left: 1rem;
+        color: var(--gray-400);
+        font-weight: 600;
+    }
+
+    .input-with-symbol input {
+        padding-left: 2rem;
+    }
+
+    .highlight-text {
+        color: #f2bb3a !important;
+        font-weight: 700 !important;
+        font-size: 1.25rem !important;
+    }
+
+    /* Comprobante Drop Zone */
+    .attachment-section {
+        margin-top: 0.5rem;
+    }
+
+    .comprobante-drop-zone {
+        background: var(--gray-800);
+        border: 2px dashed var(--border-color);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        min-height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .upload-controls {
+        display: flex;
+        gap: 1.5rem;
+    }
+
+    .upload-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        transition: all 0.2s ease;
+    }
+
+    .upload-btn.camera {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--gold);
+    }
+
+    .upload-btn.gallery {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10B981;
+    }
+
+    .upload-btn:hover {
+        transform: scale(1.1);
+    }
+
+    .preview-wrapper {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        padding: 5px;
+        border-radius: 12px;
+        background: var(--gray-800);
+        z-index: 5;
+    }
+
+    .preview-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+
+    .remove-btn {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        width: 24px;
+        height: 24px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Footer del Modal (Dark) */
+    .footer-light {
+        background: var(--gray-900); /* Darken footer */
+        padding: 1.5rem 2rem;
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .btn-light-secondary,
+    .btn-light-warning,
+    .btn-light-success {
+        padding: 0.85rem 2rem;
+        border-radius: 12px;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        transition: all 0.2s ease;
+        font-family: inherit;
+    }
+
+    .btn-light-secondary {
+        background: var(--gray-700); /* Darken button */
+        color: var(--gray-300); /* Lighten text */
+    }
+
+    .btn-light-warning {
+        background: var(--gold);
+        color: var(--black); /* Dark text for gold */
+    }
+
+    .btn-light-success {
+        background: #10b981;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    }
+
+    .btn-light-secondary:hover {
+        background: var(--gray-600);
+        color: var(--white);
+    }
+
+    .btn-light-warning:hover {
+        background: #eab308;
+    }
+
+    .btn-light-success:hover {
+        background: #059669;
+        transform: translateY(-2px);
+    }
+
+    @media (max-width: 850px) {
+        .modal-pago-body {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .modal-pago-redesign {
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            max-width: none !important;
+        }
+    }
+
+    .pago-status {
+        line-height: 1.2;
+    }
+
+    .pago-status small {
+        font-size: 0.75rem;
+        font-weight: 500;
+        opacity: 0.8;
+        display: block;
+        margin-top: 2px;
+    }
+
+    .text-date {
+        font-weight: 600;
+        color: var(--gray-300);
+    }
+</style>

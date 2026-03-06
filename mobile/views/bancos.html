@@ -1,0 +1,175 @@
+﻿<div class="section-header">
+    <h2 class="section-title">
+        <i class="fas fa-university"></i>
+        <span>Bancos e Inversiones</span>
+    </h2>
+    <div class="header-sync">
+        <button class="lite-sync-btn" onclick="initBancosModule()">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+    </div>
+</div>
+
+<div class="lite-bancos-summary">
+    <div class="lite-summary-card">
+        <span class="lite-summary-label">Créditos Activos</span>
+        <span class="lite-summary-value" id="mobile-stat-bancos-activos">0</span>
+    </div>
+    <div class="lite-summary-card highlight">
+        <span class="lite-summary-label">Deuda Total</span>
+        <span class="lite-summary-value" id="mobile-stat-bancos-deuda-total">$0.00</span>
+    </div>
+</div>
+
+<div id="mobile-bancos-list" class="lite-list-container">
+    <!-- Bancos se cargan aquí -->
+    <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Cargando bancos...</p>
+    </div>
+</div>
+
+<!-- Modal Lite de Amortización -->
+<div id="modal-amortizacion-lite" class="modal-overlay">
+    <div class="modal-content lite-modal-fullscreen">
+        <div class="modal-header lite-header-nav">
+            <button class="btn-back" onclick="closeAmortizationLite()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h3>Detalles del Crédito</h3>
+            <div class="header-action-spacer"></div>
+        </div>
+        <div class="modal-body lite-body">
+            <div class="lite-bank-info">
+                <h4 id="lite-bank-name">---</h4>
+                <div id="lite-bank-debtor" class="lite-bank-debtor">---</div>
+
+                <div class="lite-bank-detail-grid">
+                    <div class="lite-detail-col">
+                        <span class="lite-detail-label">Solicitado</span>
+                        <span class="lite-detail-value" id="lite-bank-solicitado">$0.00</span>
+                    </div>
+                    <div class="lite-detail-col">
+                        <span class="lite-detail-label">Entregado</span>
+                        <span class="lite-detail-value" id="lite-bank-entregado">$0.00</span>
+                    </div>
+                    <div class="lite-detail-col">
+                        <span class="lite-detail-label">T. Pagar</span>
+                        <span class="lite-detail-value" id="lite-bank-total-pagar">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="amortization-table-mobile-container">
+                <div id="lite-amortization-body" class="lite-amort-card-list">
+                    <!-- Cuotas se cargan aquí como tarjetas lite-amort-card -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Lite de Pago -->
+<div id="modal-pago-lite" class="modal-overlay">
+    <div class="modal-content lite-modal-fullscreen">
+        <div class="modal-header lite-header-nav">
+            <button class="btn-back" onclick="closeLitePago()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h3>Registrar Pago</h3>
+            <div class="header-action-spacer"></div>
+        </div>
+        <div class="modal-body lite-body">
+            <form id="form-pago-lite" onsubmit="handleMobilePayment(event)">
+                <input type="hidden" id="lite-pago-id-detalle">
+
+                <div class="pago-lite-info">
+                    <div class="info-row">
+                        <span>Cuota N°:</span>
+                        <strong id="lite-pago-cuota">--</strong>
+                    </div>
+                </div>
+
+                <div class="lite-form-group">
+                    <label>Monto a Pagar</label>
+                    <div class="lite-input-wrapper-themed">
+                        <i class="fas fa-dollar-sign"></i>
+                        <input type="number" step="0.01" id="lite-pago-valor-inputs" class="lite-input" required>
+                    </div>
+                </div>
+
+                <div class="lite-form-group">
+                    <label>Fecha de Pago</label>
+                    <div class="lite-input-wrapper-themed">
+                        <i class="fas fa-calendar-alt"></i>
+                        <input type="date" id="lite-pago-fecha" class="lite-input" required>
+                    </div>
+                </div>
+
+                <div class="lite-upload-section">
+                    <div id="lite-pago-placeholder">
+                        <div class="lite-upload-choices">
+                            <div class="lite-upload-btn-choice"
+                                onclick="document.getElementById('lite-pago-input-camera').click()">
+                                <i class="fas fa-camera"></i>
+                                <span>Tomar Foto</span>
+                            </div>
+                            <div class="lite-upload-btn-choice"
+                                onclick="document.getElementById('lite-pago-input-gallery').click()">
+                                <i class="fas fa-images"></i>
+                                <span>Galería</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="lite-pago-preview-container" class="lite-preview-container hidden">
+                        <img id="lite-pago-preview" src="" alt="Vista previa"
+                            style="max-height: 250px; object-fit: contain;">
+                        <button type="button" class="lite-remove-preview" onclick="clearLitePagoPreview()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <!-- Inputs Ocultos -->
+                    <input type="file" id="lite-pago-input-camera" accept="image/*" capture="environment" class="hidden"
+                        onchange="handleLiteImageSelect(event)">
+                    <input type="file" id="lite-pago-input-gallery" accept="image/*" class="hidden"
+                        onchange="handleLiteImageSelect(event)">
+                </div>
+
+                <div class="lite-buttons">
+                    <button type="submit" id="btn-lite-guardar" class="lite-btn-primary">
+                        <i class="fas fa-save"></i> Guardar Pago
+                    </button>
+                </div>
+            </form>
+            <style>
+                #lite-pago-valor-inputs {
+                    pointer-events: auto !important;
+                    cursor: text !important;
+                    user-select: text !important;
+                    background-color: var(--bg-main) !important;
+                    color: var(--text-primary) !important;
+                    opacity: 1 !important;
+                }
+            </style>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalle de Pago Móvil (Bancos) -->
+<div id="modal-comprobante-lite" class="modal-overlay">
+    <div class="modal-content lite-modal-fullscreen">
+        <div class="modal-header lite-header-nav">
+            <h3><i class="fas fa-receipt"></i> Detalle de Pago</h3>
+            <button class="btn-back" onclick="closeLiteComprobante()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body lite-body" id="lite-pago-detalle-container-bancos"
+            style="padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 1rem;">
+            <!-- Se llena dinámicamente -->
+            <div style="text-align: center; padding: 2rem;">
+                <i class="fas fa-spinner fa-spin"></i>
+            </div>
+        </div>
+    </div>
+</div>

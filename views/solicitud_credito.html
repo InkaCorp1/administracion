@@ -1,0 +1,558 @@
+<!-- Vista Solicitud de Crédito - INKA CORP -->
+<div class="content-wrapper solicitud-wrapper">
+    <!-- Hero Section (normalizado como socios) -->
+    <div class="solicitud-hero">
+        <div class="hero-icon-solicitud">
+            <i class="fas fa-file-invoice-dollar"></i>
+        </div>
+        <h1 class="hero-title-solicitud">Solicitudes</h1>
+        <p class="hero-subtitle-solicitud">Gestión de solicitudes de crédito</p>
+
+        <!-- Stats -->
+        <div class="solicitud-hero-stats">
+            <div class="solicitud-hero-stat">
+                <span class="solicitud-hero-value" id="stat-solicitudes-total">0</span>
+                <span class="solicitud-hero-label">Total</span>
+            </div>
+            <div class="solicitud-hero-stat warning">
+                <span class="solicitud-hero-value" id="stat-solicitudes-pendientes">0</span>
+                <span class="solicitud-hero-label">Pendientes</span>
+            </div>
+            <div class="solicitud-hero-stat success">
+                <span class="solicitud-hero-value" id="stat-solicitudes-aprobadas">0</span>
+                <span class="solicitud-hero-label">Aprobadas</span>
+            </div>
+            <div class="solicitud-hero-stat colocadas">
+                <span class="solicitud-hero-value" id="stat-solicitudes-colocadas">0</span>
+                <span class="solicitud-hero-label">Colocadas</span>
+            </div>
+            <div class="solicitud-hero-stat desembolsadas">
+                <span class="solicitud-hero-value" id="stat-solicitudes-desembolsadas">0</span>
+                <span class="solicitud-hero-label">Desembolsadas</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar (normalizado como socios/créditos) -->
+    <div class="solicitud-toolbar">
+        <button id="btn-sync-solicitudes" class="toolbar-btn btn-sync" onclick="refreshSolicitudes()"
+            title="Actualizar">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+
+        <div class="toolbar-separator"></div>
+
+        <!-- Botón Nueva Solicitud -->
+        <button class="toolbar-btn btn-nueva-solicitud" onclick="abrirModalNuevaSolicitud()">
+            <i class="fas fa-plus"></i>
+            <span>Nueva Solicitud</span>
+        </button>
+
+        <div class="toolbar-separator"></div>
+
+        <!-- Filtros de Estado -->
+        <button class="toolbar-btn filter-btn" data-estado="" onclick="filterSolicitudesByEstado('')">
+            <span>Todas</span>
+            <span id="count-solicitudes-all" class="filter-count">0</span>
+        </button>
+        <button class="toolbar-btn filter-btn active" data-estado="PENDIENTE"
+            onclick="filterSolicitudesByEstado('PENDIENTE')">
+            <span>Pendientes</span>
+            <span id="count-solicitudes-pendiente" class="filter-count">0</span>
+        </button>
+        <button class="toolbar-btn filter-btn" data-estado="APROBADA" onclick="filterSolicitudesByEstado('APROBADA')">
+            <span>Aprobadas</span>
+            <span id="count-solicitudes-aprobada" class="filter-count">0</span>
+        </button>
+        <button class="toolbar-btn filter-btn" data-estado="COLOCADA" onclick="filterSolicitudesByEstado('COLOCADA')">
+            <span>Colocadas</span>
+            <span id="count-solicitudes-colocada" class="filter-count">0</span>
+        </button>
+        <button class="toolbar-btn filter-btn" data-estado="DESEMBOLSADA"
+            onclick="filterSolicitudesByEstado('DESEMBOLSADA')">
+            <span>Desembolsadas</span>
+            <span id="count-solicitudes-desembolsada" class="filter-count">0</span>
+        </button>
+        <button class="toolbar-btn filter-btn" data-estado="ANULADA" onclick="filterSolicitudesByEstado('ANULADA')">
+            <span>Anuladas</span>
+            <span id="count-solicitudes-anulada" class="filter-count">0</span>
+        </button>
+
+        <div class="toolbar-separator"></div>
+
+        <!-- Búsqueda -->
+        <div class="toolbar-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-solicitudes" placeholder="Buscar por nombre o cédula..."
+                oninput="searchSolicitudes(this.value)">
+        </div>
+    </div>
+
+    <!-- Sección Prioritaria: Pendientes de Desembolso -->
+    <div id="seccion-pendiente-desembolso" class="seccion-desembolso-pendiente hidden">
+        <div class="desembolso-header-section">
+            <div class="desembolso-title">
+                <i class="fas fa-exclamation-circle"></i>
+                <h3>Pendiente de Desembolso</h3>
+                <span id="count-pendiente-desembolso" class="desembolso-badge">0</span>
+            </div>
+            <p class="desembolso-subtitle">Créditos colocados que requieren documentación y desembolso</p>
+        </div>
+        <div id="lista-pendiente-desembolso" class="lista-desembolso-cards">
+            <!-- Se llena dinámicamente -->
+        </div>
+    </div>
+
+    <!-- Secciones de Solicitudes -->
+    <div id="solicitudes-grid" class="solicitudes-sections">
+        <div class="loading-placeholder">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Cargando solicitudes...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Ver Solicitud -->
+<div id="modal-ver-solicitud" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card modal-ver-solicitud">
+        <div class="modal-header modal-header-solicitud">
+            <h3><i class="fas fa-file-invoice-dollar"></i> <span id="modal-solicitud-titulo">Solicitud de Crédito</span>
+            </h3>
+            <button class="modal-close" data-close-modal>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Header con fecha y estado -->
+            <div class="solicitud-header-info">
+                <div class="solicitud-fecha">
+                    <span class="label">Fecha de Solicitud</span>
+                    <span class="fecha-value">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="modal-solicitud-fecha">-</span>
+                    </span>
+                </div>
+                <div class="solicitud-estado">
+                    <span class="label">Estado</span>
+                    <span id="modal-solicitud-estado" class="badge badge-pendiente">PENDIENTE</span>
+                </div>
+            </div>
+
+            <!-- Monto destacado -->
+            <div class="monto-destacado-container">
+                <div class="monto-destacado">
+                    <span class="monto-label">Monto Solicitado</span>
+                    <span id="modal-solicitud-monto" class="monto-valor">$0.00</span>
+                </div>
+                <div class="plazo-destacado">
+                    <span class="plazo-label">Plazo</span>
+                    <span id="modal-solicitud-plazo" class="plazo-valor">-</span>
+                </div>
+            </div>
+
+            <!-- Datos del Socio -->
+            <div class="seccion-datos">
+                <h4 class="seccion-titulo"><i class="fas fa-user"></i> Datos del Socio</h4>
+                <div class="datos-grid">
+                    <div class="dato-item">
+                        <span class="dato-label">Nombre Completo</span>
+                        <span id="modal-solicitud-nombre" class="dato-valor">-</span>
+                    </div>
+                    <div class="dato-item">
+                        <span class="dato-label">Cédula</span>
+                        <span id="modal-solicitud-cedula" class="dato-valor">-</span>
+                    </div>
+                    <div class="dato-item">
+                        <span class="dato-label">País de Residencia</span>
+                        <span id="modal-solicitud-pais" class="dato-valor">-</span>
+                    </div>
+                    <div class="dato-item">
+                        <span class="dato-label">WhatsApp</span>
+                        <span id="modal-solicitud-whatsapp" class="dato-valor">-</span>
+                    </div>
+                    <div class="dato-item">
+                        <span class="dato-label">Estado Civil</span>
+                        <span id="modal-solicitud-estadocivil" class="dato-valor">-</span>
+                    </div>
+                    <div class="dato-item">
+                        <span class="dato-label">Dirección</span>
+                        <span id="modal-solicitud-direccion" class="dato-valor">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Datos Adicionales -->
+            <div class="seccion-datos">
+                <h4 class="seccion-titulo"><i class="fas fa-info-circle"></i> Información Adicional</h4>
+                <div class="datos-grid">
+                    <div class="dato-item">
+                        <span class="dato-label">Cónyuge</span>
+                        <span id="modal-solicitud-conyuge" class="dato-valor">-</span>
+                    </div>
+                    <div id="container-modal-cedula-conyuge" class="dato-item hidden">
+                        <span class="dato-label">Cédula Cónyuge</span>
+                        <span id="modal-solicitud-cedula-conyuge" class="dato-valor">-</span>
+                    </div>
+                    <div class="dato-item">
+                        <span class="dato-label">Referencia</span>
+                        <span id="modal-solicitud-referencia" class="dato-valor">-</span>
+                    </div>
+                    <div class="dato-item dato-item-full">
+                        <span class="dato-label">Bien/Garantía</span>
+                        <span id="modal-solicitud-bien" class="dato-valor">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Galería de Fotos -->
+            <div class="seccion-datos">
+                <h4 class="seccion-titulo"><i class="fas fa-images"></i> Documentos Adjuntos</h4>
+                <div id="modal-solicitud-fotos" class="fotos-galeria-modal">
+                    <p class="no-fotos">No hay fotos adjuntas</p>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer modal-footer-solicitud">
+            <button class="btn btn-secondary" data-close-modal>
+                <i class="fas fa-times"></i> Cerrar
+            </button>
+            <button id="btn-generar-pdf" class="btn btn-info" onclick="generarPDFSolicitud()">
+                <i class="fas fa-file-pdf"></i> Generar PDF
+            </button>
+            <div class="acciones-solicitud" id="acciones-pendiente">
+                <button class="btn btn-success" onclick="aprobarSolicitud()">
+                    <i class="fas fa-check"></i> Aprobar
+                </button>
+                <button class="btn btn-danger" onclick="anularSolicitud()">
+                    <i class="fas fa-ban"></i> Anular
+                </button>
+            </div>
+            <div class="acciones-solicitud hidden" id="acciones-aprobada">
+                <button class="btn btn-primary" onclick="colocarCredito()">
+                    <i class="fas fa-hand-holding-usd"></i> Colocar Crédito
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Visor de Imagen -->
+<div id="modal-visor-imagen" class="modal modal-visor hidden">
+    <div class="modal-backdrop" onclick="cerrarVisorImagen()"></div>
+    <div class="visor-container">
+        <div class="visor-header">
+            <span id="visor-imagen-titulo" class="visor-titulo">Imagen</span>
+            <div class="visor-controles">
+                <button class="visor-btn" onclick="zoomImagen('out')" title="Alejar">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <button class="visor-btn" onclick="zoomImagen('in')" title="Acercar">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="visor-btn visor-btn-close" onclick="cerrarVisorImagen()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="visor-imagen-wrapper">
+            <img id="visor-imagen-src" src="" alt="Vista previa">
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Nueva Solicitud -->
+<div id="modal-nueva-solicitud" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card modal-nueva-solicitud">
+        <div class="modal-header">
+            <h3><i class="fas fa-plus-circle"></i> Nueva Solicitud de Crédito</h3>
+            <button class="modal-close" data-close-modal>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Selector de Socio -->
+            <div class="form-group">
+                <label for="select-socio">Seleccionar Socio</label>
+                <div class="select-socio-container">
+                    <div id="select-socio-custom" class="select-socio-custom">
+                        <button type="button" id="select-socio-trigger" class="select-socio-trigger" aria-haspopup="listbox" aria-expanded="false">
+                            <span id="select-socio-label">-- Seleccione un socio --</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div id="select-socio-dropdown" class="select-socio-dropdown hidden">
+                            <div class="select-socio-search-wrap">
+                                <i class="fas fa-search"></i>
+                                <input id="select-socio-search" type="text" placeholder="Buscar socio por nombre o cédula..." autocomplete="off">
+                            </div>
+                            <div id="select-socio-options" class="select-socio-options" role="listbox"></div>
+                        </div>
+                        <select id="select-socio" class="form-control select-socio-native" tabindex="-1" aria-hidden="true">
+                            <option value="">-- Seleccione un socio --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info del socio seleccionado -->
+            <div id="info-socio-seleccionado" class="info-socio-card hidden">
+                <div class="info-socio-header">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="display-nombre-socio">Nombre del Socio</span>
+                </div>
+                <div class="info-socio-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Cédula:</span>
+                        <span id="display-cedula-socio" class="detail-value">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">País:</span>
+                        <span id="display-pais-socio" class="detail-value">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">WhatsApp:</span>
+                        <span id="display-whatsapp-socio" class="detail-value">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Estado Civil:</span>
+                        <span id="display-estadocivil-socio" class="detail-value">-</span>
+                    </div>
+                    <div id="container-cedula-conyuge" class="detail-row hidden">
+                        <span class="detail-label">Cédula Cónyuge:</span>
+                        <span id="display-cedula-conyuge" class="detail-value">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Campos de la solicitud -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="input-monto">Monto Solicitado ($)</label>
+                    <input type="number" id="input-monto" class="form-control" placeholder="Ej: 1000" min="100"
+                        step="100">
+                </div>
+                <div class="form-group">
+                    <label for="input-plazo">Plazo (meses)</label>
+                    <div id="select-plazo-custom" class="select-plazo-custom">
+                        <button type="button" id="select-plazo-trigger" class="select-socio-trigger" aria-haspopup="listbox" aria-expanded="false">
+                            <span id="select-plazo-label">Seleccione</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div id="select-plazo-dropdown" class="select-socio-dropdown hidden">
+                            <div id="select-plazo-options" class="select-socio-options" role="listbox"></div>
+                        </div>
+                        <select id="input-plazo" class="form-control select-plazo-native" tabindex="-1" aria-hidden="true">
+                            <option value="">Seleccione</option>
+                            <option value="3">3 meses</option>
+                            <option value="6">6 meses</option>
+                            <option value="9">9 meses</option>
+                            <option value="12">12 meses</option>
+                            <option value="18">18 meses</option>
+                            <option value="24">24 meses</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-close-modal>
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button id="btn-crear-solicitud" class="btn btn-primary" onclick="crearNuevaSolicitud()">
+                <i class="fas fa-check"></i> Crear Solicitud
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Colocar Crédito -->
+<div id="modal-colocar-credito" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card modal-colocar-credito">
+        <div class="modal-header">
+            <h3><i class="fas fa-hand-holding-usd"></i> Colocar Crédito</h3>
+            <button class="modal-close" data-close-modal>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Información Superior en una sola línea -->
+            <div class="info-socio-top">
+                <div class="socio-data-top">
+                    <i class="fas fa-user-circle"></i>
+                    <div class="data-group">
+                        <span class="label">Socio Solicitante</span>
+                        <span id="colocar-nombre-socio" class="value">-</span>
+                    </div>
+                </div>
+                <div class="monto-data-top">
+                    <span class="label">Monto del Crédito</span>
+                    <span id="colocar-monto-solicitado" class="value">-</span>
+                </div>
+                <div class="plazo-data-top">
+                    <span class="label">Plazo</span>
+                    <span id="colocar-plazo-solicitado" class="value">-</span>
+                </div>
+            </div>
+
+            <!-- Grid Principal de Colocación -->
+            <div class="colocacion-grid">
+                <!-- Columna Izquierda: Configuración -->
+                <div class="colocacion-config">
+                    <div class="config-pago">
+                        <label class="config-label" for="dia-10"><i class="fas fa-calendar-day"></i> Seleccione el Día
+                            de Pago</label>
+                        <div class="dia-pago-selector">
+                            <input type="radio" name="dia-pago" id="dia-10" value="10"
+                                onchange="actualizarCalculosColocacion()">
+                            <label for="dia-10">Día 10</label>
+
+                            <input type="radio" name="dia-pago" id="dia-15" value="15" checked
+                                onchange="actualizarCalculosColocacion()">
+                            <label for="dia-15">Día 15</label>
+
+                            <input type="radio" name="dia-pago" id="dia-20" value="20"
+                                onchange="actualizarCalculosColocacion()">
+                            <label for="dia-20">Día 20</label>
+                        </div>
+                        <p class="config-help">El primer pago se ajustará automáticamente según la regla de los 25 días.
+                        </p>
+                    </div>
+
+                    <!-- Tasa de Interés Configurable -->
+                    <div class="config-tasa">
+                        <label class="config-label" for="input-tasa-interes"><i class="fas fa-percentage"></i> Tasa de
+                            Interés Mensual</label>
+                        <div class="tasa-input-container">
+                            <button type="button" class="tasa-btn tasa-btn-down" onclick="ajustarTasa(-0.25)">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="tasa-display">
+                                <input type="number" id="input-tasa-interes" class="tasa-input" value="2" min="0.5"
+                                    max="10" step="0.25" onchange="actualizarCalculosColocacion()">
+                                <span class="tasa-suffix">%</span>
+                            </div>
+                            <button type="button" class="tasa-btn tasa-btn-up" onclick="ajustarTasa(0.25)">
+                                <i class="fas fa-chevron-up"></i>
+                            </button>
+                        </div>
+                        <p class="config-help">Ajuste en incrementos de 0.25% (0.5% - 10%).</p>
+                    </div>
+
+                    <div class="fechas-resumen">
+                        <div class="fecha-item">
+                            <span class="f-label">Desembolso (Hoy)</span>
+                            <span id="colocar-fecha-desembolso" class="f-value">-</span>
+                        </div>
+                        <div class="fecha-item highlight">
+                            <span class="f-label">Primer Vencimiento</span>
+                            <span id="colocar-fecha-primer-pago" class="f-value">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Cálculos y Totales -->
+                <div class="colocacion-calculos">
+                    <div class="calculos-detalle">
+                        <div class="c-row">
+                            <span>Tasa de Interés Mensual</span>
+                            <span id="colocar-tasa-interes" class="c-val">2.00%</span>
+                        </div>
+                        <div class="c-row">
+                            <span>Gastos Administrativos</span>
+                            <span id="colocar-gastos-admin" class="c-val">$0.00</span>
+                        </div>
+                        <div class="c-row">
+                            <span>Interés Total Estimado</span>
+                            <span id="colocar-interes-total" class="c-val">$0.00</span>
+                        </div>
+                        <div class="c-row total-row">
+                            <span>TOTAL A PAGAR</span>
+                            <span id="colocar-total-pagar" class="c-val-total">$0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="cuotas-container">
+                        <div class="cuota-card">
+                            <span class="q-label">Cuota Mensual Base</span>
+                            <span id="colocar-cuota-base" class="q-value">$0.00</span>
+                        </div>
+                        <div class="cuota-card primary">
+                            <span class="q-label">Cuota Final (+ Ahorro 10%)</span>
+                            <span id="colocar-cuota-total" class="q-value">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de Garante -->
+            <div class="garante-section">
+                <div class="garante-header">
+                    <div class="garante-toggle">
+                        <label class="switch-container">
+                            <input type="checkbox" id="switch-requiere-garante" onchange="toggleGaranteSection()">
+                            <span class="switch-slider"></span>
+                        </label>
+                        <div class="toggle-text">
+                            <span class="toggle-label"><i class="fas fa-user-shield"></i> ¿Requiere Garante?</span>
+                            <span id="garante-status" class="toggle-status">No</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="garante-form-container" class="garante-form hidden">
+                    <div class="garante-info-note">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Complete los datos del garante. Los campos marcados con <strong>*</strong> son
+                            obligatorios.</span>
+                    </div>
+
+                    <div class="garante-form-grid">
+                        <div class="garante-field">
+                            <label class="garante-label" for="garante-nombre">Nombre Completo *</label>
+                            <input type="text" id="garante-nombre" class="garante-input"
+                                placeholder="Nombre del garante">
+                        </div>
+                        <div class="garante-field">
+                            <label class="garante-label" for="garante-cedula">Cédula *</label>
+                            <input type="text" id="garante-cedula" class="garante-input" placeholder="Número de cédula"
+                                maxlength="10">
+                        </div>
+                        <div class="garante-field">
+                            <label class="garante-label" for="garante-domicilio">Domicilio</label>
+                            <input type="text" id="garante-domicilio" class="garante-input"
+                                placeholder="Dirección del garante">
+                        </div>
+                        <div class="garante-field">
+                            <label class="garante-label" for="garante-telefono">Teléfono</label>
+                            <input type="text" id="garante-telefono" class="garante-input" placeholder="Teléfono fijo">
+                        </div>
+                        <div class="garante-field">
+                            <label class="garante-label" for="garante-whatsapp">WhatsApp</label>
+                            <input type="text" id="garante-whatsapp" class="garante-input"
+                                placeholder="Número de WhatsApp">
+                        </div>
+                    </div>
+
+                    <p class="garante-docs-note">
+                        <i class="fas fa-camera"></i> Los documentos (foto cédula, domicilio, firma) se solicitarán
+                        después de la colocación.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-close-modal>
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button id="btn-simular-pdf" class="btn btn-info" onclick="prepararSimulacionPDF()">
+                <i class="fas fa-file-pdf"></i> Simular PDF
+            </button>
+            <button id="btn-confirmar-colocacion" class="btn btn-success" onclick="confirmarColocacionCredito()">
+                <i class="fas fa-check"></i> Confirmar Colocación
+            </button>
+        </div>
+    </div>
+</div>

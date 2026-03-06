@@ -1,0 +1,32 @@
+﻿<div class="section-header">
+    <h2 class="section-title">
+        <i class="fas fa-hand-holding-usd"></i>
+        <span id="header-title-text">Mis Aportes</span>
+    </h2>
+</div>
+
+<div class="mobile-stats-grid" style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 1rem; padding: 0 1rem; margin-bottom: 1.5rem;">
+    <div class="mobile-stat-card" style="background: var(--bg-card); padding: 1rem; border-radius: 16px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.25rem;">
+        <span class="stat-label" style="font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Total Aportado</span>
+        <span class="stat-value" id="lite-total-aportes" style="font-size: 1.15rem; font-weight: 800; color: #10b981;">$0.00</span>
+    </div>
+    <div class="mobile-stat-card" id="btn-filtro-mes" style="background: var(--bg-card); padding: 1rem; border-radius: 16px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.25rem; cursor: pointer; position: relative;">
+        <span class="stat-label" style="font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Aportes de:</span>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span class="stat-value" id="lite-label-mes" style="font-size: 0.95rem; font-weight: 800; color: var(--gold); text-transform: uppercase;">CARGANDO...</span>
+            <i class="fas fa-chevron-down" style="font-size: 0.7rem; color: var(--gold); margin-left: 4px;"></i>
+        </div>
+    </div>
+</div>
+
+<div class="lite-list-container" style="background: var(--bg-card); margin: 0 1rem; border-radius: 20px; overflow: hidden; border: 1px solid var(--border-color);">
+    <div class="lite-list-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem; border-bottom: 1px solid var(--border-color); background: var(--bg-main);">
+        <h3 style="margin:0; font-size: 1.1rem; color: var(--text-primary); font-weight: 700;">Historial de Aportes</h3>
+    </div>
+    <div id="lite-aportes-list" class="lite-list-content" style="min-height: 200px; max-height: 480px; overflow-y: auto;">
+        <div class="loading-state" style="padding: 3rem 0; text-align: center;">
+            <div class="loading-spinner"></div>
+            <p style="color: var(--text-secondary); margin-top: 1rem; font-size: 0.9rem;">Cargando aportes...</p>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,303 @@
+<div class="resumen-container">
+    <!-- Header del Módulo -->
+    <div class="resumen-header">
+        <div class="header-content">
+            <h1 class="page-title"><i class="fas fa-chart-line"></i> Resumen General</h1>
+            <p class="page-subtitle">Visualización consolidada de indicadores y resultados del sistema.</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="refreshResumenData()">
+                <i class="fas fa-sync-alt"></i> Actualizar Datos
+            </button>
+        </div>
+    </div>
+
+    <!-- Pestañas de Navegación del Módulo -->
+    <div class="resumen-tabs">
+        <button class="tab-btn active" onclick="switchResumenTab('creditos', this)">
+            <i class="fas fa-hand-holding-usd"></i> Créditos
+        </button>
+        <button class="tab-btn" onclick="switchResumenTab('polizas', this)">
+            <i class="fas fa-certificate"></i> Pólizas
+        </button>
+        <button class="tab-btn" onclick="switchResumenTab('bancos', this)">
+            <i class="fas fa-university"></i> Bancos
+        </button>
+        <button class="tab-btn" onclick="switchResumenTab('preferenciales', this)">
+            <i class="fas fa-star"></i> Preferenciales
+        </button>
+    </div>
+
+    <!-- Contenido Dinámico de Pestañas -->
+    <div id="resumen-content" class="resumen-tab-content">
+        <!-- Vista de Créditos (Default) -->
+        <div id="resumen-creditos" class="tab-pane active">
+            
+            <!-- KPIs Superiores -->
+            <div class="resumen-stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                        <i class="fas fa-hand-holding-usd"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Valor por Recuperar</span>
+                        <h2 class="stat-value" id="res-total-recuperar">$0.00</h2>
+                        <span class="stat-trend">Deuda global pendiente</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Recaudado (6m)</span>
+                        <h2 class="stat-value" id="res-total-6m">$0.00</h2>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(99, 102, 241, 0.1); color: #6366f1;">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Promedio Mensual</span>
+                        <h2 class="stat-value" id="res-promedio-mensual">$0.00</h2>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Créditos Activos</span>
+                        <h2 class="stat-value" id="res-creditos-activos">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficos y Tablas Lado a Lado -->
+            <div class="resumen-main-grid">
+                <!-- Top Socios (Top 5) -->
+                <div class="resumen-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-medal"></i> Top 5 Socios Activos (Pagadores 6m)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="top-socios-list" class="top-socios-list">
+                            <div class="loading-placeholder">Cargando socios...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recaudación Mensual (Lista Selector) -->
+                <div class="resumen-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-calendar-alt"></i> Selector Histórico Mensual</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="recaudacion-historia-list" class="recaudacion-historia">
+                            <div class="loading-placeholder">Analizando pagos...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Módulo de Evolución Detallado (Full Width) -->
+            <div class="resumen-card chart-full-width" style="margin-top: 1.5rem;">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3><i class="fas fa-chart-line"></i> Análisis de Evolución y Tendencia de Recaudación</h3>
+                    <div id="trend-indicator-box"></div>
+                </div>
+                <div class="card-body">
+                    <div id="evolucion-detallada-container" class="chart-container">
+                        <!-- Aquí se inyectará ApexCharts -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Placeholders para otras pestañas -->
+        <div id="resumen-polizas" class="tab-pane">
+            <div class="empty-placeholder">
+                <i class="fas fa-certificate"></i>
+                <h3>Resumen de Pólizas</h3>
+                <p>Módulo en desarrollo. Próximamente visualización de pólizas por vencer y montos acumulados.</p>
+            </div>
+        </div>
+
+        <div id="resumen-bancos" class="tab-pane">
+            <div class="empty-placeholder">
+                <i class="fas fa-university"></i>
+                <h3>Resumen de Bancos</h3>
+                <p>Módulo en desarrollo. Próximamente flujo de caja consolidado.</p>
+            </div>
+        </div>
+
+        <div id="resumen-preferenciales" class="tab-pane">
+            <div class="empty-placeholder">
+                <i class="fas fa-star"></i>
+                <h3>Resumen Preferenciales</h3>
+                <p>Módulo en desarrollo. Análisis de créditos VIP.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Estilos rápidos para el módulo de Resumen */
+.resumen-container {
+    padding: 1.5rem;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.resumen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.resumen-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.tab-btn {
+    padding: 0.75rem 1.25rem;
+    border: none;
+    background: none;
+    color: var(--gray-500);
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: var(--gray-900);
+}
+
+.tab-btn.active {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.resumen-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--gray-800);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.resumen-main-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+}
+
+.resumen-card {
+    background: var(--gray-800);
+    border-radius: 1rem;
+    box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--gray-900);
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+.top-socio-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    background: #242c36;
+    margin-bottom: 0.75rem;
+}
+
+.socio-rank {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #10b981;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.empty-placeholder {
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--gray-500);
+}
+
+.page-title,
+.stat-value,
+.card-header h3 {
+    color: var(--white);
+}
+
+.page-subtitle,
+.stat-label,
+.stat-trend {
+    color: var(--gray-500);
+}
+
+.empty-placeholder i {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.2;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>

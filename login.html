@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INKA CORP - Iniciar Sesión</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @keyframes subtle-pulse {
+            0% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 0 rgba(242, 187, 58, 0));
+            }
+
+            50% {
+                transform: scale(1.08);
+                filter: drop-shadow(0 0 15px rgba(242, 187, 58, 0.4));
+            }
+
+            100% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 0 rgba(242, 187, 58, 0));
+            }
+        }
+
+        /* UI Refinements */
+        .form-input::placeholder {
+            color: #a5b2c3 !important;
+            /* Higher contrast gray */
+            font-weight: 500;
+        }
+
+        .login-card {
+            background: #1f2833 !important;
+            border: 1px solid rgba(148, 163, 184, 0.22) !important;
+            box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45) !important;
+        }
+
+        .form-label {
+            color: #dbe3ee !important;
+        }
+
+        .form-input {
+            background: #25303d !important;
+            border: 1px solid rgba(148, 163, 184, 0.28) !important;
+            color: #edf2f8 !important;
+        }
+
+        .sidebar-subtitle {
+            color: #d1d9e6 !important;
+        }
+
+        .form-input:focus {
+            border: 2px solid #0B4E32 !important;
+            /* Solid Brand Green focus */
+            box-shadow: none !important;
+            /* Remove default shadow for solid look */
+            outline: none;
+        }
+
+        .btn.btn-primary {
+            font-weight: 800 !important;
+            /* Bold text */
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+
+<body
+    style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(to top, rgba(11, 78, 50, 0.2) 0%, #151b23 55%, #10151d 100%); background-attachment: fixed;">
+
+    <div class="login-card" style="width: 100%; max-width: 400px; padding: 1.5rem;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <img src="https://i.ibb.co/3mC22Hc4/inka-corp.png" alt="INKA CORP Logo"
+                style="width: 80px; height: 80px; animation: subtle-pulse 3s infinite ease-in-out;">
+            <h1 class="sidebar-title" style="margin-top: 1rem; font-size: 1.5rem;">INKA CORP</h1>
+            <p class="sidebar-subtitle">Sistema de Gestión</p>
+        </div>
+
+        <form id="login-form" class="login-form">
+            <div class="form-group">
+                <label for="email" class="form-label">Correo Electrónico</label>
+                <input type="email" id="email" class="form-input" placeholder="tu@email.com" required>
+            </div>
+            <div class="form-group">
+                <label for="password" class="form-label">Contraseña</label>
+                <div style="position: relative;">
+                    <input type="password" id="password" class="form-input" placeholder="••••••••" required
+                        style="padding-right: 40px;">
+                    <span id="togglePassword"
+                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--gold); z-index: 10;">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                </div>
+            </div>
+            <div id="login-error" class="inline-message error" style="display: none;"></div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                Iniciar Sesión
+            </button>
+        </form>
+
+        <div class="login-powered-by" style="margin-top: 1.25rem; text-align: center; opacity: 0.78;">
+            <span style="font-size: 0.65rem; letter-spacing: 1.4px; color: #97a8bc; display: block; margin-bottom: 0.35rem;">POWERED BY</span>
+            <picture>
+                <source srcset="img/LPwebp/lpsolutionswithe.webp" type="image/webp">
+                <img src="img/LPpng/lpsolutionswithe.png" alt="LP SOLUTIONS" style="height: 16px; width: auto;">
+            </picture>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('login-form');
+            const loginError = document.getElementById('login-error');
+
+            // Toggle Password Visibility
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+
+            if (togglePassword && passwordInput) {
+                togglePassword.addEventListener('click', function () {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+
+                    const icon = this.querySelector('i');
+                    if (type === 'password') {
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    } else {
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    }
+                });
+            }
+
+            // Inicializar Supabase
+            initSupabase();
+            const sb = getSupabaseClient();
+
+            // Listener para cambios de autenticación - esto detecta cuando la sesión se establece
+            sb.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN' && session) {
+                    // Sesión establecida correctamente, redirigir
+                    window.location.replace('index.html');
+                }
+            });
+
+            // Si ya hay sesión activa, redirigir inmediatamente
+            checkSession().then(({ isAuthenticated }) => {
+                if (isAuthenticated) {
+                    window.location.replace('index.html');
+                }
+            });
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const submitBtn = loginForm.querySelector('button[type="submit"]');
+
+                loginError.style.display = 'none';
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando...';
+
+                try {
+                    const { data, error } = await sb.auth.signInWithPassword({
+                        email: email,
+                        password: password
+                    });
+
+                    if (error) throw error;
+
+                    // Verificar perfil en tabla de usuarios
+                    const { data: userProfile, error: profileError } = await sb
+                        .from('ic_users')
+                        .select('*')
+                        .eq('id', data.user.id)
+                        .single();
+
+                    if (profileError || !userProfile) {
+                        throw new Error('Usuario no registrado en el sistema.');
+                    }
+
+                    // La redirección se manejará por onAuthStateChange
+                    // pero también forzamos aquí por si acaso
+                    window.location.replace('index.html');
+
+                } catch (error) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Iniciar Sesión';
+                    loginError.textContent = error.message || 'Error al iniciar sesión.';
+                    loginError.style.display = 'block';
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>

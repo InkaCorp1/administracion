@@ -1,0 +1,164 @@
+﻿
+<div class="simulador-container">
+    <div class="section-header">
+        <h2 class="section-title">
+            <i class="fas fa-calculator"></i>
+            <span>Simulador de Crédito</span>
+        </h2>
+    </div>
+
+    <!-- Toggle Tipo -->
+    <div class="sim-toggle-wrapper">
+        <div class="sim-toggle">
+            <button class="sim-toggle-btn active" id="btn-toggle-credito" onclick="switchSimType('credito')">
+                <i class="fas fa-hand-holding-usd"></i>
+                <span>Crédito</span>
+            </button>
+            <button class="sim-toggle-btn" id="btn-toggle-poliza" onclick="switchSimType('poliza')">
+                <i class="fas fa-certificate"></i>
+                <span>Póliza</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="lite-cards-container">
+        <!-- Formulario Principal -->
+        <div class="simulator-card main-form">
+            <div class="sim-input-group">
+                <label>Nombre del Socio (Opcional)</label>
+                <div class="input-container">
+                    <i class="fas fa-user-tag"></i>
+                    <input type="text" id="sim-nombre" placeholder="Nombre para el PDF">
+                </div>
+            </div>
+
+            <div class="sim-input-group">
+                <label id="label-capital">Capital Solicitado ($)</label>
+                <div class="input-container">
+                    <i class="fas fa-dollar-sign"></i>
+                    <input type="number" id="sim-capital" placeholder="0.00" value="1000">
+                </div>
+            </div>
+
+            <div class="sim-row">
+                <div class="sim-input-group">
+                    <label>Plazo (Meses)</label>
+                    <div class="input-container">
+                        <i class="fas fa-calendar-alt"></i>
+                        <input type="number" id="sim-plazo" value="12" min="1" max="60">
+                    </div>
+                </div>
+                <div class="sim-input-group">
+                    <label id="label-interes">Interés Mensual (%)</label>
+                    <div class="input-container">
+                        <i class="fas fa-percentage"></i>
+                        <input type="number" id="sim-interes" value="2.0" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Campos Crédito -->
+            <div id="fields-credito">
+                <div class="sim-row">
+                    <div class="sim-input-group">
+                        <label>Día de Pago</label>
+                        <select id="sim-dia-pago">
+                            <option value="10">Día 10</option>
+                            <option value="15" selected>Día 15</option>
+                            <option value="20">Día 20</option>
+                            <option value="25">Día 25</option>
+                        </select>
+                    </div>
+                    <div class="sim-input-group">
+                        <label>Fecha Desembolso</label>
+                        <input type="date" id="sim-fecha-desembolso">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Campos Póliza -->
+            <div id="fields-poliza" class="hidden">
+                <div class="sim-input-group">
+                    <label>Fecha de Inicio</label>
+                    <input type="date" id="sim-fecha-inicio">
+                </div>
+            </div>
+
+            <div class="sim-actions">
+                <button class="sim-btn-calculate" onclick="calcularSimulacionMobile()">
+                    <i class="fas fa-calculator"></i> Calcular Simulación
+                </button>
+                <button class="sim-btn-clear" onclick="limpiarSimuladorMobile()">
+                    <i class="fas fa-redo"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Card de Resultados Resumen -->
+        <div id="sim-result-container" class="sim-result-card hidden">
+            <div class="sim-result-header">
+                <i class="fas fa-chart-line"></i>
+                <span>Resumen Estimado</span>
+            </div>
+            
+            <div class="sim-result-main">
+                <div class="main-res-item">
+                    <span class="label">Cuota Sugerida</span>
+                    <span class="value" id="res-cuota-principal">$0.00</span>
+                    <span class="subtext">Incluye ahorro programado</span>
+                </div>
+            </div>
+
+            <div class="sim-result-grid-luxury">
+                <div class="sim-res-item">
+                    <span class="label">Capital</span>
+                    <span class="value" id="res-capital">$0.00</span>
+                </div>
+                <div class="sim-res-item">
+                    <span class="label">Gastos Admin</span>
+                    <span class="value" id="res-gastos">$0.00</span>
+                </div>
+                <div class="sim-res-item">
+                    <span class="label">Int. Totales</span>
+                    <span class="value" id="res-interes">$0.00</span>
+                </div>
+                <div class="sim-res-item highlight">
+                    <span class="label">Total Neto</span>
+                    <span class="value" id="res-total">$0.00</span>
+                </div>
+            </div>
+
+            <div class="sim-info-note">
+                <i class="fas fa-info-circle"></i>
+                <span id="res-nota-ahorro">El ahorro se devuelve al finalizar.</span>
+            </div>
+
+            <div class="sim-pdf-action">
+                <button class="sim-btn-pdf" id="btn-generar-pdf" onclick="generarPDFSimulacionMobile()">
+                    <i class="fas fa-file-pdf"></i> Generar Documento PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla de Amortización (Mobile Table) -->
+        <div id="sim-table-container" class="sim-table-card hidden">
+            <div class="sim-result-header">
+                <i class="fas fa-list-ol"></i>
+                <span>Tabla de Amortización</span>
+            </div>
+            <div class="sim-mobile-table-wrapper">
+                <table class="sim-mobile-table">
+                    <thead>
+                        <tr id="sim-table-head">
+                            <!-- JS populated -->
+                        </tr>
+                    </thead>
+                    <tbody id="sim-table-body">
+                        <!-- JS populated -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>

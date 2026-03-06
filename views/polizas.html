@@ -1,0 +1,301 @@
+<!-- Vista Administración de Pólizas - INKA CORP -->
+<div class="content-wrapper polizas-wrapper">
+    <!-- Hero Header del Módulo (Estilo Créditos) -->
+    <div class="creditos-hero">
+        <div class="hero-bg-creditos"></div>
+        <div class="hero-content-creditos">
+            <div class="hero-icon-creditos">
+                <i class="fas fa-certificate"></i>
+            </div>
+            <h1 class="hero-title-creditos">Pólizas e Inversiones</h1>
+            <p class="hero-subtitle-creditos">Gestión de Certificados de Inversión</p>
+        </div>
+
+        <!-- Stats integrados en hero -->
+        <div class="creditos-hero-stats">
+            <div class="creditos-hero-stat">
+                <span class="creditos-hero-value" id="stat-polizas-activos">0</span>
+                <span class="creditos-hero-label">Activas</span>
+            </div>
+            <div class="creditos-hero-stat warning">
+                <span class="creditos-hero-value" id="stat-polizas-vencimiento">0</span>
+                <span class="creditos-hero-label">Por Vencer</span>
+                <span id="stat-polizas-vencimiento-msg" class="stat-extra-info"></span>
+            </div>
+            <div class="creditos-hero-stat highlight">
+                <span class="creditos-hero-value" id="stat-polizas-total">$0</span>
+                <span class="creditos-hero-label">Total Invertido</span>
+            </div>
+            <div class="creditos-hero-stat">
+                <span class="creditos-hero-value" id="stat-polizas-interes">$0</span>
+                <span class="creditos-hero-label">Retorno Proyectado</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Herramientas de Filtros (Estilo Créditos) -->
+    <div class="creditos-toolbar">
+        <!-- Botón Sincronizar -->
+        <button id="btn-sync-polizas" class="toolbar-btn btn-sync" title="Sincronizar datos">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+
+        <!-- Separador -->
+        <div class="toolbar-separator"></div>
+
+        <!-- Botón Agrupar -->
+        <button id="btn-estado-filter" class="toolbar-btn active" title="Alternar Agrupamiento">
+            <i class="fas fa-layer-group"></i>
+        </button>
+
+        <!-- Ordenamiento Secundario -->
+        <button class="toolbar-btn" data-sort="socio" title="Ordenar por socio">
+            <span>Socio</span>
+            <i class="fas fa-sort-alpha-down"></i>
+        </button>
+        <button class="toolbar-btn" data-sort="fecha" title="Ordenar por fecha">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Vencimiento</span>
+        </button>
+        <button class="toolbar-btn active" data-sort="valor" title="Ordenar por valor">
+            <i class="fas fa-dollar-sign"></i>
+            <span>Valor</span>
+        </button>
+
+        <!-- Separador -->
+        <div class="toolbar-separator"></div>
+
+        <!-- Búsqueda -->
+        <div class="toolbar-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-polizas" class="search-input-toolbar"
+                placeholder="Buscar socio o certificado...">
+        </div>
+
+        <div class="toolbar-spacer"></div>
+
+        <!-- Botón Nuevo -->
+        <button type="button" id="btn-nueva-poliza" class="btn btn-primary"
+            style="height: 38px; border-radius: 0.5rem;">
+            <i class="fas fa-plus"></i>
+            <span class="hide-mobile">Nueva Póliza</span>
+        </button>
+    </div>
+
+    <!-- Contadores de Estado (Pills - Estilo Créditos) -->
+    <div class="estado-counters">
+        <div class="estado-counter active" data-estado="">
+            <span class="counter-label">TODAS</span>
+            <span class="counter-value" id="count-polizas-all">0</span>
+        </div>
+        <div class="estado-counter" data-estado="ACTIVO">
+            <span class="counter-label">ACTIVO</span>
+            <span class="counter-value success" id="count-polizas-activo">0</span>
+        </div>
+        <div class="estado-counter" data-estado="PAGADO">
+            <span class="counter-label">PAGADO</span>
+            <span class="counter-value" id="count-polizas-pagado">0</span>
+        </div>
+        <div class="estado-counter" data-estado="CAPITALIZADO">
+            <span class="counter-label">CAPITALIZADO</span>
+            <span class="counter-value" id="count-polizas-capitalizado">0</span>
+        </div>
+    </div>
+
+    <!-- Contenedor de Secciones dinámicas -->
+    <div id="polizas-sections-container" class="creditos-sections-container">
+        <!-- Se genera dinámicamente -->
+    </div>
+
+    <div id="polizas-empty" class="hidden" style="text-align: center; padding: 3rem;">
+        <i class="fas fa-certificate" style="font-size: 3rem; color: var(--gray-700); margin-bottom: 1rem;"></i>
+        <p style="color: var(--gray-500);">No se encontraron pólizas</p>
+    </div>
+    <!-- Modal Registrar/Editar Póliza -->
+    <div id="poliza-modal" class="modal hidden">
+        <div class="modal-backdrop" data-close-modal></div>
+        <div class="modal-card modal-redesign">
+            <div class="modal-header-clean"
+                style="justify-content: space-between; align-items: center; padding-bottom: 0;">
+                <h2 id="modal-poliza-title"
+                    style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--primary); padding-left: 1rem;">
+                    Nueva Póliza</h2>
+                <button class="modal-close-minimal" data-close-modal>
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body-custom">
+                <form id="form-poliza">
+                    <input type="hidden" id="poliza-id">
+
+                    <!-- SECCIÓN: SOCIO -->
+                    <div class="modal-section-v2">
+                        <span class="section-label-v2">Información del Socio</span>
+                        <div class="socio-selection-box">
+                            <div id="socio-avatar-display" class="socio-avatar-v2">
+                                <span id="socio-initials">NK</span>
+                            </div>
+                            <div class="socio-info-v2">
+                                <label class="field-label-v2" for="poliza-socio">Socio / Inversionista</label>
+                                <!-- Modo Edición -->
+                                <select id="poliza-socio" class="form-select-v2 mode-edit" required>
+                                    <option value="">Seleccione un socio...</option>
+                                </select>
+                                <!-- Modo Información -->
+                                <div id="display-socio-nombre" class="info-value-v2 mode-info hidden">Cargando...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN: DETALLES -->
+                    <div class="modal-section-v2">
+                        <span class="section-label-v2">Detalles de la Inversión</span>
+                        <div class="form-grid-v2">
+                            <div class="form-group-v2">
+                                <label class="field-label-v2" for="poliza-fecha">Fecha de Inicio</label>
+                                <div class="input-with-icon-v2 mode-edit">
+                                    <input type="date" id="poliza-fecha" class="form-control-v2" required>
+                                    <i class="fas fa-calendar-alt"></i>
+                                </div>
+                                <div id="display-fecha-inicio" class="info-value-v2 mode-info hidden">--/--/----</div>
+                            </div>
+                            <div class="form-group-v2">
+                                <label class="field-label-v2" for="poliza-plazo">Plazo (Meses)</label>
+                                <input type="number" id="poliza-plazo" class="form-control-v2 mode-edit" value="12"
+                                    required>
+                                <div id="display-plazo" class="info-value-v2 mode-info hidden">0 meses</div>
+                            </div>
+                            <div class="form-group-v2">
+                                <label class="field-label-v2" for="poliza-valor">Valor Inversión ($)</label>
+                                <div class="input-prefix-v2 mode-edit">
+                                    <span class="prefix">$</span>
+                                    <input type="number" id="poliza-valor" class="form-control-v2" step="0.01" min="0"
+                                        placeholder="0.00" required>
+                                </div>
+                                <div id="display-valor-inversion" class="info-value-v2 mode-info font-bold hidden"
+                                    style="color: var(--primary);">$0.00</div>
+                            </div>
+                            <div class="form-group-v2">
+                                <label class="field-label-v2" for="poliza-interes">Interés (%)</label>
+                                <div class="input-suffix-v2 mode-edit">
+                                    <input type="number" id="poliza-interes" class="form-control-v2" step="0.01"
+                                        value="10.00" required>
+                                    <span class="suffix">%</span>
+                                </div>
+                                <div id="display-interes" class="info-value-v2 mode-info hidden">0.00%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN: PROYECCIÓN -->
+                    <div class="projection-box-v2">
+                        <div class="projection-header">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Resultados Proyectados</span>
+                        </div>
+                        <div class="projection-content">
+                            <div class="projection-item">
+                                <span class="field-label-v2 orange">Fecha Vencimiento</span>
+                                <div id="display-vencimiento" class="display-value-v2 date">00/00/0000</div>
+                                <input type="hidden" id="poliza-vencimiento">
+                            </div>
+                            <div class="projection-item text-right">
+                                <span class="field-label-v2 orange">Valor Final ($)</span>
+                                <div id="display-valor-final" class="display-value-v2 price">$0.00</div>
+                                <input type="hidden" id="poliza-valor-final">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- NUEVA SECCIÓN: VALOR DEVENGADO (Solo Info) -->
+                    <div id="poliza-devengado-container" class="projection-box-v2 mode-info hidden"
+                        style="background: #FFFBEB; border-color: #FEF3C7; margin-top: -1rem;">
+                        <div class="projection-header" style="color: #D97706;">
+                            <i class="fas fa-hand-holding-usd"></i>
+                            <span>Valor Acumulado a la Fecha</span>
+                        </div>
+                        <div class="projection-content">
+                            <div class="projection-item">
+                                <span class="field-label-v2" style="color: #B45309;">Días Transcurridos</span>
+                                <div id="display-dias-pasados" class="display-value-v2">0 días</div>
+                            </div>
+                            <div class="projection-item text-right">
+                                <span class="field-label-v2" style="color: #B45309;">Valor Actual (Capital +
+                                    Int.)</span>
+                                <div id="display-valor-hoy" class="display-value-v2 price" style="color: #B45309;">$0.00
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ESTADO Y CERTIFICADO (Ocultos o en sección discreta) -->
+                    <div class="modal-section-v2 extra-fields">
+                        <div class="form-grid-v2">
+                            <div class="form-group-v2">
+                                <label class="field-label-v2" for="poliza-estado">Estado de la Póliza</label>
+                                <select id="poliza-estado" class="form-select-v2 mode-edit">
+                                    <option value="ACTIVO">Activo</option>
+                                    <option value="PAGADO">Pagado</option>
+                                    <option value="CAPITALIZADO">Capitalizado</option>
+                                </select>
+                                <div id="display-estado" class="mode-info hidden">
+                                    <span class="badge badge-poliza-activo">ACTIVO</span>
+                                </div>
+                            </div>
+                            <div class="form-group-v2">
+                                <label class="field-label-v2" for="poliza-certificado">Comprobante Firmado (URL)</label>
+                                <input type="url" id="poliza-certificado" class="form-control-v2 mode-edit"
+                                    placeholder="https://...">
+                                <div id="display-certificado-url" class="info-value-v2 mode-info hidden"
+                                    style="font-size: 0.8rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    -</div>
+                            </div>
+                        </div>
+
+                        <!-- Visor de Certificado -->
+                        <div id="poliza-certificado-preview-container" class="hidden"
+                            style="margin-top: 2rem; border-top: 2px dashed #E2E8F0; padding-top: 1.5rem;">
+                            <span class="field-label-v2" style="text-align: center; margin-bottom: 1rem;">COMPROBANTE
+                                ORIGINAL FIRMADO</span>
+                            <div class="certificado-img-wrapper"
+                                style="border-radius: 1.25rem; overflow: hidden; background: #fff; padding: 5px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #E2E8F0;">
+                                <img id="poliza-certificado-preview" src="" alt="Certificado"
+                                    style="max-width: 100%; height: auto; display: block; margin: 0 auto; min-height: 200px; object-fit: contain;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer-v2">
+                        <div id="poliza-actions-container" class="hidden"
+                            style="display: flex; gap: 0.75rem; flex: 1; align-items: center;">
+                            <button type="button" id="btn-pagar-poliza" class="btn-save-v2"
+                                style="background: #10B981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
+                                <i class="fas fa-check-double"></i>
+                                Pagar al Socio
+                            </button>
+                            <button type="button" id="btn-renovar-poliza" class="btn-save-v2"
+                                style="background: #3B82F6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
+                                <i class="fas fa-sync-alt"></i>
+                                Renovar Póliza
+                            </button>
+                            <!-- Botón WhatsApp -->
+                            <button type="button" id="btn-whatsapp-poliza" class="btn-save-v2"
+                                style="background: #25D366; padding: 0.75rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2); width: auto; height: 100%; display: flex; align-items: center; justify-content: center;"
+                                title="Enviar recordatorio WhatsApp">
+                                <i class="fab fa-whatsapp" style="font-size: 1.5rem; margin: 0;"></i>
+                            </button>
+                        </div>
+                        <button type="button" class="btn-cancel-v2" data-close-modal
+                            style="padding: 0.75rem 1.5rem; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 0.75rem; color: #64748B; font-weight: 700; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-times-circle"></i>
+                            Cerrar Ventana
+                        </button>
+                        <button type="submit" id="btn-guardar-poliza" class="btn-save-v2">
+                            <i class="fas fa-save"></i>
+                            Generar Nueva Póliza
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>

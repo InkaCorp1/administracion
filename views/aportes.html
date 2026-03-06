@@ -1,0 +1,263 @@
+<div class="content-wrapper aportes-wrapper">
+    <!-- Hero Header del Módulo -->
+    <div class="aportes-hero">
+        <div class="hero-bg-aportes"></div>
+        <div class="hero-content-aportes">
+            <div class="hero-icon-aportes">
+                <i class="fas fa-hand-holding-usd"></i>
+            </div>
+            <div class="hero-text-aportes">
+                <h1 class="hero-title-aportes">Aportes Semanales</h1>
+                <p class="hero-subtitle-aportes">Administración y registro de aportes</p>
+            </div>
+        </div>
+        <div class="hero-actions-aportes">
+            <button class="btn btn-primary" id="btn-nuevo-aporte">
+                <i class="fas fa-plus"></i> Registrar Aporte
+            </button>
+            <button class="btn btn-danger" id="btn-ver-pendientes" style="background: #a31111; border: none;">
+                <i class="fas fa-exclamation-triangle"></i> Pendientes
+            </button>
+            <button class="btn btn-outline-light" id="btn-ver-historial-completo">
+                <i class="fas fa-history"></i> Historial Completo
+            </button>
+            <button class="btn btn-primary" id="btn-reporte-general-aportes" title="Generar Informe PDF de Aportes"
+                style="background: #0b4e32; color: #f2bb3a;">
+                <i class="fas fa-file-pdf"></i> <span class="desktop-only">Informe PDF</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Panel de Estadísticas Rápidas -->
+    <div class="stats-panel mb-4">
+        <div class="stat-card">
+            <div class="stat-icon bg-soft-primary">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Socios con Aporte</span>
+                <span class="stat-value" id="stat-socios-count">--</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-soft-gold">
+                <i class="fas fa-coins"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Total de la Semana</span>
+                <span class="stat-value" id="stat-total-caja">$0.00</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-soft-success">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Aportes esta Semana</span>
+                <span class="stat-value" id="stat-week-count">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mini Historial -->
+    <div class="section-card">
+        <div class="section-card-header">
+            <h2 class="section-card-title">
+                <i class="fas fa-stream"></i>
+                Movimientos Recientes
+            </h2>
+            <div class="section-card-actions">
+                <span id="current-week-label" class="badge-pulsing">Semana Actual</span>
+            </div>
+        </div>
+        <div class="table-container">
+            <table class="premium-table" id="tabla-aportes-recientes">
+                <thead>
+                    <tr>
+                        <th>Socio</th>
+                        <th>Monto Aportado</th>
+                        <th>Fecha de Pago</th>
+                        <th>Estado Pago</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-aportes-recientes">
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="loading-state-simple">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Cargando aportes recientes...</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Registrar Aporte -->
+<div id="modal-aporte" class="modal hidden" style="display: none;">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card glass-modal" style="width: 500px; max-width: 95vw;">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-plus-circle text-gold"></i> Registrar Aporte</h3>
+            <button class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form id="form-aporte">
+            <div class="modal-body">
+                <div class="form-group-premium">
+                    <label for="aporte-socio-search">Socio / Aportante</label>
+                    <!-- Barra de búsqueda añadida (filtra el select de abajo) -->
+                    <div class="input-with-icon" style="margin-bottom: .5rem; position: relative;">
+                        <i class="fas fa-search"></i>
+                        <input id="aporte-socio-search" class="form-control-premium" type="text" placeholder="Buscar socio..." autocomplete="off" aria-label="Buscar socio" aria-autocomplete="list" aria-haspopup="listbox" aria-controls="aporte-socio-suggestions">
+
+                        <!-- Contenedor de sugerencias personalizado (solo aparece mientras se escribe) -->
+                        <div id="aporte-socio-suggestions" class="aporte-suggestions hidden" role="listbox" aria-label="Sugerencias de socios"></div>
+                    </div>
+
+                    <!-- Select eliminado del DOM por petición: mantenemos un input oculto para compatibilidad con el submit -->
+                    <input type="hidden" id="aporte-socio" name="aporte-socio" aria-hidden="true">
+
+                    <!-- Contenedor visual para mostrar el socio seleccionado (reemplaza la apariencia previa del select) -->
+                    <div id="aporte-socio-selected" class="selected-socio hidden" aria-live="polite" role="status"></div> 
+                    
+                    <!-- Estado de aportes de la semana -->
+                    <div id="aporte-status-semana" class="status-semana-banner hidden">
+                        <div class="status-semana-info">
+                            <span class="status-label">Estado de Semana <span id="label-semana-num">--</span>:</span>
+                            <span class="status-value" id="status-monto-pagado">$0.00</span> / <span id="status-monto-objetivo">$450.00</span>
+                        </div>
+                        <div id="status-comprobantes-previos" class="status-comprobantes">
+                            <!-- Miniaturas de comprobantes ya subidos -->
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group-premium">
+                        <label for="aporte-monto">Monto ($)</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                            <input type="number" id="aporte-monto" class="form-control-premium" step="0.01" min="0"
+                                required placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="form-group-premium">
+                        <label for="aporte-fecha">Fecha</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                            <input type="date" id="aporte-fecha" class="form-control-premium" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selector de Semana Manual -->
+                <div class="form-group-premium" id="container-override-week" style="margin-bottom: 20px;">
+                    <label for="aporte-week-override" style="font-size: 0.8rem; color: var(--gold); border-bottom: 1px solid rgba(242, 187, 58, 0.2); padding-bottom: 4px; display: block; margin-bottom: 10px;">Vincular a Semana Específica</label>
+                    <select id="aporte-week-override" class="form-control-premium" style="background: rgba(2, 6, 23, 0.3); border-color: rgba(242, 187, 58, 0.4); height: 45px; cursor: pointer; color-scheme: dark;">
+                        <option value="">-- Autodetectar por Fecha --</option>
+                    </select>
+                </div>
+
+                <div class="form-group-premium" style="display: flex; align-items: center; gap: 10px; background: rgba(242, 187, 58, 0.05); padding: 10px; border-radius: 8px;">
+                    <input type="checkbox" id="aporte-igualacion" style="width: 18px; height: 18px; cursor: pointer;">
+                    <label for="aporte-igualacion" style="margin: 0; cursor: pointer; color: #f2bb3a; font-weight: 600;">Es un pago de IGUALACIÓN / ATRASADO</label>
+                </div>
+                <div class="form-group-premium" style="display: flex; align-items: center; gap: 10px; background: rgba(242, 187, 58, 0.05); padding: 10px; border-radius: 8px; margin-top: 5px;">
+                    <input type="checkbox" id="aporte-multi-comprobante" style="width: 18px; height: 18px; cursor: pointer;">
+                    <label for="aporte-multi-comprobante" style="margin: 0; cursor: pointer; color: #f2bb3a; font-weight: 600;">Subir múltiples comprobantes</label>
+                </div>
+                <div class="form-group-premium">
+                    <label>Comprobante de Pago</label>
+                    <div class="upload-zone-premium" id="aporte-upload-container">
+                        <input type="file" id="aporte-comprobante" accept="image/*" hidden>
+                        <div id="aporte-preview" class="upload-preview-premium hidden" style="flex-wrap: wrap; gap: 10px; height: auto; min-height: 120px;">
+                            <!-- Las imágenes se cargarán dinámicamente aquí -->
+                        </div>
+                        <div id="aporte-upload-placeholder" class="upload-placeholder-premium">
+                            <div class="upload-icon-circle">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <p>Subir Comprobante</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close-modal>Cerrar</button>
+                <button type="submit" class="btn btn-primary btn-glow" id="btn-save-aporte">
+                    <i class="fas fa-check-circle"></i> Guardar Aporte
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Historial Completo -->
+<div id="modal-historial-aportes" class="modal hidden" style="display: none;">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card glass-modal" style="width: 950px; max-width: 95vw;">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-history text-gold"></i> Historial Completo</h3>
+            <button class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <div class="modal-body">
+            <!-- Filtros -->
+            <div class="filters-bar-premium mb-4">
+                <div class="filter-item">
+                    <label><i class="fas fa-user-circle mr-1"></i> Socio</label>
+                    <select id="filter-aporte-socio" class="form-control-premium">
+                        <option value="">Todos los socios</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label><i class="fas fa-calendar-alt mr-1"></i> Desde</label>
+                    <input type="date" id="filter-aporte-desde" class="form-control-premium">
+                </div>
+                <div class="filter-item">
+                    <label><i class="fas fa-calendar-check mr-1"></i> Hasta</label>
+                    <input type="date" id="filter-aporte-hasta" class="form-control-premium">
+                </div>
+                <div class="filter-action">
+                    <button id="btn-filter-aportes" class="btn btn-primary btn-round shadow-sm"
+                        title="Filtrar Resultados">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Resumen -->
+            <div id="summary-historial-aportes" class="summary-stats-banner mb-4" style="display: none;">
+                <div class="summary-stat-box">
+                    <span class="summary-stat-label">Total Acumulado</span>
+                    <span class="summary-stat-value" id="resumen-total-monto">$0.00</span>
+                </div>
+                <div class="summary-stat-separator"></div>
+                <div class="summary-stat-box">
+                    <span class="summary-stat-label">Registros</span>
+                    <span class="summary-stat-value" id="resumen-total-conteo">0</span>
+                </div>
+            </div>
+
+            <div class="table-container-scroll" style="max-height: 400px; overflow-y: auto;">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Socio</th>
+                            <th>Monto</th>
+                            <th class="text-center">Comp.</th>
+                            <th>Registro</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-historial-aportes">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close-modal>Cerrar</button>
+        </div>
+    </div>
+</div>

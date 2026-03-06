@@ -1,0 +1,916 @@
+/**
+ * INKA CORP - Estilos del Módulo de Pólizas
+ * Alineado 100% con el diseño del Módulo de Créditos
+ */
+
+.polizas-wrapper {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* ==========================================
+   HERO SECTION (Clonado de Créditos)
+   ========================================== */
+.polizas-wrapper .creditos-hero {
+    position: relative;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: 1.25rem;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-color);
+}
+
+.polizas-wrapper .hero-bg-creditos {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.polizas-wrapper .hero-content-creditos {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.polizas-wrapper .hero-icon-creditos {
+    width: 70px;
+    height: 70px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.polizas-wrapper .hero-icon-creditos i {
+    font-size: 2rem;
+    color: var(--gold);
+}
+
+.polizas-wrapper .hero-title-creditos {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--black); /* En el tema del usuario var(--black) es blanco */
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.5px;
+}
+
+/* Forzar blanco si var(--black) no es lo que esperamos */
+.polizas-wrapper .hero-title-creditos {
+    color: #FFFFFF !important;
+}
+
+.polizas-wrapper .hero-subtitle-creditos {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 600;
+}
+
+.polizas-wrapper .creditos-hero-stats {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.polizas-wrapper .creditos-hero-stat {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(10px);
+    padding: 1.25rem;
+    border-radius: 1rem;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all var(--transition-normal);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100px;
+}
+
+.polizas-wrapper .creditos-hero-stat:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.polizas-wrapper .creditos-hero-stat.warning {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.1);
+}
+
+.polizas-wrapper .creditos-hero-stat.highlight {
+    background: rgba(242, 187, 58, 0.25);
+    border-color: rgba(242, 187, 58, 0.1);
+}
+
+.polizas-wrapper .creditos-hero-value {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 0.25rem;
+}
+
+.polizas-wrapper .stat-extra-info {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-top: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    animation: pulseWarning 2s infinite;
+}
+
+@keyframes pulseWarning {
+    0% { opacity: 0.7; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 0.7; transform: scale(1); }
+}
+
+.polizas-wrapper .creditos-hero-stat.warning .creditos-hero-value {
+    color: #FBBF24;
+}
+
+.polizas-wrapper .creditos-hero-stat.highlight .creditos-hero-value {
+    color: var(--gold);
+}
+
+.polizas-wrapper .creditos-hero-label {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+/* ==========================================
+   TOOLBAR (Clonado de Créditos)
+   ========================================== */
+.polizas-wrapper .creditos-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    background: var(--gray-800);
+    padding: 1rem;
+    border-radius: 1rem;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
+}
+
+.polizas-wrapper .toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    min-height: 38px;
+    background: var(--gray-700);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    color: var(--gray-300);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.polizas-wrapper .toolbar-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #FFFFFF !important;
+}
+
+.polizas-wrapper .toolbar-btn.active i {
+    color: #FFFFFF !important;
+}
+
+.polizas-wrapper .toolbar-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--gray-900);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0 0.75rem;
+    height: 38px;
+    min-width: 250px;
+    flex: 1;
+}
+
+.polizas-wrapper .search-input-toolbar {
+    background: transparent;
+    border: none;
+    color: var(--white);
+    font-size: 0.85rem;
+    width: 100%;
+    margin-left: 0.5rem;
+    outline: none;
+}
+
+/* ==========================================
+   ESTADO COUNTERS (Pills Horizontales)
+   ========================================== */
+.polizas-wrapper .estado-counters {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.polizas-wrapper .estado-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    background: var(--gray-800);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.polizas-wrapper .estado-counter:hover {
+    background: var(--gray-700);
+    transform: translateY(-2px);
+}
+
+.polizas-wrapper .estado-counter.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px var(--primary-glow);
+    color: #FFFFFF !important;
+}
+
+.polizas-wrapper .estado-counter.active .counter-label,
+.polizas-wrapper .estado-counter.active i {
+    color: #FFFFFF !important;
+    font-weight: 700;
+}
+
+.polizas-wrapper .estado-counter.active .counter-value {
+    background: rgba(255, 255, 255, 0.25);
+    color: #FFFFFF !important;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.polizas-wrapper .counter-label {
+    color: var(--gray-400);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.polizas-wrapper .counter-value {
+    font-weight: 700;
+    color: var(--white);
+    padding: 0.1rem 0.4rem;
+    background: rgba(255,255,255,0.1);
+    border-radius: 0.25rem;
+}
+
+.polizas-wrapper .counter-value.success {
+    color: var(--success-light);
+    background: rgba(16, 185, 129, 0.15);
+}
+
+/* ==========================================
+   SECCIONES Y TABLAS (Estilo Créditos)
+   ========================================== */
+.polizas-wrapper .creditos-sections-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.polizas-wrapper .creditos-section {
+    background: var(--gray-900);
+    border-radius: 1rem;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.polizas-wrapper .section-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--section-bg, var(--gray-800));
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+}
+
+.polizas-wrapper .section-header-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.polizas-wrapper .section-title {
+    font-weight: 700;
+    color: var(--white);
+    font-size: 1.1rem;
+}
+
+.polizas-wrapper .section-count {
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.polizas-wrapper .section-table-container {
+    padding: 0;
+    overflow-x: auto;
+}
+
+.polizas-wrapper .creditos-section-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.polizas-wrapper .creditos-section-table th {
+    background: var(--gray-900);
+    color: var(--gray-400);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.polizas-wrapper .creditos-section-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--gray-300);
+    font-size: 0.9rem;
+}
+
+.polizas-wrapper .credito-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+}
+
+.polizas-wrapper .btn-icon {
+    background: var(--gray-800);
+    border: 1px solid var(--border-color);
+    color: var(--gray-300);
+    width: 32px;
+    height: 32px;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.polizas-wrapper .btn-icon:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+/* Modal and Form adjustments */
+.poliza-modal .modal-content {
+    background: var(--gray-900);
+    border: 1px solid var(--border-color);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .polizas-wrapper .creditos-hero {
+        padding: 1.5rem;
+    }
+    .polizas-wrapper .hero-title-creditos {
+        font-size: 1.75rem;
+    }
+    .polizas-wrapper .creditos-hero-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* ==========================================
+   FIXED HEADER CLONE (JavaScript controlled)
+   ========================================== */
+.fixed-header-clone {
+    background: var(--gray-900) !important;
+    border-bottom: 1px solid var(--border-color);
+    backdrop-filter: blur(20px);
+}
+
+.fixed-header-clone .section-sticky-header {
+    border-radius: 0;
+    margin: 0;
+    padding: 0.75rem 1rem;
+    background: transparent !important;
+}
+
+.fixed-header-clone .sticky-table-header {
+    background: transparent;
+}
+
+.fixed-header-clone .sticky-table-header thead th {
+    background: var(--gray-900);
+    padding: 0.75rem 1rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gray-400);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ==========================================
+   CELDAS ESPECIALES
+   ========================================== */
+.socio-info-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.socio-name {
+    font-weight: 600;
+    color: var(--white);
+}
+
+.socio-meta {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.vencimiento-cell.text-warning {
+    color: var(--warning) !important;
+    font-weight: 600;
+}
+
+/* Notorius Signal para Vencimientos */
+.vencimiento-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.vencimiento-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.vencimiento-tag.critical {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+    animation: flashCritical 2s infinite;
+}
+
+.vencimiento-tag.warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.vencimiento-tag.info {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+@keyframes flashCritical {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.text-warning {
+    color: var(--warning) !important;
+}
+
+.ml-1 {
+    margin-left: 0.25rem !important;
+}
+
+/* Badges */
+.badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.badge-poliza-activo {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10B981;
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.badge-poliza-pagado {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3B82F6;
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+.badge-poliza-capitalizado {
+    background: rgba(245, 158, 11, 0.15);
+    color: #F59E0B;
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+.btn-action {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
+    color: var(--gray-500);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-action:hover {
+    background: rgba(242, 187, 58, 0.15);
+    color: var(--gold);
+    transform: scale(1.1);
+}
+
+/* ==========================================
+   MODAL (Herencia de styles.css)
+   ========================================== */
+/* Los modales ya tienen estilos en styles.css, solo ajustar específicos si es necesario */
+
+/* ==========================================
+   MODAL REDESIGN (Estilo Captura)
+   ========================================== */
+.modal-redesign {
+    width: 95% !important;
+    max-width: 850px !important;
+    max-height: 92vh !important;
+    background: #FFFFFF !important;
+    border-radius: 1.5rem !important;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1) !important;
+    color: #1a1f2e !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-header-clean {
+    padding: 1.25rem 1.5rem 0.5rem;
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.modal-close-minimal {
+    background: none;
+    border: none;
+    color: #94A3B8;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.modal-close-minimal:hover {
+    color: #64748B;
+}
+
+.modal-body-custom {
+    padding: 0 2.5rem 2.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Custom Scrollbar for white modal */
+.modal-body-custom::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body-custom::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 10px;
+}
+
+.modal-body-custom::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.modal-body-custom::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.modal-section-v2 {
+    margin-bottom: 2rem;
+}
+
+.section-label-v2 {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    color: #94A3B8;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid #F1F5F9;
+    padding-bottom: 0.5rem;
+}
+
+.field-label-v2 {
+    display: block;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: #D97706; /* Naranja/Ocre del diseño */
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.5px;
+}
+
+.field-label-v2.orange {
+    color: #D97706;
+}
+
+/* Socio Selection */
+.socio-selection-box {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.5rem 0;
+}
+
+.socio-avatar-v2 {
+    width: 50px;
+    height: 50px;
+    background: #0B4E32;
+    color: #FFFFFF;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.socio-info-v2 {
+    flex: 1;
+}
+
+.form-select-v2, .form-control-v2 {
+    width: 100%;
+    border: 1px solid #E2E8F0;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    color: #334155;
+    background: #FFFFFF;
+    transition: all 0.2s;
+    height: 48px;
+}
+
+.form-select-v2:focus, .form-control-v2:focus {
+    outline: none;
+    border-color: #0B4E32;
+    box-shadow: 0 0 0 3px rgba(11, 78, 50, 0.05);
+}
+
+/* Informative Mode Styles */
+.info-value-v2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1e293b;
+    padding: 0.5rem 0;
+    min-height: 24px;
+}
+
+.mode-info.hidden, .mode-edit.hidden {
+    display: none !important;
+}
+
+.font-bold {
+    font-weight: 800 !important;
+}
+
+/* Grid */
+.form-grid-v2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+/* Projection Box */
+.projection-box-v2 {
+    background: #F1F7FF; /* Azul muy claro del diseño */
+    border: 1px solid #EBF4FF;
+    border-radius: 1.25rem;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+}
+
+.projection-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #2563EB;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+}
+
+.projection-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.display-value-v2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.display-value-v2.price {
+    font-size: 2.5rem;
+    color: #0B4E32;
+    line-height: 1;
+}
+
+.display-value-v2.date {
+    font-size: 1.75rem;
+}
+
+/* Footer */
+.modal-footer-v2 {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.btn-cancel-v2 {
+    background: none;
+    border: none;
+    color: #1E293B;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.btn-save-v2 {
+    background: #0B4E32;
+    color: #FFFFFF;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(11, 78, 50, 0.2);
+    transition: all 0.2s;
+}
+
+.btn-save-v2:hover {
+    background: #073D27;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(11, 78, 50, 0.3);
+}
+
+.extra-fields {
+    background: #F8FAFC;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    margin-top: 2rem;
+}
+
+/* Helpers iconos */
+.input-with-icon-v2, .input-prefix-v2, .input-suffix-v2 {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-icon-v2 i {
+    position: absolute;
+    right: 1rem;
+    color: #94A3B8;
+}
+
+.input-prefix-v2 .prefix, .input-suffix-v2 .suffix {
+    position: absolute;
+    color: #94A3B8;
+    font-weight: 500;
+}
+
+.input-prefix-v2 .prefix { left: 1rem; }
+.input-suffix-v2 .suffix { right: 1rem; }
+
+.input-prefix-v2 input { padding-left: 2rem; }
+.input-suffix-v2 input { padding-right: 2rem; }
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+@media (max-width: 991px) {
+    .polizas-toolbar {
+        gap: 0.75rem;
+        padding: 1rem;
+    }
+
+    .toolbar-spacer {
+        display: none;
+    }
+
+    .search-wrapper {
+        width: 100%;
+        order: 10;
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .polizas-wrapper .creditos-hero {
+        border-radius: 0 0 1.25rem 1.25rem;
+        padding: 1.5rem 1rem 1rem;
+        margin-top: -1rem;
+        margin-left: -1rem;
+        margin-right: -1rem;
+    }
+    .polizas-wrapper .hero-title-creditos { font-size: 1.8rem; }
+    .polizas-wrapper .hero-icon-creditos { width: 60px; height: 60px; margin-bottom: 0.5rem; }
+    .polizas-wrapper .hero-icon-creditos i { font-size: 1.5rem; }
+    .polizas-wrapper .creditos-hero-stats { 
+        gap: 0.75rem; 
+        grid-template-columns: 1fr 1fr; 
+        padding-bottom: 0.5rem;
+    }
+    .polizas-wrapper .creditos-hero-stat { 
+        padding: 0.75rem; 
+        min-height: 80px; 
+    }
+    .polizas-wrapper .creditos-hero-value { font-size: 1.25rem; }
+    .polizas-wrapper .hero-content-creditos { margin-bottom: 1rem; }
+    
+    .creditos-toolbar {
+        flex-wrap: wrap;
+        padding: 0.75rem;
+    }
+    
+    .toolbar-search {
+        min-width: 100% !important;
+        margin-top: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .polizas-wrapper .creditos-hero-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

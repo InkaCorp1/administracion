@@ -1,0 +1,656 @@
+/* Estilos para Gastos Administrativos - INKA CORP */
+
+.administrativos-hero {
+    position: relative;
+    padding: 3rem 2rem;
+    border-radius: 1.5rem;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0b4e32 0%, #146e3a 50%, #0f5835 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    box-shadow: 0 10px 40px rgba(11, 78, 50, 0.3), 0 0 0 1px rgba(242, 187, 58, 0.2);
+    border: 1px solid rgba(242, 187, 58, 0.3);
+}
+
+.hero-bg-administrativos {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('https://www.transparenttextures.com/patterns/cubes.png');
+    opacity: 0.15;
+    pointer-events: none;
+}
+
+.hero-content-administrativos {
+    position: relative;
+    z-index: 1;
+}
+
+.hero-icon-administrativos {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, rgba(242, 187, 58, 0.3) 0%, rgba(242, 187, 58, 0.1) 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(242, 187, 58, 0.4);
+}
+
+.hero-title-administrativos {
+    font-size: 2.2rem;
+    font-weight: 900;
+    margin: 0;
+    letter-spacing: -0.8px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.hero-subtitle-administrativos {
+    font-size: 1.05rem;
+    opacity: 0.95;
+    margin: 0.5rem 0 0 0;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.administrativos-hero-stats {
+    display: flex;
+    gap: 2.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.adm-hero-stat {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.adm-hero-stat:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.adm-hero-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.adm-hero-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    opacity: 0.85;
+    margin-top: 0.25rem;
+}
+
+.btn-pdf {
+    background: #0b4e32 !important;
+    color: white !important;
+    font-weight: 700 !important;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-pdf:hover {
+    background: #083d26 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(11, 78, 50, 0.2);
+}
+
+.administrativos-toolbar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    background: var(--black-soft);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color);
+}
+
+.search-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 250px;
+}
+
+.search-wrapper i {
+    position: absolute;
+    left: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 1.1rem;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.85rem 1.25rem 0.85rem 3rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 0.75rem;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: #ffffff;
+    color: #334155;
+    font-weight: 500;
+}
+
+.search-input::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #0b4e32;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(11, 78, 50, 0.1);
+}
+
+/* Barra de búsqueda estilo toolbar (como pólizas) */
+.administrativos-wrapper .toolbar-search {
+    display: flex;
+    align-items: center;
+    background: var(--gray-700);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0 0.75rem;
+    height: 38px;
+    flex: 1;
+    min-width: 200px;
+    max-width: 320px;
+    transition: all 0.2s ease;
+}
+
+.administrativos-wrapper .toolbar-search:focus-within {
+    border-color: #0b4e32;
+    box-shadow: 0 0 0 2px rgba(11, 78, 50, 0.1);
+}
+
+.administrativos-wrapper .toolbar-search i {
+    color: var(--gray-400);
+    margin-right: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.administrativos-wrapper .search-input-toolbar {
+    background: transparent;
+    border: none;
+    color: var(--white);
+    font-size: 0.9rem;
+    width: 100%;
+    outline: none;
+}
+
+.administrativos-wrapper .search-input-toolbar::placeholder {
+    color: var(--gray-500);
+}
+
+
+/* Estilos de tabla premium para gastos */
+.adm-table-container {
+    background: var(--black-soft);
+    border-radius: 1rem;
+    padding: 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.adm-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+.adm-table th {
+    text-align: left;
+    padding: 1.25rem 1.5rem;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-bottom: 2px solid #0b4e32;
+    background: var(--gray-800);
+}
+
+.adm-table td {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    color: #ffffff;
+}
+
+.adm-table tr:hover {
+    background: rgba(11, 78, 50, 0.08);
+}
+
+.expense-row {
+    transition: all 0.2s ease;
+}
+
+.expense-id {
+    display: block;
+    font-family: 'Inter', monospace;
+    font-size: 0.7rem;
+    color: #94a3b8;
+    margin-top: 0.2rem;
+}
+
+.expense-amount {
+    font-weight: 800;
+    color: #10B981;
+    font-size: 1.15rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.expense-reason {
+    font-weight: 600;
+    color: var(--gray-300);
+    max-width: 400px;
+    line-height: 1.5;
+}
+
+.expense-date {
+    font-weight: 600;
+    color: var(--gray-400);
+    font-size: 0.9rem;
+}
+
+.btn-view-photo {
+    background: var(--gray-800);
+    color: #10B981;
+    border: 1px solid var(--border-color);
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-view-photo:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(11, 78, 50, 0.4);
+}
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(11, 78, 50, 0.3);
+}
+
+.btn-view-photo i {
+    font-size: 1rem;
+}
+
+/* Modal especificidades */
+.upload-area-premium {
+    width: 100%;
+    margin-top: 1rem;
+    border: 2px dashed var(--primary);
+    border-radius: 1.5rem;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gray-800);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    padding: 1.5rem;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.upload-area-premium:hover {
+    background: var(--gray-700);
+    border-color: var(--primary-light);
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+
+.img-preview-container img {
+    max-width: 100%;
+    max-height: 300px;
+    display: block;
+}
+
+.btn-delete-expense {
+    color: #dc2626;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border: 1.5px solid #fecaca;
+    padding: 0.65rem;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+}
+
+.btn-delete-expense:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: white;
+    border-color: #dc2626;
+    transform: scale(1.15) rotate(5deg);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+/* Fix para botón de carga de imagen que solapa texto e icono */
+#modal-gasto-adm .btn-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #0b4e32;
+    width: auto;
+    height: auto;
+    padding: 0.5rem;
+    box-shadow: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 1rem;
+}
+
+#modal-gasto-adm .btn-icon:hover {
+    transform: translateY(-2px);
+}
+
+#modal-gasto-adm .btn-icon i {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, rgba(11, 78, 50, 0.1) 0%, rgba(11, 78, 50, 0.05) 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(11, 78, 50, 0.1);
+}
+
+#modal-gasto-adm .btn-camera i {
+    background: linear-gradient(135deg, rgba(242, 187, 58, 0.2) 0%, rgba(242, 187, 58, 0.1) 100%);
+    color: #d3900d;
+    box-shadow: 0 4px 12px rgba(242, 187, 58, 0.2);
+}
+
+#modal-gasto-adm .btn-camera:hover i {
+    background: linear-gradient(135deg, #f2bb3a 0%, #d3900d 100%);
+    color: white;
+    box-shadow: 0 8px 20px rgba(242, 187, 58, 0.4);
+    transform: scale(1.1);
+}
+
+#modal-gasto-adm .btn-gallery i {
+    background: linear-gradient(135deg, rgba(20, 110, 58, 0.2) 0%, rgba(11, 78, 50, 0.1) 100%);
+    color: #0b4e32;
+    box-shadow: 0 4px 12px rgba(11, 78, 50, 0.2);
+}
+
+#modal-gasto-adm .btn-gallery:hover i {
+    background: linear-gradient(135deg, #146e3a 0%, #0b4e32 100%);
+    color: white;
+    box-shadow: 0 8px 20px rgba(11, 78, 50, 0.4);
+    transform: scale(1.1);
+}
+
+.upload-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin: 1rem 0 0 0;
+    padding: 0;
+    width: 100%;
+}
+
+/* Estilos para Inputs en Modal Administrativos */
+#modal-gasto-adm .input-premium {
+    background: var(--gray-800) !important;
+    border: 2px solid var(--border-color) !important;
+    color: #ffffff !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+#modal-gasto-adm .input-premium:focus {
+    border-color: var(--primary-light) !important;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1), 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    transform: translateY(-1px);
+}
+
+#modal-gasto-adm label {
+    color: var(--gray-400) !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 0.5rem !important;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#modal-gasto-adm label i {
+    color: var(--primary-light);
+    font-size: 1rem;
+}
+
+.comprobante-viewer {
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Fix para vista previa de comprobante en modal de gastos */
+#adm-preview-container {
+    position: relative;
+    width: 100%;
+    max-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+#adm-preview {
+    width: 100%;
+    height: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    display: block;
+    border-radius: 0.5rem;
+}
+
+.date-filters {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    background: var(--gray-800);
+    padding: 0.5rem 1rem;
+    border-radius: 0.8rem;
+    border: 1px solid var(--border-color);
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--gray-400);
+    text-transform: uppercase;
+}
+
+.input-premium.sm {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.8rem !important;
+    min-width: 130px;
+}
+
+#btn-adm-ver-todo.hidden {
+    display: none;
+}
+
+/* ========================================
+   ESTILOS PREMIUM PARA MODAL DE GASTOS
+   ======================================== */
+
+/* Header del modal con gradiente verde Inka */
+#modal-gasto-adm .modal-header-premium {
+    background: linear-gradient(135deg, #0b4e32 0%, #146e3a 100%);
+    padding: 1.5rem 2rem;
+    border-radius: 1rem 1rem 0 0;
+    border-bottom: 3px solid #f2bb3a;
+}
+
+#modal-gasto-adm .modal-title-premium {
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+#modal-gasto-adm .modal-close-premium {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+#modal-gasto-adm .modal-close-premium:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg) scale(1.1);
+}
+
+/* Body del modal */
+#modal-gasto-adm .modal-body-premium {
+    padding: 2rem;
+    background: var(--bg-secondary);
+}
+
+/* Footer del modal con mejor espaciado */
+#modal-gasto-adm .modal-footer-premium {
+    padding: 1.5rem 2rem;
+    background: var(--black);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+#modal-gasto-adm .btn-primary {
+    background: linear-gradient(135deg, #0b4e32 0%, #146e3a 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(11, 78, 50, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#modal-gasto-adm .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(11, 78, 50, 0.4);
+}
+
+#modal-gasto-adm .btn-secondary {
+    background: transparent;
+    color: var(--gray-400);
+    border: 2px solid var(--border-color);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#modal-gasto-adm .btn-secondary:hover {
+    background: var(--gray-800);
+    border-color: var(--gray-600);
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* Form row para campos lado a lado */
+#modal-gasto-adm .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    #modal-gasto-adm .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .administrativos-hero-stats {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .hero-title-administrativos {
+        font-size: 1.5rem;
+    }
+
+    .date-filters {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

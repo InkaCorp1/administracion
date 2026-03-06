@@ -1,0 +1,302 @@
+<div class="section-header">
+    <h2 class="section-title">
+        <i class="fas fa-cash-register"></i>
+        <span>Control de Caja</span>
+    </h2>
+    <div id="caja-status-badge" class="section-badge status-closed">
+        <i class="fas fa-lock"></i> CAJA CERRADA
+    </div>
+</div>
+
+    <!-- Alerta de Transferencia Entrante -->
+    <div id="transfer-alert-mobile" class="transfer-alert-v2 hidden pulse" onclick="showAceptarTransferModal()">
+        <div class="alert-icon"><i class="fas fa-hand-holding-usd"></i></div>
+        <div class="alert-content">
+            <strong>Transferencia Pendiente</strong>
+            <span>¡Tienes dinero por recibir! Toca aquí para aceptar.</span>
+        </div>
+        <div class="alert-arrow"><i class="fas fa-chevron-right"></i></div>
+    </div>
+
+    <!-- Acciones Principales -->
+    <div class="caja-main-actions">
+        <button id="btn-abrir-caja" class="mobile-btn primary" onclick="showAperturaModal()">
+            <i class="fas fa-door-open"></i> ABRIR CAJA PARA TRABAJAR
+        </button>
+        <button id="btn-cerrar-caja" class="mobile-btn danger hidden" onclick="showCierreModal()">
+            <i class="fas fa-door-closed"></i> CERRAR CAJA Y ARCHIVAR
+        </button>
+    </div>
+
+    <!-- Indicadores Rï¿½pidos -->
+    <div class="caja-summary-grid">
+        <div class="summary-card income">
+            <i class="fas fa-arrow-down"></i>
+            <div class="summary-info">
+                <span>Ingresos</span>
+                <strong id="caja-total-ingresos">$0.00</strong>
+            </div>
+        </div>
+        <div class="summary-card expense">
+            <i class="fas fa-arrow-up"></i>
+            <div class="summary-info">
+                <span>Egresos</span>
+                <strong id="caja-total-egresos">$0.00</strong>
+            </div>
+        </div>
+        <div class="summary-card balance">
+            <i class="fas fa-wallet"></i>
+            <div class="summary-info">
+                <span>Saldo Actual</span>
+                <strong id="caja-saldo-actual">$0.00</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros Temporales -->
+    <div class="mobile-filter-bar">
+        <div class="filter-dates">
+            <div class="mobile-input-group">
+                <label>Desde</label>
+                <input type="date" id="filter-caja-inicio" class="mobile-input-v2">
+            </div>
+            <div class="mobile-input-group">
+                <label>Hasta</label>
+                <input type="date" id="filter-caja-fin" class="mobile-input-v2">
+            </div>
+            <button class="mobile-refresh-btn" onclick="loadCajaData()">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Manual Actions (Solo si caja abierta) -->
+    <div id="caja-manual-actions" class="caja-manual-row hidden">
+        <button class="manual-btn income" onclick="showMovimientoManualModal('INGRESO')">
+            <i class="fas fa-plus-circle"></i>
+            <span>INGRESO</span>
+        </button>
+        <button class="manual-btn transfer" onclick="showTransferModalMobile()">
+            <i class="fas fa-exchange-alt"></i>
+            <span>TRANSFERIR</span>
+        </button>
+        <button class="manual-btn expense" onclick="showMovimientoManualModal('EGRESO')">
+            <i class="fas fa-minus-circle"></i>
+            <span>EGRESO</span>
+        </button>
+    </div>
+
+    <!-- Lista de Movimientos -->
+    <div class="mobile-section-title">
+        <h3 id="caja-movimientos-title">Movimientos Recientes</h3>
+    </div>
+    
+    <div id="caja-movimientos-container" class="mobile-list-container">
+        <div class="loading-inline">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Cargando movimientos...</span>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     MODALES (LITE MOBILE VERSION)
+     ========================================== -->
+
+<!-- Modal Apertura -->
+<div id="modal-apertura-caja" class="modal-overlay">
+    <div class="modal-content lite-modal">
+        <div class="modal-header lite-header">
+            <h3><i class="fas fa-door-open"></i> Apertura de Caja</h3>
+            <button class="modal-close" onclick="closeLiteModal('modal-apertura-caja')"><i class="fas fa-times"></i></button>
+        </div>
+        <form onsubmit="handleAperturaCaja(event)" class="lite-form">
+            <div class="modal-body lite-body">
+                <div class="mobile-form-group">
+                    <label>Saldo Inicial de Cuentas</label>
+                    <input type="number" step="0.01" name="saldo_inicial" value="0.00" class="mobile-input-v2" required>
+                    <p class="form-help">Ingrese el total disponible en el sistema al iniciar.</p>
+                </div>
+                <div class="mobile-form-group">
+                    <label>Observaciones</label>
+                    <textarea name="observaciones" class="mobile-input-v2" rows="2" placeholder="Opcional..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer lite-footer">
+                <button type="submit" class="lite-btn success">
+                    <i class="fas fa-check-circle"></i> CONFIRMAR APERTURA
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Movimiento Manual -->
+<div id="modal-movimiento-manual" class="modal-overlay">
+    <div class="modal-content lite-modal">
+        <div class="modal-header lite-header">
+            <h3 id="manual-modal-title">Movimiento de Caja</h3>
+            <button class="modal-close" onclick="closeLiteModal('modal-movimiento-manual')"><i class="fas fa-times"></i></button>
+        </div>
+        <form onsubmit="handleMovimientoManual(event)" class="lite-form">
+            <input type="hidden" id="manual-tipo" name="tipo_movimiento">
+            <input type="hidden" name="metodo_pago" value="TRANSFERENCIA">
+            <div class="modal-body lite-body">
+                <div class="mobile-form-group">
+                    <label>Monto</label>
+                    <input type="number" step="0.01" name="monto" class="mobile-input-v2" placeholder="0.00" required>
+                </div>
+                <div class="mobile-form-group">
+                    <label>Descripción / Motivo</label>
+                    <input type="text" name="descripcion" class="mobile-input-v2" placeholder="Ej: Pago de servicios..." required>
+                </div>
+                <div class="mobile-form-group" style="margin-top: 1.5rem;">
+                    <label>Comprobante o Evidencia</label>
+                    <div class="mobile-upload-options">
+                        <div class="upload-option" onclick="document.getElementById('manual-comprobante-camera').click()">
+                            <div class="option-icon camera"><i class="fas fa-camera"></i></div>
+                            <span>Cámara</span>
+                        </div>
+                        <div class="upload-option" onclick="document.getElementById('manual-comprobante-gallery').click()">
+                            <div class="option-icon gallery"><i class="fas fa-image"></i></div>
+                            <span>Galería</span>
+                        </div>
+                    </div>
+                    <input type="file" id="manual-comprobante-camera" accept="image/*" capture="environment" class="hidden" onchange="previewMobileImage(event, 'preview-box')">
+                    <input type="file" id="manual-comprobante-gallery" accept="image/*" class="hidden" onchange="previewMobileImage(event, 'preview-box')">
+                    <div id="preview-box" class="mobile-preview-box hidden">
+                        <img id="preview-img" src="">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer lite-footer">
+                <button type="submit" id="btn-save-manual" class="lite-btn primary">
+                    <i class="fas fa-save"></i> REGISTRAR EN CAJA
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Cierre -->
+<div id="modal-cierre-caja" class="modal-overlay">
+    <div class="modal-content lite-modal">
+        <div class="modal-header lite-header">
+            <h3><i class="fas fa-door-closed"></i> Arqueo y Cierre</h3>
+            <button class="modal-close" onclick="closeLiteModal('modal-cierre-caja')"><i class="fas fa-times"></i></button>
+        </div>
+        <form onsubmit="handleCierreCaja(event)" class="lite-form">
+            <div class="modal-body lite-body">
+                <div class="cierre-info-box">
+                    <span>Saldo Previsto en Sistema:</span>
+                    <strong id="cierre-saldo-previsto">$0.00</strong>
+                </div>
+                <div class="mobile-form-group">
+                    <label>Saldo Real en Cuentas</label>
+                    <input type="number" step="0.01" name="saldo_final" class="mobile-input-v2" placeholder="0.00" required>
+                    <p class="form-help">Ingrese el saldo total físico o bancario real al finalizar el turno.</p>
+                </div>
+                <div class="mobile-form-group">
+                    <label>Observaciones / Novedades</label>
+                    <textarea name="observaciones" class="mobile-input-v2" rows="2" placeholder="¿Alguna novedad con el dinero?"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer lite-footer">
+                <button type="submit" class="lite-btn danger">
+                    <i class="fas fa-lock"></i> REALIZAR ARQUEO Y CERRAR
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Transferencia (Enviar) -->
+<div id="modal-transferencia-mobile" class="modal-overlay">
+    <div class="modal-content lite-modal">
+        <div class="modal-header lite-header">
+            <h3 class="modal-title"><i class="fas fa-exchange-alt"></i> Transferir Dinero</h3>
+            <button class="modal-close" onclick="closeLiteModal('modal-transferencia-mobile')"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="form-transferencia-mobile" onsubmit="handleEnviarTransferenciaMobile(event)" class="lite-form">
+            <div class="modal-body lite-body">
+                <div class="mobile-balance-banner">
+                    <span>Tu Saldo:</span>
+                    <strong id="transfer-current-balance-mobile">$0.00</strong>
+                </div>
+
+                <div class="mobile-form-group">
+                    <label>Compañero Destinatario</label>
+                    <select id="transfer-destino-mobile" class="mobile-input-v2" required>
+                        <option value="">Cargando usuarios...</option>
+                    </select>
+                </div>
+
+                <div class="mobile-form-group">
+                    <label>Monto a Enviar ($)</label>
+                    <input type="number" id="transfer-monto-mobile" step="0.01" min="0.01" class="mobile-input-v2" placeholder="0.00" required>
+                    <p id="transfer-error-mobile" class="text-danger hidden">Excede tu saldo actual</p>
+                </div>
+
+                <div class="mobile-form-group">
+                    <label>Motivo / Observación</label>
+                    <input type="text" id="transfer-descripcion-mobile" class="mobile-input-v2" placeholder="Ej: Ajuste de caja...">
+                </div>
+
+                <div class="mobile-form-group">
+                    <label>Evidencia (Opcional)</label>
+                    <div class="mobile-upload-options">
+                        <div class="upload-option" onclick="document.getElementById('transfer-file-camera-mobile').click()">
+                            <div class="option-icon camera"><i class="fas fa-camera"></i></div>
+                            <span>Cámara</span>
+                        </div>
+                        <div class="upload-option" onclick="document.getElementById('transfer-file-gallery-mobile').click()">
+                            <div class="option-icon gallery"><i class="fas fa-image"></i></div>
+                            <span id="transfer-file-name-mobile">Galería</span>
+                        </div>
+                    </div>
+                    <input type="file" id="transfer-file-camera-mobile" accept="image/*" capture="environment" class="hidden" onchange="updateMobileFileName(this, 'transfer-file-name-mobile')">
+                    <input type="file" id="transfer-file-gallery-mobile" accept="image/*" class="hidden" onchange="updateMobileFileName(this, 'transfer-file-name-mobile')">
+                </div>
+            </div>
+            <div class="modal-footer lite-footer">
+                <button type="submit" id="btn-confirm-transfer-mobile" class="lite-btn primary">
+                    <i class="fas fa-paper-plane"></i> ENVIAR DINERO
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Recibir Transferencia (Aceptar) -->
+<div id="modal-aceptar-transferencia-mobile" class="modal-overlay">
+    <div class="modal-content lite-modal">
+        <div class="modal-header lite-header">
+            <h3 class="modal-title"><i class="fas fa-hand-holding-usd"></i> Transferencia Recibida</h3>
+            <button class="modal-close" onclick="closeLiteModal('modal-aceptar-transferencia-mobile')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body lite-body">
+            <div class="transfer-info-card-mobile">
+                <div class="info-row-mobile"><span>Origen:</span> <strong id="recibir-origen-mobile">---</strong></div>
+                <div class="info-row-mobile"><span>Monto:</span> <strong id="recibir-monto-mobile" class="text-success">$0.00</strong></div>
+                <div class="info-row-mobile"><span>Motivo:</span> <p id="recibir-descripcion-mobile" class="italic">---</p></div>
+            </div>
+            
+            <div id="recibir-comprobante-box-mobile" class="hidden">
+                <p class="form-label-mobile">Evidencia adjunta:</p>
+                <img id="recibir-img-mobile" src="" class="img-preview-mobile" onclick="window.open(this.src, '_blank')">
+            </div>
+
+            <div class="mobile-alert-info">
+                <i class="fas fa-info-circle"></i> Al aceptar, el monto entrará a tu balance actual.
+            </div>
+        </div>
+        <div class="modal-footer lite-footer split">
+            <button type="button" class="lite-btn danger" onclick="handleProcesarTransferenciaMobile('RECHAZADA')">
+                <i class="fas fa-times"></i> RECHAZAR
+            </button>
+            <button type="button" class="lite-btn success" onclick="handleProcesarTransferenciaMobile('ACEPTADA')">
+                <i class="fas fa-check"></i> ACEPTAR
+            </button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,535 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>INKA CORP - Móvil</title>
+    <meta name="description" content="Sistema de gestión INKA CORP - Vista Móvil">
+    <meta name="theme-color" content="#0B4E32">
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="../manifest.json">
+    <link rel="apple-touch-icon" href="../img/icon-192.png">
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CSS Base -->
+    <link rel="stylesheet" href="css/mobile-styles.css">
+    
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    
+    <!-- Core Config/JS -->
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        /**
+         * REDIRECCIÓN AGRESIVA A ESCRITORIO
+         * Evita que un usuario en PC vea la versión móvil recortada.
+         */
+        function forceDesktopRedirect() {
+            const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isLargeScreen = window.innerWidth > 850;
+
+            // Si es un PC (No Mobile UA) y la pantalla es grande
+            if (!isMobileUA && isLargeScreen) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const view = urlParams.get('view');
+                
+                // Módulos que existen en PC
+                const pcModules = ['creditos', 'desembolsos', 'aportes', 'bancos', 'simulador', 'socios', 'dashboard'];
+                const targetView = (view && pcModules.includes(view)) ? view : '';
+
+                // Volver a la raíz (PC)
+                const pcUrl = targetView ? `../?view=${targetView}` : '../';
+                
+                console.warn('[SECURITY] Redirigiendo a versión de escritorio forzada.');
+                window.location.replace(pcUrl);
+                return true;
+            }
+            return false;
+        }
+
+        // Ejecutar antes de pintar
+        if (forceDesktopRedirect()) {
+            document.documentElement.style.display = 'none';
+        }
+
+        window.addEventListener('resize', () => forceDesktopRedirect());
+    </script>
+</head>
+
+<body class="mobile-body">
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <img src="https://i.ibb.co/3mC22Hc4/inka-corp.png" alt="Logo" class="splash-logo">
+        <div class="splash-spinner"></div>
+        <div class="mobile-powered-by mobile-powered-by-dark">
+            <span>POWERED BY</span>
+            <picture>
+                <source srcset="../img/LPwebp/lpsolutionswithe.webp" type="image/webp">
+                <img src="../img/LPpng/lpsolutionswithe.png" alt="LP SOLUTIONS" class="mobile-powered-logo">
+            </picture>
+        </div>
+    </div>
+
+    <div class="mobile-app">
+        <!-- HEADER MODULAR -->
+        <header class="mobile-header">
+            <div class="header-top">
+                <div class="header-logo">
+                    <img src="https://i.ibb.co/3mC22Hc4/inka-corp.png" alt="Logo">
+                    <span class="header-logo-text">INKA CORP</span>
+                    <span id="mobile-app-version" class="mobile-app-version-inline" data-app-version></span>
+                </div>
+                <div class="header-actions">
+                    <button class="header-btn" id="report-btn-mobile" style="display: none;">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                    <button class="header-btn" id="refresh-btn" onclick="location.reload()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="header-btn" id="logout-btn" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="header-greeting">
+                <div class="greeting-text">Bienvenido de nuevo,</div>
+                <div class="greeting-name">Cargando...</div>
+            </div>
+        </header>
+
+        <!-- CONTENIDO DINÁMICO -->
+        <main class="main-content">
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Cargando módulo...</p>
+                <div class="mobile-powered-by mobile-powered-by-light">
+                    <span>POWERED BY</span>
+                    <picture>
+                        <source srcset="../img/LPwebp/lpsolutionsblack.webp" type="image/webp">
+                        <img src="../img/LPpng/lpsolutionsblack.png" alt="LP SOLUTIONS" class="mobile-powered-logo">
+                    </picture>
+                </div>
+            </div>
+        </main>
+
+        <!-- NAVEGACIÓN INFERIOR -->
+        <nav class="mobile-nav">
+            <div class="nav-item active" id="nav-desembolsos" onclick="loadMobileView('desembolsos')">
+                <i class="fas fa-home"></i>
+                <span>Inicio</span>
+            </div>
+            <div class="nav-item" id="nav-creditos" onclick="loadMobileView('creditos')">
+                <i class="fas fa-hand-holding-usd"></i>
+                <span>Créditos</span>
+            </div>
+            
+            <!-- Botón Central FAB -->
+            <div class="nav-fab-container">
+                <button class="nav-fab" onclick="toggleQuickMenu()">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+
+            <div class="nav-item" id="nav-bancos" onclick="loadMobileView('bancos')">
+                <i class="fas fa-university"></i>
+                <span>Bancos</span>
+            </div>
+            <div class="nav-item" id="nav-caja" onclick="loadMobileView('caja')">
+                <i class="fas fa-cash-register"></i>
+                <span>Caja</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Menú de Acciones Rápidas (Overlay) -->
+    <div id="quick-menu-overlay" class="quick-menu-overlay" onclick="toggleQuickMenu()">
+        <div class="quick-menu-content" onclick="event.stopPropagation()">
+            <div class="quick-menu-header">
+                <h3>Acciones Rápidas</h3>
+                <button class="quick-menu-close" onclick="toggleQuickMenu()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="quick-menu-grid">
+                <div class="quick-item" onclick="loadMobileView('aportes'); toggleQuickMenu()">
+                    <div class="quick-icon bg-purple">
+                        <i class="fas fa-piggy-bank"></i>
+                    </div>
+                    <span>Aportes</span>
+                </div>
+                <div class="quick-item" onclick="loadMobileView('simulador'); toggleQuickMenu()">
+                    <div class="quick-icon bg-gold">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <span>Simulador</span>
+                </div>
+                <div class="quick-item" onclick="loadMobileView('socios'); toggleQuickMenu()">
+                    <div class="quick-icon bg-blue">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <span>Socios</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modales Compartidos -->
+    <div id="credito-lite-modal" class="modal-overlay">
+        <!-- Contenido base del modal de créditos -->
+        <div class="modal-content lite-modal">
+            <div class="modal-header lite-header">
+                <h3><i class="fas fa-file-invoice-dollar"></i> Detalle del Crédito</h3>
+                <button class="modal-close" onclick="closeLiteModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body lite-body">
+                <!-- Resumen Superior -->
+                <div class="lite-detail-header">
+                    <h4 id="lite-det-codigo">---</h4>
+                    <div id="lite-det-socio" class="lite-det-socio">---</div>
+                </div>
+
+                <!-- Progreso -->
+                <div class="lite-det-section">
+                    <div class="lite-det-label">Progreso del Crédito</div>
+                    <div class="lite-progress-container">
+                        <div id="lite-progreso-bar" class="lite-progress-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="lite-progress-info">
+                        <span id="lite-det-cuotas">0/0 cuotas</span>
+                        <span id="lite-det-pct">0%</span>
+                    </div>
+                </div>
+
+                <!-- Valores Clave -->
+                <div class="lite-det-grid">
+                    <div class="lite-det-item highlight">
+                        <div class="lite-det-label">Próx. Cuota</div>
+                        <div id="lite-det-cuota" class="lite-det-value">$0.00</div>
+                    </div>
+                    <div class="lite-det-item">
+                        <div class="lite-det-label">Capital</div>
+                        <div id="lite-det-capital" class="lite-det-value">$0.00</div>
+                    </div>
+                </div>
+
+                <!-- Información Adicional -->
+                <div class="lite-det-section" style="padding: 1rem;">
+                    <div class="lite-info-row">
+                        <i class="fas fa-calendar-day"></i>
+                        <div class="lite-info-content">
+                            <div class="lite-info-label">Fecha Desembolso</div>
+                            <div id="lite-det-fecha-val" class="lite-info-value">---</div>
+                        </div>
+                    </div>
+                    <div class="lite-info-row">
+                        <i class="fas fa-history"></i>
+                        <div class="lite-info-content">
+                            <div class="lite-info-label">Próximo Vencimiento</div>
+                            <div id="lite-det-vencimiento" class="lite-info-value">---</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección de Deuda Mora (Solo para Morosos) -->
+                <div id="lite-det-mora-section" class="lite-det-section" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; color: #EF4444; font-weight: 800; font-size: 0.85rem; margin-bottom: 0.75rem; text-transform: uppercase;">
+                        <i class="fas fa-exclamation-triangle"></i> Deuda para estar al día
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem;">
+                        <span style="color: var(--text-secondary);">Cuotas Vencidas (Neto)</span>
+                        <span id="lite-det-mora-cuotas" style="color: var(--text-primary); font-weight: 600;">$0.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem;">
+                        <span style="color: var(--text-secondary);">Mora Acumulada</span>
+                        <span id="lite-det-mora-valor" style="color: #EF4444; font-weight: 700;">$0.00</span>
+                    </div>
+                    <div style="height: 1px; background: rgba(239, 68, 68, 0.2); margin: 0.5rem 0;"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <span style="font-weight: 700; font-size: 0.8rem; color: #EF4444;">TOTAL DEUDA ACTUAL</span>
+                        <span id="lite-det-mora-total" style="font-size: 1.25rem; font-weight: 900; color: #EF4444;">$0.00</span>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="lite-actions-group">
+                    <button class="lite-btn-action success" id="btn-pagar-credito" style="display:none;">
+                        <i class="fas fa-hand-holding-usd"></i> Pagar Cuota
+                    </button>
+                    <button class="lite-btn-action primary" id="btn-whatsapp-socio">
+                        <i class="fab fa-whatsapp"></i> Contactar Socio
+                    </button>
+                    <button class="lite-btn-action secondary" onclick="showCreditoAmortization()">
+                        <i class="fas fa-list-ol"></i> Ver Amortización
+                    </button>
+                </div>
+
+                <div class="lite-det-footer">
+                    <span id="lite-det-estado" class="lite-det-status">---</span>
+                    <span id="lite-det-fecha" style="display:none;">---</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Amortización Créditos -->
+    <div id="modal-amortizacion-credito" class="modal-overlay">
+        <div class="modal-content lite-modal">
+            <div class="modal-header lite-header">
+                <h3><i class="fas fa-list-ol"></i> Plan de Pagos</h3>
+                <button class="modal-close" onclick="closeLiteModal('modal-amortizacion-credito')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body lite-body">
+                <div class="lite-bank-info">
+                    <h4 id="lite-amort-codigo">---</h4>
+                    <div id="lite-amort-socio" class="lite-bank-debtor">---</div>
+                </div>
+
+                <div id="lite-amortization-credito-body" class="lite-amort-card-list">
+                    <!-- Cards se cargan aquí -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalle de Pago Móvil -->
+    <div id="modal-pago-detalle-mobile" class="modal-overlay">
+        <div class="modal-content lite-modal">
+            <div class="modal-header lite-header" style="background: #10b981; color: white;">
+                <h3><i class="fas fa-receipt"></i> Detalle de Pago</h3>
+                <button class="modal-close" onclick="closeLiteModal('modal-pago-detalle-mobile')" style="background: white; color: black; width: 30px; height: 30px; border-radius: 50%; opacity: 1; display: flex; align-items: center; justify-content: center; border: none; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body lite-body" id="lite-pago-detalle-container">
+                <!-- Se llena dinámicamente -->
+                <div style="text-align: center; padding: 2rem;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Registro de Pago Pro (Créditos) -->
+    <div id="modal-registro-pago-credito" class="modal-overlay">
+        <div class="modal-content lite-modal">
+            <div class="modal-header lite-header" style="border-bottom: 1px solid var(--border-color);">
+                <div style="display: flex; flex-direction: column;">
+                    <h3 style="margin: 0; color: var(--gold);"><i class="fas fa-cash-register"></i> Registrar Pago</h3>
+                    <span id="pago-lite-credito-codigo" style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">COD: ---</span>
+                </div>
+                <button class="modal-close" onclick="closeLiteModal('modal-registro-pago-credito')" style="background: var(--bg-main); color: var(--text-primary); border: 1px solid var(--border-color);">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body lite-body" style="padding: 1.25rem; background: var(--bg-card);">
+                <!-- Socio Info -->
+                <div style="background: var(--bg-main); padding: 1.25rem; border-radius: 16px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Socio</span>
+                    <div id="pago-lite-socio-nombre" style="font-weight: 800; color: var(--text-primary); font-size: 1.2rem; margin-top: 4px;">-</div>
+                </div>
+
+                <!-- Selección de Cuotas -->
+                <div class="lite-form-group" style="margin-bottom: 1.5rem;">
+                    <label style="font-weight: 800; margin-bottom: 0.85rem; display: block; font-size: 0.9rem; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">Cuotas a Cancelar</label>
+                    
+                    <!-- New Selection List (Mobile optimized) -->
+                    <div id="pago-lite-cuotas-selection-list" class="lite-selection-list">
+                        <!-- Items rendered dynamically via JS -->
+                    </div>
+
+                    <!-- Hidden select for JS compatibility -->
+                    <select id="pago-lite-cuotas-select" style="display: none;">
+                        <!-- Options still synced here for other logic functions -->
+                    </select>
+                </div>
+
+                <div class="lite-form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                    <div class="lite-form-group">
+                        <label style="font-weight: 700; margin-bottom: 0.6rem; display: block; font-size: 0.85rem; color: var(--text-primary);">Fecha Pago</label>
+                        <input type="date" id="pago-lite-fecha" class="lite-input" style="border-radius: 12px; height: 50px; background: var(--bg-main); color: var(--white); border-color: var(--border-color);">
+                    </div>
+                    <div class="lite-form-group">
+                        <label style="font-weight: 700; margin-bottom: 0.6rem; display: block; font-size: 0.85rem; color: var(--text-primary);">Método</label>
+                        <select id="pago-lite-metodo" class="lite-input" style="border-radius: 12px; height: 50px; background: var(--bg-main); color: var(--white); border-color: var(--border-color);">
+                            <option value="EFECTIVO">Efectivo</option>
+                            <option value="TRANSFERENCIA">Transferencia</option>
+                            <option value="DEPOSITO">Depósito</option>
+                            <option value="OTROS">Otros</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Card de Resumen con Totals -->
+                <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 1.5rem; border-radius: 20px; color: white; margin-bottom: 1.5rem; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; opacity: 0.8; font-size: 0.85rem;">
+                        <span style="color: var(--text-secondary);">Subtotal Cuotas</span>
+                        <span id="pago-lite-monto-base" style="font-weight: 600;">$0.00</span>
+                    </div>
+                    <div id="pago-lite-mora-row" style="display: none; justify-content: space-between; margin-bottom: 0.75rem; color: var(--gold); font-size: 0.85rem;">
+                        <span style="font-weight: 600;">Mora Sugerida (<span id="pago-lite-dias-mora">0</span> días)</span>
+                        <span id="pago-lite-monto-mora" style="font-weight: 800;">$0.00</span>
+                    </div>
+                    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0.75rem 0;"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <span style="font-weight: 700; font-size: 0.9rem; letter-spacing: 0.5px;">MONTO TOTAL</span>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span id="pago-lite-total-final" style="font-size: 2rem; font-weight: 900; color: #38bdf8; text-shadow: 0 2px 10px rgba(56, 189, 248, 0.3);">$0.00</span>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary); margin-top: 5px; cursor: pointer; font-weight: 500;">
+                                <input type="checkbox" id="pago-lite-convenio-toggle" style="width: 18px; height: 18px; accent-color: #38bdf8;">
+                                Convenio de Pago
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monto Personalizado (Solo si hay convenio) -->
+                <div id="pago-lite-monto-personalizado-container" class="lite-form-group" style="display: none; margin-bottom: 1.25rem; animation: slideDown 0.3s ease;">
+                    <label style="font-weight: 700; margin-bottom: 0.6rem; display: block; font-size: 0.85rem; color: var(--gold);">Monto a Pagar por Convenio</label>
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 15px; top: 12px; font-weight: 800; color: var(--gold);">$</span>
+                        <input type="number" id="pago-lite-monto-personalizado" class="lite-input" placeholder="0.00" step="0.01" style="padding-left: 35px; border-radius: 12px; height: 50px; background: var(--bg-main); border: 2px solid var(--gold); color: var(--white);">
+                    </div>
+                    <p id="pago-lite-min-hint" style="font-size: 0.75rem; color: var(--gold); margin-top: 5px; font-weight: 600; display: none;">
+                        <i class="fas fa-hand-holding-usd"></i> Mínimo permitido: <span id="pago-lite-min-valor">$0.00</span>
+                    </p>
+                </div>
+
+                <!-- Campos Adicionales -->
+                <div class="lite-form-group" style="margin-bottom: 1.25rem;">
+                    <label style="font-weight: 700; margin-bottom: 0.6rem; display: block; font-size: 0.85rem; color: var(--text-primary);">Referencia / Comprobante # <span style="color: #ef4444;">*</span></label>
+                    <input type="text" id="pago-lite-referencia" class="lite-input" placeholder="Ej: Transf. 12345" style="border-radius: 12px; height: 50px; background: var(--bg-main); border-color: var(--border-color);">
+                </div>
+
+                <!-- Subida de Comprobante -->
+                <div style="margin-bottom: 2rem;">
+                    <label style="font-weight: 700; margin-bottom: 0.6rem; display: block; font-size: 0.85rem; color: var(--text-primary);">Evidencia de Pago <span style="color: #ef4444;">*</span></label>
+                    <div id="pago-lite-upload-container" style="position: relative; min-height: 140px; border: 2px dashed var(--border-color); border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-main); overflow: hidden; padding: 15px;">
+                        
+                        <!-- Preview (inicialmente oculto) -->
+                        <img id="pago-lite-preview" style="display: none; width: 100%; max-height: 250px; object-fit: contain; border-radius: 12px;">
+                        
+                        <div id="pago-lite-upload-placeholder" style="width: 100%;">
+                            <div class="lite-upload-choices">
+                                <div class="lite-upload-btn-choice" onclick="document.getElementById('pago-lite-file-input-camera').click()" style="background: var(--bg-card); border-color: var(--border-color);">
+                                    <i class="fas fa-camera" style="color: var(--primary);"></i>
+                                    <span style="color: var(--text-primary);">Tomar Foto</span>
+                                </div>
+                                <div class="lite-upload-btn-choice" onclick="document.getElementById('pago-lite-file-input-gallery').click()" style="background: var(--bg-card); border-color: var(--border-color);">
+                                    <i class="fas fa-images" style="color: var(--primary);"></i>
+                                    <span style="color: var(--text-primary);">Galería</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="pago-lite-remove-file" type="button" onclick="window.clearLiteReceipt()" style="display: none; position: absolute; top: 10px; right: 10px; background: rgba(220, 38, 38, 0.9); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; z-index: 10;">
+                            <i class="fas fa-times"></i>
+                        </button>
+
+                        <!-- Inputs Ocultos -->
+                        <input type="file" id="pago-lite-file-input-camera" accept="image/*" capture="environment" style="display: none;">
+                        <input type="file" id="pago-lite-file-input-gallery" accept="image/*" style="display: none;">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 2rem;">
+                    <button id="btn-lite-confirmar-pago" class="lite-btn-primary" style="width: 100%; height: 60px; font-size: 1.1rem; border-radius: 30px; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);">
+                        <i class="fas fa-check-circle"></i> Confirmar y Registrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón Volver Arriba -->
+    <button id="scroll-to-top" class="scroll-top-btn" onclick="scrollToTop()">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
+    <!-- Tools & Utils -->
+    <script src="../js/image-utils.js"></script>
+    <script src="js/mobile-app.js"></script>
+
+    <script>
+        async function logout() {
+            const { error } = await window.getSupabaseClient().auth.signOut();
+            if (error) console.error(error);
+            window.location.href = '../login.html';
+        }
+
+        // Registro de Service Worker para Móvil
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then((registration) => {
+                        console.log('[PWA] Service Worker registrado (Móvil)');
+
+                        // Recarga cuando el nuevo SW tome el control
+                        let refreshing = false;
+                        navigator.serviceWorker.addEventListener('controllerchange', () => {
+                            if (!refreshing) {
+                                refreshing = true;
+                                window.location.reload();
+                            }
+                        });
+
+                        // Detectar si hay una actualización esperando
+                        const showUpdatePrompt = (worker) => {
+                            if (window.Swal) {
+                                Swal.fire({
+                                    title: 'Nueva versión detectada',
+                                    text: 'Actualiza la app para continuar y disfrutar de las últimas mejoras.',
+                                    icon: 'info',
+                                    confirmButtonText: 'ACTUALIZAR AHORA',
+                                    confirmButtonColor: '#0B4E32',
+                                    allowOutsideClick: false,
+                                    allowEscapeKey: false
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        worker.postMessage({ type: 'SKIP_WAITING' });
+                                    }
+                                });
+                            } else if (confirm('Nueva versión detectada. ¿Actualizar ahora?')) {
+                                worker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        };
+
+                        if (registration.waiting) {
+                            showUpdatePrompt(registration.waiting);
+                        }
+
+                        registration.onupdatefound = () => {
+                            const installingWorker = registration.installing;
+                            installingWorker.onstatechange = () => {
+                                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    showUpdatePrompt(installingWorker);
+                                }
+                            };
+                        };
+
+                        // Verificar actualizaciones periódicamente
+                        setInterval(() => registration.update(), 60 * 60 * 1000);
+                    });
+            });
+        }
+    </script>
+</body>
+
+</html>
+
+
+

@@ -1,0 +1,275 @@
+/* ==========================================
+   INKA CORP - Estilos del Módulo de Ahorros
+   ========================================== */
+
+.ahorros-wrapper {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 1rem 2rem 2rem 2rem; /* Reducido padding superior */
+}
+
+/* Hero Section Refinement */
+.ahorros-hero {
+    position: relative;
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--black) 100%);
+    border-radius: 1.5rem;
+    padding: 2.5rem;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--border-color);
+}
+
+.hero-icon-ahorros {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+    border-radius: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    box-shadow: 0 10px 25px rgba(242, 187, 58, 0.2);
+}
+
+.hero-icon-ahorros i {
+    font-size: 2.5rem;
+    color: var(--primary-dark);
+}
+
+/* Toolbar gap fix */
+.ahorros-toolbar {
+    margin-bottom: 2rem;
+}
+
+/* Sticky Header Table System */
+.ahorros-sections-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.ahorros-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: visible; /* Crucial para sticky */
+}
+
+.section-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 1rem 1rem 0 0;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    backdrop-filter: blur(20px);
+    transition: all 0.2s ease;
+}
+
+/* Barra dorada lateral como en créditos */
+.section-sticky-header::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: -1px;
+    bottom: -1px;
+    width: 4px;
+    background: var(--gold);
+    border-radius: 1rem 0 0 0;
+}
+
+.section-header-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-title {
+    font-weight: 700;
+    color: var(--white);
+    font-size: 1rem;
+    letter-spacing: -0.25px;
+}
+
+.section-count {
+    padding: 0.25rem 0.75rem;
+    border-radius: 2rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: rgba(242, 187, 58, 0.2);
+    color: var(--gold);
+}
+
+.ahorros-table-container {
+    overflow: visible;
+}
+
+.section-table-container {
+    overflow-x: auto;
+    background: var(--card-bg);
+    border-radius: 0 0 1rem 1rem;
+}
+
+.ahorros-table-container table {
+    width: 100%;
+    border-collapse: collapse; /* Cambiado a collapse para consistencia */
+}
+
+/* Encabezado de tabla (será manejado por JS clone como en créditos) */
+.ahorros-table-container thead th {
+    background: var(--bg-secondary);
+    color: var(--gray-400);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0.85rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.ahorros-table-container td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+
+.ahorros-table-container td.text-center, 
+.ahorros-table-container th.text-center {
+    text-align: center;
+}
+
+.ahorros-table-container td.text-right,
+.ahorros-table-container th.text-right {
+    text-align: right;
+}
+
+.ahorros-table-container tbody tr:hover {
+    background: rgba(11, 78, 50, 0.03);
+}
+
+.ahorros-table-container tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Helper classes */
+.ahorros-table-container .text-right { text-align: right; }
+.ahorros-table-container .text-center { text-align: center; }
+
+/* Badges */
+.badge-ahorro {
+    padding: 0.25rem 0.75rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Stats cards in hero */
+.ahorros-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.ahorros-hero-stat {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+
+.ahorros-hero-value {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 0.25rem;
+}
+
+.ahorros-hero-label {
+    font-size: 0.8rem;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ahorros-hero-stat.success .ahorros-hero-value {
+    color: #10B981;
+}
+
+
+/* Badges */
+.badge-ahorro {
+    padding: 0.25rem 0.75rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-ahorro-activo {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10B981;
+}
+
+/* Stats cards in hero */
+.ahorros-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.ahorros-hero-stat {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+
+.ahorros-hero-value {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 0.25rem;
+}
+
+.ahorros-hero-label {
+    font-size: 0.8rem;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ahorros-hero-stat.success .ahorros-hero-value {
+    color: #10B981;
+}
+
+/* Fixed Header Clone Support (if we add JS logic similar to creditos) */
+.fixed-header-clone-ahorros {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-md);
+    display: none;
+}

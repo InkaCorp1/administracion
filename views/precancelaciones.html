@@ -1,0 +1,1125 @@
+<!-- Vista Precancelaciones - INKA CORP -->
+<div class="content-wrapper precancelaciones-wrapper">
+    <!-- Hero Section -->
+    <div class="precancelaciones-hero">
+        <div class="hero-icon-precancelaciones">
+            <i class="fas fa-hand-holding-usd"></i>
+        </div>
+        <h1 class="hero-title-precancelaciones">Precancelaciones</h1>
+        <p class="hero-subtitle-precancelaciones">Cancelación anticipada de créditos</p>
+
+        <!-- Stats -->
+        <div class="precancelaciones-hero-stats">
+            <div class="precancelaciones-hero-stat">
+                <span class="precancelaciones-hero-value" id="precanc-stat-activos">0</span>
+                <span class="precancelaciones-hero-label">Activos</span>
+            </div>
+            <div class="precancelaciones-hero-stat highlight">
+                <span class="precancelaciones-hero-value" id="precanc-stat-capital">$0</span>
+                <span class="precancelaciones-hero-label">Capital Pend.</span>
+            </div>
+            <div class="precancelaciones-hero-stat">
+                <span class="precancelaciones-hero-value" id="precanc-stat-ahorro">$0</span>
+                <span class="precancelaciones-hero-label">Ahorro Acum.</span>
+            </div>
+            <div class="precancelaciones-hero-stat precancelados">
+                <span class="precancelaciones-hero-value" id="precanc-stat-procesados">0</span>
+                <span class="precancelaciones-hero-label">Precancelados</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Herramientas de Filtros -->
+    <div class="precancelaciones-toolbar">
+        <!-- Botón Sincronizar -->
+        <button class="toolbar-btn btn-sync" onclick="refreshPrecancelaciones()" title="Sincronizar datos">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+
+        <!-- Separador -->
+        <div class="toolbar-separator"></div>
+
+        <!-- Filtros de País -->
+        <button class="toolbar-btn pais-filter-btn active" data-pais="" onclick="filterPrecancelacionesByPais('')"
+            title="Todos los países">
+            <span class="globe-emoji">🌎</span>
+        </button>
+        <button class="toolbar-btn pais-filter-btn" data-pais="ECUADOR"
+            onclick="filterPrecancelacionesByPais('ECUADOR')" title="Ecuador">
+            <img src="https://flagcdn.com/w40/ec.png" alt="EC" class="toolbar-flag">
+        </button>
+        <button class="toolbar-btn pais-filter-btn" data-pais="USA" onclick="filterPrecancelacionesByPais('USA')"
+            title="Estados Unidos">
+            <img src="https://flagcdn.com/w40/us.png" alt="US" class="toolbar-flag">
+        </button>
+        <button class="toolbar-btn pais-filter-btn" data-pais="PERU" onclick="filterPrecancelacionesByPais('PERU')"
+            title="Perú">
+            <img src="https://flagcdn.com/w40/pe.png" alt="PE" class="toolbar-flag">
+        </button>
+
+        <!-- Separador -->
+        <div class="toolbar-separator"></div>
+
+        <!-- Búsqueda -->
+        <div class="toolbar-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-precancelacion" class="search-input-toolbar"
+                placeholder="Buscar por código, nombre o cédula...">
+        </div>
+    </div>
+
+    <!-- Tabs de navegación -->
+    <div class="precancelaciones-tabs">
+        <button class="tab-btn active" data-tab="activos" onclick="switchPrecancelacionTab('activos')">
+            <i class="fas fa-clock"></i>
+            <span>Créditos Precancelables</span>
+            <span class="tab-count" id="tab-count-activos">0</span>
+        </button>
+        <button class="tab-btn" data-tab="historial" onclick="switchPrecancelacionTab('historial')">
+            <i class="fas fa-history"></i>
+            <span>Historial Precancelados</span>
+            <span class="tab-count" id="tab-count-historial">0</span>
+        </button>
+    </div>
+
+    <!-- Tab: Créditos Precancelables -->
+    <div id="tab-activos" class="tab-content active">
+        <div id="precancelaciones-sections-container" class="precancelaciones-sections-container">
+            <!-- Las secciones se generan dinámicamente -->
+            <div class="loading-placeholder">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Cargando créditos...</span>
+            </div>
+        </div>
+
+        <!-- Mensaje cuando no hay resultados -->
+        <div id="precancelaciones-empty" class="empty-state hidden">
+            <i class="fas fa-check-circle"></i>
+            <p>No hay créditos activos para precancelar</p>
+        </div>
+    </div>
+
+    <!-- Tab: Historial de Precancelaciones -->
+    <div id="tab-historial" class="tab-content">
+        <div id="historial-sections-container" class="precancelaciones-sections-container">
+            <div class="loading-placeholder">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Cargando historial...</span>
+            </div>
+        </div>
+
+        <!-- Mensaje cuando no hay historial -->
+        <div id="historial-empty" class="empty-state hidden">
+            <i class="fas fa-folder-open"></i>
+            <p>No hay precancelaciones registradas</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Calcular Precancelación -->
+<div id="modal-calcular-precancelacion" class="modal hidden" style="display: none;">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card modal-lg">
+        <div class="modal-header">
+            <h3><i class="fas fa-calculator"></i> Calcular Precancelación</h3>
+            <button class="modal-close" data-close-modal>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Info del crédito seleccionado -->
+            <div class="credito-info-card">
+                <div class="credito-info-header">
+                    <span class="credito-codigo" id="calc-credito-codigo">CRE-XXXXXX</span>
+                    <span class="credito-estado badge-activo">ACTIVO</span>
+                </div>
+                <div class="credito-info-socio" id="calc-credito-socio">Nombre del Socio</div>
+                <div class="credito-info-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Capital Original</span>
+                        <span class="detail-value" id="calc-capital-original">$0.00</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Cuotas</span>
+                        <span class="detail-value" id="calc-cuotas-info">0/12</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Tasa</span>
+                        <span class="detail-value" id="calc-tasa-info">2%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label required" for="fecha-precancelacion">Fecha de Precancelación</label>
+                <input type="date" id="fecha-precancelacion" class="form-input" required>
+                <small class="form-hint">Seleccione la fecha en que se realizará la precancelación</small>
+            </div>
+
+            <button id="btn-calcular-montos" class="btn btn-primary btn-block">
+                <i class="fas fa-calculator"></i>
+                Calcular Montos
+            </button>
+
+            <!-- Resultados del cálculo -->
+            <div id="resultados-calculo" class="hidden" style="margin-top: 1.5rem;">
+                <h4 class="section-title"><i class="fas fa-receipt"></i> Detalle de Precancelación</h4>
+
+                <div class="resumen-grid">
+                    <div class="resumen-item">
+                        <div class="resumen-label">Cuotas Pagadas</div>
+                        <div class="resumen-value" id="calc-cuotas-pagadas">0</div>
+                    </div>
+                    <div class="resumen-item">
+                        <div class="resumen-label">Cuotas Restantes</div>
+                        <div class="resumen-value" id="calc-cuotas-restantes">0</div>
+                    </div>
+                </div>
+
+                <div class="resumen-grid">
+                    <div class="resumen-item">
+                        <div class="resumen-label">Capital Pendiente</div>
+                        <div class="resumen-value" id="calc-capital-pendiente">$0.00</div>
+                    </div>
+                    <div class="resumen-item">
+                        <div class="resumen-label">Días desde última cuota</div>
+                        <div class="resumen-value" id="calc-dias-transcurridos">0 días</div>
+                    </div>
+                </div>
+
+                <div class="resumen-grid">
+                    <div class="resumen-item">
+                        <div class="resumen-label">Interés Proporcional</div>
+                        <div class="resumen-value" id="calc-interes-proporcional">$0.00</div>
+                    </div>
+                    <div class="resumen-item success">
+                        <div class="resumen-label">Interés Perdonado</div>
+                        <div class="resumen-value" id="calc-interes-perdonado">$0.00</div>
+                    </div>
+                </div>
+
+                <div class="resumen-grid highlight-grid">
+                    <div class="resumen-item highlight devolucion">
+                        <div class="resumen-label"><i class="fas fa-piggy-bank"></i> Ahorro a Devolver</div>
+                        <div class="resumen-value" id="calc-ahorro-devolver">$0.00</div>
+                    </div>
+                    <div class="resumen-item highlight pagar">
+                        <div class="resumen-label"><i class="fas fa-dollar-sign"></i> Monto a Pagar</div>
+                        <div class="resumen-value" id="calc-monto-total">$0.00</div>
+                    </div>
+                </div>
+
+                <div class="info-box info-success">
+                    <strong>💰 Resumen de la operación:</strong>
+                    <ul class="resumen-list">
+                        <li>El socio paga <strong id="calc-detalle-pagar">$0.00</strong> para precancelar</li>
+                        <li>Se le devuelve <strong id="calc-detalle-devolver">$0.00</strong> de ahorro programado</li>
+                        <li>Se ahorra <strong id="calc-detalle-ahorro">$0.00</strong> en intereses</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-close-modal>Cancelar</button>
+            <button id="btn-procesar-precancelacion" class="btn btn-success hidden">
+                <i class="fas fa-check"></i>
+                Procesar Precancelación
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirmar Precancelación -->
+<div id="modal-confirmar-precancelacion" class="modal hidden" style="display: none;">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card">
+        <div class="modal-header warning">
+            <h3><i class="fas fa-exclamation-triangle"></i> Confirmar Precancelación</h3>
+            <button class="modal-close" data-close-modal>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="confirm-warning">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>Esta acción es <strong>irreversible</strong>. El crédito será marcado como PRECANCELADO.</p>
+            </div>
+
+            <div id="confirm-resumen" class="confirm-details">
+                <!-- Se llena dinámicamente -->
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="confirm-referencia">Referencia / Comprobante</label>
+                <input type="text" id="confirm-referencia" class="form-input"
+                    placeholder="Número de transacción o comprobante...">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="confirm-observaciones">Observaciones</label>
+                <textarea id="confirm-observaciones" class="form-input" rows="3"
+                    placeholder="Observaciones adicionales..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-close-modal>Cancelar</button>
+            <button id="btn-confirmar-final" class="btn btn-success">
+                <i class="fas fa-check-circle"></i>
+                Confirmar Precancelación
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Ver Detalle Precancelación (Historial) -->
+<div id="modal-ver-precancelacion" class="modal hidden" style="display: none;">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card modal-lg">
+        <div class="modal-header">
+            <h3><i class="fas fa-file-invoice-dollar"></i> Detalle de Precancelación</h3>
+            <button class="modal-close" data-close-modal>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="modal-detalle-precancelacion-body">
+            <!-- Se llena dinámicamente -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-close-modal>Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* ==========================================
+       PRECANCELACIONES - Estilos del Módulo
+       ========================================== */
+    .precancelaciones-wrapper {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* ==========================================
+       HERO SECTION (idéntico a socios)
+       ========================================== */
+    .precancelaciones-hero {
+        position: relative;
+        background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+        border-radius: 1.5rem;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        overflow: hidden;
+        box-shadow: var(--shadow-xl);
+        border: 1px solid var(--border-color);
+        text-align: center;
+    }
+
+    .precancelaciones-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+            radial-gradient(circle at 10% 20%, rgba(11, 78, 50, 0.2) 0%, transparent 20%),
+            radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 20%);
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .hero-icon-precancelaciones {
+        position: relative;
+        z-index: 2;
+        width: 70px;
+        height: 70px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.25rem;
+        box-shadow: var(--shadow-primary);
+        transform: rotate(-5deg);
+    }
+
+    .hero-icon-precancelaciones i {
+        font-size: 2.25rem;
+        color: var(--gold);
+    }
+
+    .hero-title-precancelaciones {
+        position: relative;
+        z-index: 2;
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--black);
+        margin: 0 0 0.25rem;
+    }
+
+    .hero-subtitle-precancelaciones {
+        position: relative;
+        z-index: 2;
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.75);
+        margin: 0 0 1.25rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-weight: 600;
+    }
+
+    /* ==========================================
+       STATS CARDS (idéntico a socios)
+       ========================================== */
+    .precancelaciones-hero-stats {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1.25rem;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .precancelaciones-hero-stat {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        padding: 1.25rem;
+        border-radius: 1rem;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all var(--transition-normal);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 100px;
+    }
+
+    .precancelaciones-hero-stat:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .precancelaciones-hero-stat.highlight {
+        background: rgba(34, 197, 94, 0.2);
+    }
+
+    .precancelaciones-hero-stat.precancelados {
+        background: rgba(59, 130, 246, 0.15);
+    }
+
+    .precancelaciones-hero-value {
+        display: block;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--black);
+        margin-bottom: 0.25rem;
+    }
+
+    .precancelaciones-hero-stat.highlight .precancelaciones-hero-value {
+        color: #34d399;
+    }
+
+    .precancelaciones-hero-stat.precancelados .precancelaciones-hero-value {
+        color: #60a5fa;
+    }
+
+    .precancelaciones-hero-label {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.7);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Toolbar */
+    .precancelaciones-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--card-bg);
+        padding: 0.75rem 1rem;
+        border-radius: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-color);
+        flex-wrap: wrap;
+    }
+
+    .toolbar-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.375rem;
+        padding: 0.5rem 0.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .toolbar-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--white);
+    }
+
+    .toolbar-btn.active {
+        background: rgba(212, 175, 55, 0.15);
+        border-color: rgba(212, 175, 55, 0.3);
+        color: var(--gold);
+    }
+
+    .toolbar-btn.btn-sync:hover {
+        color: var(--primary-light);
+    }
+
+    .toolbar-btn.btn-sync:hover i {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .toolbar-separator {
+        width: 1px;
+        height: 24px;
+        background: var(--border-color);
+        margin: 0 0.25rem;
+    }
+
+    .toolbar-flag {
+        width: 20px;
+        height: auto;
+        border-radius: 2px;
+    }
+
+    .globe-emoji {
+        font-size: 1.1rem;
+    }
+
+    .toolbar-search {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        flex: 1;
+        min-width: 200px;
+        margin-left: auto;
+    }
+
+    .toolbar-search i {
+        color: var(--gray-500);
+        font-size: 0.875rem;
+    }
+
+    .search-input-toolbar {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        outline: none;
+    }
+
+    .search-input-toolbar::placeholder {
+        color: var(--gray-500);
+    }
+
+    /* Tabs */
+    .precancelaciones-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        background: var(--card-bg);
+        padding: 0.5rem;
+        border-radius: 1rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .tab-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        background: transparent;
+        border: none;
+        border-radius: 0.625rem;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--white);
+    }
+
+    .tab-btn.active {
+        background: rgba(212, 175, 55, 0.15);
+        color: var(--gold);
+    }
+
+    .tab-count {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .tab-btn.active .tab-count {
+        background: rgba(212, 175, 55, 0.3);
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    /* Sections Container */
+    .precancelaciones-sections-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    /* Section Styles */
+    .precancelaciones-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+    }
+
+    .section-header-precanc {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .section-header-precanc i {
+        font-size: 1.1rem;
+    }
+
+    .section-header-precanc.activos {
+        border-left: 4px solid #10B981;
+    }
+
+    .section-header-precanc.activos i {
+        color: #10B981;
+    }
+
+    .section-header-precanc.morosos {
+        border-left: 4px solid #EF4444;
+    }
+
+    .section-header-precanc.morosos i {
+        color: #EF4444;
+    }
+
+    .section-header-precanc.historial {
+        border-left: 4px solid #3B82F6;
+    }
+
+    .section-header-precanc.historial i {
+        color: #3B82F6;
+    }
+
+    .section-title-precanc {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--white);
+    }
+
+    .section-count-precanc {
+        margin-left: auto;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--gray-300);
+    }
+
+    /* Table Styles */
+    .precancelaciones-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .precancelaciones-table thead th {
+        background: var(--bg-secondary);
+        padding: 0.75rem 1rem;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--gray-400);
+        font-weight: 600;
+        border-bottom: 1px solid var(--border-color);
+        white-space: nowrap;
+        text-align: left;
+    }
+
+    .precancelaciones-table tbody tr {
+        transition: background 0.15s ease;
+    }
+
+    .precancelaciones-table tbody tr:hover {
+        background: rgba(212, 175, 55, 0.05);
+    }
+
+    .precancelaciones-table tbody td {
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.875rem;
+        vertical-align: middle;
+    }
+
+    .precancelaciones-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .codigo-credito {
+        font-family: 'Fira Code', monospace;
+        font-size: 0.8rem;
+        color: var(--gold);
+        font-weight: 500;
+    }
+
+    .socio-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+    }
+
+    .socio-nombre {
+        font-weight: 600;
+        color: var(--white);
+    }
+
+    .socio-cedula {
+        font-size: 0.75rem;
+        color: var(--gray-400);
+    }
+
+    .pais-flag-img {
+        width: 22px;
+        height: auto;
+        border-radius: 2px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .progress-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 0.375rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--gray-300);
+    }
+
+    .capital-amount {
+        font-weight: 600;
+        color: var(--gold);
+    }
+
+    .ahorro-amount {
+        color: var(--primary-light);
+    }
+
+    /* Botón Precancelar */
+    .btn-precancelar {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: rgba(212, 175, 55, 0.15);
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        border-radius: 0.5rem;
+        color: var(--gold);
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-precancelar:hover {
+        background: var(--gold);
+        color: var(--primary-dark);
+        border-color: var(--gold);
+    }
+
+    /* Botón Ver Detalle */
+    .btn-ver-detalle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 0.5rem;
+        color: #60A5FA;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-ver-detalle:hover {
+        background: #3B82F6;
+        color: white;
+        border-color: #3B82F6;
+    }
+
+    /* Modal Styles específicos */
+    .credito-info-card {
+        background: var(--bg-secondary);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .credito-info-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+
+    .credito-codigo {
+        font-family: 'Fira Code', monospace;
+        font-size: 1rem;
+        color: var(--gold);
+        font-weight: 600;
+    }
+
+    .credito-estado {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .badge-activo {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10B981;
+    }
+
+    .credito-info-socio {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--white);
+        margin-bottom: 1rem;
+    }
+
+    .credito-info-details {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .detail-item {
+        text-align: center;
+    }
+
+    .detail-label {
+        display: block;
+        font-size: 0.7rem;
+        color: var(--gray-400);
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+
+    .detail-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--white);
+    }
+
+    .btn-block {
+        width: 100%;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--gold);
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Resumen Grid en Modal */
+    .resumen-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .resumen-item {
+        background: var(--bg-secondary);
+        padding: 1rem;
+        border-radius: 0.75rem;
+        text-align: center;
+        border-left: 3px solid var(--border-color);
+    }
+
+    .resumen-item.success {
+        border-left-color: #10B981;
+        background: rgba(16, 185, 129, 0.1);
+    }
+
+    .resumen-item.success .resumen-value {
+        color: #10B981;
+    }
+
+    .resumen-label {
+        font-size: 0.7rem;
+        color: var(--gray-400);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .resumen-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--white);
+    }
+
+    .highlight-grid {
+        margin-top: 1rem;
+    }
+
+    .resumen-item.highlight {
+        padding: 1.25rem;
+    }
+
+    .resumen-item.highlight.devolucion {
+        background: rgba(59, 130, 246, 0.15);
+        border-left-color: #3B82F6;
+    }
+
+    .resumen-item.highlight.devolucion .resumen-value {
+        color: #60A5FA;
+    }
+
+    .resumen-item.highlight.pagar {
+        background: rgba(212, 175, 55, 0.15);
+        border-left-color: var(--gold);
+    }
+
+    .resumen-item.highlight.pagar .resumen-value {
+        color: var(--gold);
+        font-size: 1.5rem;
+    }
+
+    .info-box.info-success {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .resumen-list {
+        margin: 0.5rem 0 0 1.5rem;
+        padding: 0;
+    }
+
+    .resumen-list li {
+        margin-bottom: 0.25rem;
+    }
+
+    /* Confirmación Warning */
+    .confirm-warning {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: rgba(245, 158, 11, 0.15);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .confirm-warning i {
+        font-size: 2rem;
+        color: #F59E0B;
+    }
+
+    .confirm-warning p {
+        color: var(--text-secondary);
+        margin: 0;
+    }
+
+    .confirm-details {
+        background: var(--bg-secondary);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-header.warning {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.1) 100%);
+    }
+
+    .modal-header.warning h3 {
+        color: #F59E0B;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--gray-400);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-state p {
+        font-size: 1rem;
+    }
+
+    /* Loading */
+    .loading-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        color: var(--gray-400);
+        gap: 1rem;
+    }
+
+    .loading-placeholder i {
+        font-size: 2.5rem;
+        color: var(--gold);
+    }
+
+    /* Historial Row Styles */
+    .fecha-precancelacion {
+        font-size: 0.85rem;
+        color: var(--white);
+    }
+
+    .monto-pagado {
+        font-weight: 600;
+        color: var(--gold);
+    }
+
+    .ahorro-devuelto {
+        color: #60A5FA;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .precancelaciones-hero {
+            padding: 1.5rem;
+        }
+
+        .hero-title-precancelaciones {
+            font-size: 1.75rem;
+        }
+
+        .hero-icon-precancelaciones {
+            width: 60px;
+            height: 60px;
+        }
+
+        .hero-icon-precancelaciones i {
+            font-size: 1.75rem;
+        }
+
+        .precancelaciones-hero-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .precancelaciones-toolbar {
+            flex-wrap: wrap;
+        }
+
+        .toolbar-search {
+            width: 100%;
+            margin-left: 0;
+            margin-top: 0.5rem;
+        }
+
+        .precancelaciones-tabs {
+            overflow-x: auto;
+        }
+
+        .tab-btn span {
+            display: none;
+        }
+
+        .tab-btn i {
+            font-size: 1rem;
+        }
+
+        /* Mobile Table */
+        .precancelaciones-table thead {
+            display: none;
+        }
+
+        .precancelaciones-table tbody tr {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .precancelaciones-table tbody td {
+            padding: 0;
+            border: none;
+        }
+
+        .precancelaciones-table tbody td:nth-child(1) {
+            grid-column: 1 / -1;
+        }
+
+        .precancelaciones-table tbody td:last-child {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        .btn-precancelar span {
+            display: none;
+        }
+
+        .resumen-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .credito-info-details {
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+        }
+    }
+</style>

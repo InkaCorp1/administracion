@@ -1,0 +1,399 @@
+.mobile-socios-module {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-bottom: 5.5rem;
+}
+
+.mobile-socios-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    padding-top: 0.15rem;
+    background: linear-gradient(180deg, var(--bg-main) 0%, rgba(19, 24, 32, 0.96) 72%, rgba(19, 24, 32, 0) 100%);
+}
+
+.mobile-socios-search {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: #192331;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-socios-search i {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.mobile-socios-search input {
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-primary);
+    width: 100%;
+    font-size: 0.9rem;
+}
+
+.mobile-socios-search input::placeholder {
+    color: var(--text-muted);
+}
+
+.mobile-socios-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding-bottom: 1.5rem;
+}
+
+.mobile-socios-group {
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 14px;
+    background: #17212d;
+    overflow: hidden;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.24);
+}
+
+.mobile-socios-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    background: #1b2633;
+}
+
+.mobile-socios-group-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: #e9eff8;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.mobile-socios-group-title i {
+    color: var(--gold);
+    font-size: 0.76rem;
+}
+
+.mobile-socios-group-count {
+    min-width: 24px;
+    height: 22px;
+    padding: 0 0.45rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #eef4fb;
+    border: 1px solid rgba(148, 163, 184, 0.36);
+    background: rgba(51, 65, 85, 0.6);
+}
+
+.mobile-socios-group.moroso .mobile-socios-group-header {
+    border-bottom-color: rgba(239, 68, 68, 0.3);
+}
+
+.mobile-socios-group.activo .mobile-socios-group-header {
+    border-bottom-color: rgba(16, 185, 129, 0.3);
+}
+
+.mobile-socios-group.pausado .mobile-socios-group-header {
+    border-bottom-color: rgba(59, 130, 246, 0.3);
+}
+
+.mobile-socios-group.sin-credito .mobile-socios-group-header {
+    border-bottom-color: rgba(148, 163, 184, 0.34);
+}
+
+.mobile-socios-group-body {
+    padding: 0.55rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.mobile-socio-card {
+    background: #1a2533;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 14px;
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-socio-card:active {
+    transform: scale(0.99);
+}
+
+.mobile-socio-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.7rem;
+}
+
+.mobile-socio-name {
+    color: #f3f7ff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.mobile-socio-id {
+    color: #aebbd0;
+    font-size: 0.75rem;
+}
+
+.mobile-socio-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: #d4deea;
+    font-size: 0.74rem;
+    flex-wrap: wrap;
+}
+
+.mobile-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.26rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.45px;
+    text-transform: uppercase;
+}
+
+.mobile-badge.activo {
+    background: rgba(16, 185, 129, 0.16);
+    color: #6ee7b7;
+}
+
+.mobile-badge.moroso {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fca5a5;
+}
+
+.mobile-badge.pausado {
+    background: rgba(59, 130, 246, 0.16);
+    color: #93c5fd;
+}
+
+.mobile-badge.sin-credito {
+    background: rgba(148, 163, 184, 0.16);
+    color: #cbd5e1;
+}
+
+.mobile-socio-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    color: #b7c3d7;
+    font-size: 0.76rem;
+}
+
+.mobile-socio-row span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.mobile-socio-row i {
+    color: var(--gold);
+    font-size: 0.74rem;
+}
+
+.mobile-empty-state {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 1.5rem 1rem;
+}
+
+.mobile-empty-state i {
+    font-size: 2rem;
+    margin-bottom: 0.6rem;
+    opacity: 0.65;
+}
+
+.mobile-socio-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+}
+
+.mobile-socio-modal.hidden {
+    display: none;
+}
+
+.mobile-socio-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.88);
+}
+
+.mobile-socio-modal-card {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    height: 100dvh;
+    max-height: 100dvh;
+    background: #171f29;
+    border-radius: 0;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: none;
+}
+
+.mobile-socio-modal-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    padding: 0.9rem 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.mobile-socio-modal-header h3 {
+    color: var(--on-primary-title);
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+.mobile-modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.16);
+    color: var(--on-primary-title);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-socio-modal-body {
+    padding: 0.75rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+}
+
+.mobile-detail-section {
+    background: #1f2937;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    border-radius: 12px;
+    overflow: visible;
+}
+
+.mobile-detail-title {
+    padding: 0.55rem 0.7rem;
+    font-size: 0.73rem;
+    font-weight: 700;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.45px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.mobile-detail-grid {
+    padding: 0.62rem 0.7rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.58rem 0.65rem;
+}
+
+.mobile-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.mobile-detail-item label {
+    font-size: 0.67rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.mobile-detail-item span {
+    font-size: 0.82rem;
+    color: #ecf2f9;
+    word-break: break-word;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.mobile-detail-item a {
+    color: #6ee7b7;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.mobile-credit-history {
+    padding: 0.65rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    max-height: none;
+    overflow: visible;
+}
+
+.mobile-credit-item {
+    background: #151c25;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 10px;
+    padding: 0.62rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.45rem 0.65rem;
+    align-items: center;
+}
+
+.mobile-credit-code {
+    color: var(--text-primary);
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.mobile-credit-amount {
+    color: var(--gold);
+    font-size: 0.86rem;
+    font-weight: 700;
+    text-align: right;
+}
+
+.mobile-credit-meta {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.7rem;
+    color: #b8c4d7;
+    font-size: 0.71rem;
+}

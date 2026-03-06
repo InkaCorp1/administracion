@@ -1,0 +1,1123 @@
+/* ==========================================
+   INKA CORP - REDISEÑO PREMIUM APORTES
+   ========================================== */
+
+:root {
+    --primary: #0B4E32;
+    --primary-dark: #073D27;
+    --primary-light: #146E3A;
+    --gold: #F2BB3A;
+    --gold-dark: #D3900D;
+    --text-primary: #eef2f7;
+    --text-secondary: #93a1b3;
+    --text-muted: #5e6b7c;
+    --bg-main: #111318;
+    --bg-card: #1c222b;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --white-glass: rgba(255, 255, 255, 0.05);
+}
+
+.aportes-wrapper {
+    padding: 1rem;
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* ==========================================
+   HERO SECTION
+   ========================================== */
+.aportes-hero {
+    position: relative;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: 20px;
+    /* Match the visual footprint of .creditos-hero (pólizas) */
+    padding: 4rem 2.25rem 4rem 2.25rem;
+    margin-bottom: 2rem;
+    min-height: 420px; /* increased to match Pólizas visual height */
+    overflow: hidden;
+    /* switch to column layout so title+icon are centered and actions sit below (like Pólizas) */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 15px 35px rgba(11, 78, 50, 0.2);
+}
+
+/* Enlarge/shift the decorative illustration so it fills the taller hero similarly to Pólizas */
+.hero-bg-aportes {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 680px;
+    height: 140%;
+    transform: translateY(4%);
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cpath fill='%23F2BB3A' opacity='0.05' d='M44.7,-76.4C58.1,-69.2,69.2,-58.1,77.3,-44.7C85.4,-31.3,90.5,-15.6,89.3,-0.7C88.1,14.3,80.5,28.5,72.4,41.9C64.3,55.3,55.7,67.8,44.3,74.9C32.9,82,18.7,83.7,4.3,76.2C-10.1,68.7,-24.6,52,-38.3,44.9C-52,37.8,-64.9,40.4,-74.4,33.3C-83.9,26.2,-90,9.4,-90.1,-7.5C-90.2,-24.3,-84.3,-41.2,-73.4,-48.3C-62.5,-55.4,-46.6,-52.7,-35,-60.9C-23.4,-69.1,-16.1,-88.2,-1.1,-86.3C13.9,-84.4,27.8,-83.6,44.7,-76.4Z' transform='translate(100 100)' /%3E%3C/svg%3E") no-repeat center right;
+    background-size: contain;
+}
+
+/* Keep responsive parity with Pólizas: reduce height on small screens */
+@media (max-width: 992px) {
+    .aportes-hero { padding: 3rem 1rem; min-height: 320px; }
+    .hero-bg-aportes { width: 480px; height: 120%; right: -20px; transform: translateY(2%); }
+}
+@media (max-width: 640px) {
+    .aportes-hero { padding: 2rem 1rem; min-height: 220px; }
+    .hero-bg-aportes { width: 320px; height: 110%; right: -10px; transform: none; }
+}
+
+.hero-bg-aportes {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 400px;
+    height: 100%;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cpath fill='%23F2BB3A' opacity='0.05' d='M44.7,-76.4C58.1,-69.2,69.2,-58.1,77.3,-44.7C85.4,-31.3,90.5,-15.6,89.3,-0.7C88.1,14.3,80.5,28.5,72.4,41.9C64.3,55.3,55.7,67.8,44.3,74.9C32.9,82,18.7,83.7,4.3,76.2C-10.1,68.7,-24.6,52,-38.3,44.9C-52,37.8,-64.9,40.4,-74.4,33.3C-83.9,26.2,-90,9.4,-90.1,-7.5C-90.2,-24.3,-84.3,-41.2,-73.4,-48.3C-62.5,-55.4,-46.6,-52.7,-35,-60.9C-23.4,-69.1,-16.1,-88.2,-1.1,-86.3C13.9,-84.4,27.8,-83.6,44.7,-76.4Z' transform='translate(100 100)' /%3E%3C/svg%3E") no-repeat center right;
+    background-size: contain;
+}
+
+.hero-content-aportes {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.5rem;
+}
+
+.hero-icon-aportes {
+    width: 86px;
+    height: 86px;
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.25rem;
+    color: var(--primary-dark);
+    box-shadow: 0 12px 35px rgba(2,6,23,0.12);
+    margin-bottom: 0.6rem;
+}
+
+.hero-title-aportes {
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: white;
+    margin: 0;
+    letter-spacing: -1px;
+    text-shadow: 0 4px 10px rgba(2,6,23,0.12);
+}
+
+.hero-subtitle-aportes {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0.35rem 0 0 0;
+}
+
+.hero-actions-aportes {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 1rem;
+    margin-top: 2.25rem; /* place buttons below title */
+    justify-content: center; /* center under the title */
+    width: 100%;
+}
+
+/* ensure buttons keep compact appearance on wide layouts */
+.hero-actions-aportes .btn-primary { min-width: 220px; }
+.hero-actions-aportes .btn-outline-light { min-width: 200px; }
+
+
+.btn-outline-light {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(5px);
+}
+
+.btn-outline-light:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: white;
+}
+
+.hero-actions-aportes .btn-primary {
+    background: var(--gold);
+    color: var(--primary-dark);
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(242, 187, 58, 0.3);
+    border: none;
+}
+
+.hero-actions-aportes .btn-primary:hover {
+    background: var(--gold-light);
+    color: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+/* ==========================================
+   STATS PANEL
+   ========================================== */
+.stats-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border-radius: 18px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-light);
+}
+
+.stat-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+}
+
+.bg-soft-primary {
+    background: rgba(11, 78, 50, 0.1);
+    color: var(--primary);
+}
+
+.bg-soft-gold {
+    background: rgba(242, 187, 58, 0.1);
+    color: var(--gold-dark);
+}
+
+.bg-soft-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10B981;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+/* ==========================================
+   SECTION CARDS
+   ========================================== */
+.section-card {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+}
+
+.section-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.section-card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-card-title i {
+    color: var(--gold-dark);
+}
+
+.badge-pulsing {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10B981;
+    padding: 0.5rem 1rem 0.5rem 1.8rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.badge-pulsing::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: #10B981;
+    border-radius: 50%;
+    left: 0.7rem;
+    top: calc(50% - 1px);
+    transform: translateY(-50%);
+    animation: pulse 1.5s infinite;
+}
+
+/* ==========================================
+   MODAL APORTES - ESTADOS DINÁMICOS
+   ========================================== */
+.status-semana-banner {
+    background: rgba(242, 187, 58, 0.08);
+    border: 1px solid rgba(242, 187, 58, 0.2);
+    border-radius: 12px;
+    padding: 15px;
+    margin: 15px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: slideDown 0.3s ease-out;
+}
+
+.status-semana-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+}
+
+.status-label {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.status-value {
+    color: var(--gold);
+    font-weight: 800;
+    font-size: 1.1rem;
+}
+
+#status-monto-objetivo {
+    color: var(--text-primary);
+    opacity: 0.8;
+}
+
+.status-comprobantes {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mini-comprobante {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.mini-comprobante:hover {
+    transform: scale(1.05);
+    border-color: var(--gold);
+}
+
+.mini-comprobante img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mini-comprobante .monto-mini {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 10px;
+    text-align: center;
+    padding: 2px 0;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.premium-table thead th {
+    background: var(--gray-900);
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 700;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.premium-table tbody td {
+    padding: 1.25rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    transition: background 0.2s;
+}
+
+.premium-table tbody tr:hover td {
+    background: var(--gray-800);
+}
+
+.avatar-initial {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-right: 1rem;
+}
+
+/* ==========================================
+   MODALS PREMIUM
+   ========================================== */
+.glass-modal {
+    background: rgba(27, 33, 42, 0.95) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px !important;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#form-aporte {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ====== APORTES: make #modal-aporte visually match the Reportes modal (scoped, non-invasive) ====== */
+#modal-aporte .modal-card {
+    /* mirror .modal-export-card (reportes) while keeping previous responsive sizing) */
+    max-width: 550px !important;
+    width: 100%;
+    border-radius: 1.25rem !important;
+    background: var(--bg-card); /* light card background like export modal */
+    border: none;
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+}
+
+/* Header: gradient + gold bottom border (like Reportes) */
+#modal-aporte .modal-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    padding: 1.25rem 1.5rem;
+    border-bottom: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#modal-aporte .modal-title {
+    color: var(--gold);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+#modal-aporte .modal-close {
+    color: rgba(255,255,255,0.8);
+    background: transparent;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.6rem;
+    transition: background .12s ease, color .12s ease;
+}
+#modal-aporte .modal-close:hover { background: rgba(255,255,255,0.06); color: #fff; }
+
+#modal-aporte .modal-body {
+    padding: 1.25rem 1.5rem 1.5rem 1.5rem;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    max-height: calc(80vh - 140px);
+}
+
+/* Form surface and inputs: match export modal's clean look */
+#modal-aporte .export-like-surface {
+    background: var(--gray-900);
+    border-radius: 0.85rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+#modal-aporte .form-control-premium,
+#modal-aporte .input-with-icon input,
+#modal-aporte select,
+#modal-aporte input[type="date"],
+#modal-aporte input[type="number"] {
+    /* give inputs a subtle card surface so they read over the modal background */
+    background: var(--gray-800);
+    border: 1px solid var(--border-color);
+    padding: .8rem 1rem .8rem 3.6rem; /* space for left icon */
+    border-radius: .75rem;
+    box-sizing: border-box;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 20px rgba(0,0,0,0.2);
+    font-size: 0.98rem;
+    color: var(--text-primary);
+    min-height: 48px;
+    transition: box-shadow .18s ease, transform .12s ease, border-color .12s ease;
+}
+#modal-aporte input[type="date"] { padding-right: 2.75rem; }
+#modal-aporte input[type="number"] { -moz-appearance: textfield; }
+#modal-aporte .form-control-premium:focus, #modal-aporte input:focus {
+    outline: none;
+    border-color: rgba(11,78,50,0.25);
+    box-shadow: 0 10px 30px rgba(2,6,23,0.08);
+    transform: translateY(-1px);
+}
+
+/* Fix legibility of weeks select dropdown in dark mode */
+#aporte-week-override { 
+    color-scheme: dark; 
+}
+#aporte-week-override option {
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+}
+
+/* Ensure icon inside inputs is positioned and doesn't overlap text */
+#modal-aporte .input-with-icon { position: relative; }
+#modal-aporte .input-with-icon i {
+    position: absolute;
+    left: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Segunda barra eliminada del DOM — ya no se necesita la regla que la ocultaba. */
+#modal-aporte .form-group-premium > .input-with-icon:first-of-type { margin-bottom: 0.6rem; }
+#modal-aporte .form-group-premium > .input-with-icon:first-of-type .form-control-premium { width: 100%; }
+
+
+/* Specific contrast for placeholder text so it's readable */
+#modal-aporte .form-control-premium::placeholder,
+#modal-aporte input::placeholder {
+    color: var(--gray-500);
+}
+
+/* Selects that expand to a list still need left padding for the icon */
+#modal-aporte select[data-size-temp],
+#modal-aporte select[size] {
+    padding-left: 3.6rem;
+}
+
+/* Prevent browser-native decorations from colliding with custom layout */
+#modal-aporte select { -webkit-appearance: none; appearance: none; padding-right: 2.75rem; }
+
+/* Give modal body extra bottom padding so content never hides under the footer */
+#modal-aporte .modal-body { padding-bottom: 3.25rem; }
+
+/* Upload placeholder: elevate and add hover feedback */
+#modal-aporte #aporte-upload-placeholder {
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.75rem;
+    background: var(--gray-800);
+    border-radius: .9rem;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+#modal-aporte #aporte-upload-placeholder:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+    background: var(--gray-700);
+    cursor: pointer;
+}
+
+/* Cloud icon: subtle pop on hover and accessible focus state */
+#modal-aporte .upload-icon-circle {
+    width: 64px;
+    height: 64px;
+    background: var(--gray-700);
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    transition: transform .28s cubic-bezier(.2,.9,.25,1), box-shadow .28s;
+}
+#modal-aporte #aporte-upload-placeholder:hover .upload-icon-circle {
+    transform: translateY(-6px) scale(1.06);
+    box-shadow: 0 22px 48px rgba(2,6,23,0.16);
+    animation: cloud-pop .72s ease;
+}
+#modal-aporte .upload-icon-circle:focus,
+#modal-aporte .upload-icon-circle:focus-visible { outline: none; box-shadow: 0 22px 48px rgba(2,6,23,0.2), 0 0 0 4px rgba(11,78,50,0.06); }
+
+@keyframes cloud-pop {
+    0% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-8px) scale(1.08); }
+    100% { transform: translateY(0) scale(1); }
+}
+
+#modal-aporte .upload-preview-premium img { max-height: 300px; object-fit: contain; border-radius: .6rem; }
+#modal-aporte .btn-remove-preview { z-index: 12; }
+
+/* Small spacing fixes so labels and controls don't overlap */
+#modal-aporte .modal-body .form-group-premium { margin-top: .6rem; }
+#modal-aporte .form-row { gap: 1.25rem; }
+
+/* Keep inputs readable when the modal is narrow */
+@media (max-width: 640px) {
+    #modal-aporte .form-control-premium,
+    #modal-aporte select,
+    #modal-aporte .input-with-icon input { padding-left: 2.5rem; }
+    #modal-aporte #aporte-upload-placeholder { padding: 1.25rem; min-height: 140px; }
+}
+
+/* Upload area styled like export preview */
+#modal-aporte .upload-zone-premium { background: var(--gray-900); border: 1px solid var(--border-color); padding: 1rem; border-radius: .75rem; }
+#modal-aporte .upload-preview-premium { background: var(--bg-card); border: 1px solid var(--border-color); padding: .5rem; border-radius: .6rem; }
+
+/* Footer: mirror .modal-export-card footer */
+#modal-aporte .modal-footer {
+    padding: 1.25rem 1.5rem;
+    background: var(--gray-800);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: .75rem;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+#modal-aporte .btn.btn-primary.btn-glow {
+    background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: #FFFFFF;
+    font-weight: 800;
+    padding: .7rem 1.6rem;
+    border-radius: .85rem;
+    box-shadow: 0 12px 30px rgba(11,78,50,0.22), inset 0 -3px 8px rgba(0,0,0,0.06);
+    border: 1px solid rgba(255,255,255,0.06);
+    transition: transform .12s ease, box-shadow .18s ease, background .12s ease;
+}
+#modal-aporte .btn.btn-primary.btn-glow:hover {
+    background: linear-gradient(180deg, var(--primary-dark) 0%, #0b5c39 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 20px 48px rgba(11,78,50,0.28);
+}
+#modal-aporte .btn.btn-primary.btn-glow:active { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(11,78,50,0.2); }
+#modal-aporte .btn.btn-primary.btn-glow:focus-visible { outline: 4px solid rgba(11,78,50,0.12); outline-offset: 3px; }
+
+#modal-aporte .btn.btn-secondary {
+    /* make secondary clearly distinct from background but subtler than primary */
+    background: var(--gray-700);
+    border: 1px solid var(--border-color);
+    color: var(--white);
+    padding: .62rem 1.25rem;
+    border-radius: .75rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+    transition: background .12s ease, transform .12s ease, box-shadow .12s ease;
+}
+#modal-aporte .btn.btn-secondary:hover {
+    background: var(--gray-600);
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(0,0,0,0.3);
+}
+#modal-aporte .btn.btn-secondary:focus-visible {
+    outline: 3px solid rgba(11,78,50,0.06);
+    outline-offset: 3px;
+}
+#modal-aporte .btn.btn-secondary[disabled],
+#modal-aporte .btn.btn-secondary.is-disabled { opacity: 0.6; pointer-events: none; }
+
+
+/* Utility: wrap portions of the existing form in an export-like surface without changing HTML
+   (applies to existing containers because of class names already present) */
+#modal-aporte .form-group-premium {
+    background: transparent;
+}
+#modal-aporte #aporte-upload-container { margin-top: .5rem; }
+#modal-aporte #aporte-upload-placeholder { background: var(--bg-card); border-radius: .75rem; padding: 2.25rem; }
+
+/* Selected socio pill (replaces former select visual) */
+#aporte-socio-selected { margin-top: 0.6rem; }
+.selected-socio { display: block; }
+.selected-socio.hidden { display: none; }
+.selected-socio-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.9rem;
+    background: var(--gray-800);
+    border: 1px solid var(--border-color);
+    padding: 0.85rem 1.2rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    font-weight: 700;
+}
+.selected-socio-pill .selected-socio-name { color: var(--text-primary); }
+.selected-socio-pill .btn-clear-selected {
+    margin-left: 0.6rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.selected-socio-pill .btn-clear-selected:hover { background: rgba(255, 255, 255, 0.1); transform: scale(1.02); }
+
+/* Suggestions dropdown (custom, appears only while typing) */
+.aporte-suggestions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 8px);
+    background: var(--gray-800);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    border-radius: 12px;
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 2200;
+    padding: 0.5rem;
+}
+.aporte-suggestion { padding: 0.6rem 0.8rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; }
+.aporte-suggestion + .aporte-suggestion { margin-top: 0.35rem; }
+.aporte-suggestion .suggestion-name { font-weight: 700; color: var(--text-primary); }
+.aporte-suggestion.is-active { background: rgba(11,78,50,0.04); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4); }
+.aporte-suggestions.hidden { display: none; }
+.aporte-suggestions::-webkit-scrollbar { height: 8px; width: 8px; }
+.aporte-suggestions::-webkit-scrollbar-thumb { background: rgba(11,78,50,0.12); border-radius: 8px; }
+
+/* responsive parity with export modal */
+@media (max-width: 640px) {
+    #modal-aporte .modal-card { max-width: calc(100vw - 32px); margin: 0 16px; }
+    #modal-aporte .modal-body { padding: 1rem; }
+}
+
+/* keep existing modal history extras section intact */
+
+
+.modal-body {
+    overflow-y: auto;
+    flex: 1;
+    padding-bottom: 2rem;
+}
+
+.form-group-premium {
+    margin-bottom: 1.5rem;
+}
+
+.form-group-premium label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.input-with-icon {
+    position: relative;
+}
+
+.input-with-icon i {
+    position: absolute;
+    left: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+.form-control-premium {
+    width: 100%;
+    padding: 0.875rem 1.25rem 0.875rem 3rem;
+    border-radius: 14px;
+    border: 2px solid var(--border-color);
+    background: var(--gray-800);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.form-control-premium:focus {
+    border-color: var(--primary);
+    background: var(--gray-700);
+    box-shadow: 0 0 0 4px rgba(11, 78, 50, 0.2);
+    outline: none;
+}
+
+/* Estilos para el select "expandido" usado por el buscador de socios en el modal */
+#modal-aporte select[data-size-temp],
+#modal-aporte select[size] {
+    /* Visualmente más grande y legible cuando se muestra como lista */
+    font-size: 1.03rem;
+    line-height: 1.6;
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-color);
+    background: var(--gray-800);
+    padding-left: 1rem; /* mejora lectura del primer carácter */
+    transition: all 180ms cubic-bezier(.2,.9,.2,1);
+    z-index: 1400; /* por encima de otros elementos del modal */
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+}
+
+#modal-aporte select[data-size-temp] {
+    /* Altura máxima cómoda y scrollbar visible */
+    max-height: calc(48px * 6);
+    overflow-y: auto;
+    min-height: 48px;
+}
+
+#modal-aporte select[data-size-temp] option {
+    padding: 0.6rem 1rem;
+    height: 48px; /* fuerza opciones más grandes para facilitar lectura */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+    background: transparent;
+}
+
+/* De-emfatizar la primera (placeholder) cuando la lista está expandida */
+#modal-aporte select[data-size-temp] option:first-child {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 0.95rem;
+}
+
+/* Resaltar la opción sobre la que se pasa el cursor */
+#modal-aporte select[data-size-temp] option:hover,
+#modal-aporte select[data-size-temp] option:focus {
+    background: var(--primary);
+    color: white;
+}
+
+/* Scrollbar más visible y delgado */
+#modal-aporte select[data-size-temp]::-webkit-scrollbar { width: 8px; }
+#modal-aporte select[data-size-temp]::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 8px; }
+#modal-aporte select[data-size-temp]::-webkit-scrollbar-track { background: transparent; }
+
+/* Aumentar contraste de la opción seleccionada en el select nativo */
+#modal-aporte select option:checked {
+    background: var(--primary);
+    color: white;
+}
+
+
+/* ==========================================
+   UPLOAD ZONE — bank-modal parity (copied/adapted from bancos.css)
+   Kept scoped to #modal-aporte so no global changes occur
+   ========================================== */
+#modal-aporte .upload-zone-premium {
+    /* match bank modal: darker elevated surface, dashed outline */
+    border: 2px dashed var(--border-color);
+    border-radius: 20px;
+    padding: 2rem;
+    text-align: center;
+    background: var(--black-soft);
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+#modal-aporte .upload-zone-premium:hover {
+    border-color: var(--primary);
+    /* subtle brand tint on hover */
+    box-shadow: 0 18px 40px rgba(2,6,23,0.06);
+    transform: translateY(-4px);
+}
+
+/* keep the circular cloud icon but match bank spacing/feel */
+#modal-aporte .upload-icon-circle {
+    width: 64px;
+    height: 64px;
+    background: var(--gray-700);
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    transition: transform .28s cubic-bezier(.2,.9,.25,1), box-shadow .28s;
+    margin: 0 auto 1rem;
+}
+#modal-aporte .upload-zone-premium:hover .upload-icon-circle {
+    transform: translateY(-6px) scale(1.04);
+    box-shadow: 0 22px 48px rgba(0,0,0,0.3);
+}
+
+/* Preview: match bank fixed-height crop for consistent composition */
+#modal-aporte .upload-preview-premium {
+    /* Mostrar la imagen completa: contenedor con padding y altura máxima razonable */
+    position: relative;
+    width: 100%;
+    max-height: 360px;
+    border-radius: 16px;
+    overflow: visible;
+    display: block;
+    margin: 0.5rem 0 0;
+    background: var(--gray-800);
+    padding: 1.25rem; /* espacio alrededor para que la imagen no toque bordes */
+    box-sizing: border-box;
+}
+#modal-aporte .upload-preview-premium img {
+    /* Mostrar la imagen completa y proporcionalmente
+       - no forzar altura fija (evita recorte)
+       - mantener limitaciones máximas para no romper el layout */
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 320px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2) inset;
+}
+
+/* Remove button: match bank red circular style and placement */
+#modal-aporte .btn-remove-preview {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 12;
+}
+#modal-aporte .btn-remove-preview:hover { transform: scale(1.05); background: #ef4444; }
+
+/* keep existing lighter placeholder styles for the 'no file' state but
+   align spacing with the bank modal */
+#modal-aporte #aporte-upload-placeholder {
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.75rem;
+    background: var(--gray-800);
+    border-radius: .9rem;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+#modal-aporte #aporte-upload-placeholder:hover { transform: translateY(-6px); box-shadow: 0 30px 60px rgba(0,0,0,0.4); cursor: pointer; }
+
+
+/* ==========================================
+   STAT SUMMARY BANNER
+   ========================================== */
+.summary-stats-banner {
+    background: var(--primary);
+    border-radius: 16px;
+    padding: 1.25rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    color: white;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.summary-stat-box {
+    text-align: center;
+}
+
+.summary-stat-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.25rem;
+}
+
+.summary-stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--gold);
+}
+
+.summary-stat-separator {
+    width: 1px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================
+   ANIMATIONS
+   ========================================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: translateY(-50%) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-50%) scale(2.5);
+        opacity: 0;
+    }
+}
+
+.stat-card {
+    animation: fadeIn 0.4s ease-out backwards;
+}
+
+.stat-card:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.stat-card:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.stat-card:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+/* ==========================================
+   MODAL HISTORY EXTRAS
+   ========================================== */
+.filters-bar-premium {
+    background: var(--gray-800);
+    padding: 1.25rem;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: flex-end;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.filter-item {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-item label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-action {
+    display: flex;
+    align-items: center;
+    padding-bottom: 2px;
+}
+
+.btn-round {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    padding: 0;
+}
+
+.table-container-scroll {
+    background: var(--gray-800);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    margin-top: 1rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.comprobante-link {
+    color: var(--gold-dark);
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    background: rgba(242, 187, 58, 0.1);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.comprobante-link:hover {
+    background: var(--gold);
+    color: var(--primary-dark);
+}
+
+.text-amount {
+    font-weight: 800;
+    color: var(--primary);
+    font-size: 1.05rem;
+}

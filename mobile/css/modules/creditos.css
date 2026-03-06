@@ -1,0 +1,133 @@
+﻿/**
+ * Estilos para MÃ³dulo de CrÃ©ditos - MÃ³vil
+ */
+
+.lite-credit-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 1.25rem;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.lite-credit-card:active {
+    transform: scale(0.98);
+}
+
+.lite-credit-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--primary);
+}
+
+.lite-credit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.lite-credit-code {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lite-credit-amount {
+    font-weight: 800;
+    font-size: 1.15rem; /* Un poco más grande para destacar */
+    color: #10B981; /* Verde Success de alto contraste sobre fondo oscuro */
+}
+
+.lite-credit-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.lite-credit-footer {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+/* Badge States */
+.lite-status-badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.65rem;
+}
+
+/* Botón pagar rápido en tarjeta */
+.lite-btn-pay-inline {
+    background: var(--success);
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+}
+
+.lite-btn-pay-inline:active {
+    transform: scale(0.92);
+}
+
+.lite-btn-pay-inline i {
+    font-size: 0.7rem;
+}
+
+.badge-activo {
+    background: rgba(16, 185, 129, 0.1) !important;
+    color: #10b981 !important;
+}
+
+.badge-pendiente {
+    background: rgba(245, 158, 11, 0.1) !important;
+    color: #f59e0b !important;
+}
+
+.badge-moroso {
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: #ef4444 !important;
+}
+
+.badge-pausado {
+    background: rgba(245, 158, 11, 0.1) !important;
+    color: #F59E0B !important;
+}
+
+.badge-precancelado {
+    background: rgba(59, 130, 246, 0.1) !important;
+    color: #3B82F6 !important;
+}
+
+.badge-cancelado {
+    background: rgba(107, 114, 128, 0.1) !important;
+    color: #6B7280 !important;
+}

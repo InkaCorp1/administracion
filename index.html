@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INKA CORP - Dashboard</title>
+    <meta name="description" content="Sistema de gestión INKA CORP - Panel de administración">
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0B4E32">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="INKA CORP">
+    <link rel="apple-touch-icon" href="img/icon-192.png">
+
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/creditos.css">
+    <link rel="stylesheet" href="css/creditos_preferenciales.css">
+    <link rel="stylesheet" href="css/creditos_preferenciales_hero.css">
+    <link rel="stylesheet" href="css/polizas.css">
+    <link rel="stylesheet" href="css/socios.css">
+    <link rel="stylesheet" href="css/solicitud_credito.css">
+    <link rel="stylesheet" href="css/simulador.css">
+    <link rel="stylesheet" href="css/aportes.css">
+    <link rel="stylesheet" href="css/bancos.css">
+    <link rel="stylesheet" href="css/caja.css">
+    <link rel="stylesheet" href="css/ahorros.css">
+    <link rel="stylesheet" href="css/administrativos.css">
+    <link rel="stylesheet" href="css/agenda.css">
+    <link rel="stylesheet" href="css/resumen_general.css">
+    <link rel="stylesheet" href="css/contratos.css?v=1.2">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- jsPDF para generación de fichas PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- QRious para códigos QR en PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    
+    <!-- Librería de Gráficos ApexCharts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        /**
+         * REDIRECCIÓN AGRESIVA A MÓVIL
+         * Evita en un 100% que cargue el Layout de PC en dispositivos pequeños.
+         */
+        function forceMobileRedirect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const allowDesktopByParam = urlParams.get('forceDesktop') === '1';
+            const allowDesktopBySession = sessionStorage.getItem('forceDesktop') === 'true' || localStorage.getItem('forceDesktop') === 'true';
+
+            // Permitir abrir escritorio desde móvil para flujo puntual (generación de documentos)
+            if (allowDesktopByParam || allowDesktopBySession) {
+                if (allowDesktopBySession) {
+                    sessionStorage.removeItem('forceDesktop');
+                    localStorage.removeItem('forceDesktop');
+                }
+                return false;
+            }
+
+            const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isSmallScreen = window.innerWidth <= 850;
+
+            if (isMobileUA || isSmallScreen) {
+                // Si ya estamos en la carpeta mobile, no hacer nada
+                if (window.location.pathname.includes('/mobile/')) return false;
+
+                const view = urlParams.get('view');
+                
+                // Módulos que existen en versión móvil
+                const mobileModules = ['creditos', 'desembolsos', 'aportes', 'bancos', 'simulador', 'socios'];
+                const targetView = (view && mobileModules.includes(view)) ? view : '';
+
+                // Construir URL base a la carpeta mobile
+                let baseUrl = window.location.origin + window.location.pathname;
+                if (!baseUrl.endsWith('/')) {
+                    baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1);
+                }
+                
+                const finalUrl = baseUrl + 'mobile/' + (targetView ? '?view=' + targetView : '');
+                
+                console.warn('[SECURITY] Redirigiendo a versión móvil forzada.');
+                window.location.replace(finalUrl);
+                return true;
+            }
+            return false;
+        }
+
+        // Ejecutar antes de que el navegador pinte nada
+        if (forceMobileRedirect()) {
+            document.documentElement.style.display = 'none';
+        }
+
+        window.addEventListener('resize', () => forceMobileRedirect());
+    </script>
+</head>
+
+<body>
+    <!-- Screen Locker de Carga Inicial -->
+    <div id="app-screen-locker" class="screen-locker">
+        <div class="screen-locker-content">
+            <img src="https://i.ibb.co/3mC22Hc4/inka-corp.png" alt="INKA CORP" class="screen-locker-logo">
+            <div class="screen-locker-title">INKA CORP</div>
+            <div class="screen-locker-spinner"></div>
+            <div class="screen-locker-text">Cargando aplicación...</div>
+            <div class="powered-by-chip powered-by-chip-dark">
+                <span>POWERED BY</span>
+                <picture>
+                    <source srcset="img/LPwebp/lpsolutionswithe.webp" type="image/webp">
+                    <img src="img/LPpng/lpsolutionswithe.png" alt="LP SOLUTIONS" class="powered-by-logo">
+                </picture>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout Principal -->
+    <div class="app-layout" style="display: none;" id="app-layout">
+        <!-- Botones de Acceso Rápido (visibles cuando sidebar está cerrado) -->
+        <button id="sidebar-toggle" class="sidebar-toggle" title="Menú">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <button id="home-shortcut" class="home-shortcut-btn hidden" title="Ir al Dashboard"
+            onclick="loadView('dashboard')">
+            <i class="fas fa-home"></i>
+        </button>
+
+        <!-- Overlay para cerrar sidebar -->
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar collapsed">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <img src="https://i.ibb.co/3mC22Hc4/inka-corp.png" alt="INKA CORP Logo">
+                </div>
+                <div>
+                    <div class="sidebar-title">INKA CORP</div>
+                    <div class="sidebar-subtitle">Sistema de Gestión</div>
+                </div>
+                <span class="sidebar-version-pill" data-app-version></span>
+            </div>
+
+            <nav class="nav-menu">
+                <div class="nav-section-title">Navegación</div>
+
+                <a href="index.html" class="nav-item active" data-view="dashboard">
+                    <i class="fas fa-th-large"></i>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="resumen_general.html" class="nav-item" data-view="resumen_general" data-module="resumen_general">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Resumen General</span>
+                </a>
+
+                <a href="socios.html" class="nav-item" data-view="socios" data-module="socios">
+                    <i class="fas fa-users"></i>
+                    <span>Socios</span>
+                </a>
+
+                <a href="solicitud_credito.html" class="nav-item" data-view="solicitud_credito"
+                    data-module="solicitud_credito">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Solicitud de Crédito</span>
+                </a>
+
+                <a href="creditos.html" class="nav-item" data-view="creditos" data-module="creditos">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <span>Créditos</span>
+                </a>
+
+                <a href="creditos_preferenciales.html" class="nav-item" data-view="creditos_preferenciales"
+                    data-module="creditos_preferenciales">
+                    <i class="fas fa-star"></i>
+                    <span>Créditos Preferenciales</span>
+                </a>
+
+                <a href="precancelaciones.html" class="nav-item" data-view="precancelaciones"
+                    data-module="precancelaciones">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <span>Precancelaciones</span>
+                </a>
+
+                <a href="ahorros.html" class="nav-item" data-view="ahorros" data-module="ahorros">
+                    <i class="fas fa-piggy-bank"></i>
+                    <span>Ahorros</span>
+                </a>
+
+                <a href="polizas.html" class="nav-item" data-view="polizas" data-module="polizas">
+                    <i class="fas fa-certificate"></i>
+                    <span>Pólizas</span>
+                </a>
+
+                <a href="simulador.html" class="nav-item" data-view="simulador" data-module="simulador">
+                    <i class="fas fa-calculator"></i>
+                    <span>Simulador</span>
+                </a>
+
+                <a href="aportes.html" class="nav-item" data-view="aportes" data-module="aportes">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <span>Aportes Semanales</span>
+                </a>
+
+                <a href="bancos.html" class="nav-item" data-view="bancos" data-module="bancos">
+                    <i class="fas fa-university"></i>
+                    <span>Situación Bancaria</span>
+                </a>
+
+                <a href="caja.html" class="nav-item" data-view="caja" data-module="caja">
+                    <i class="fas fa-cash-register"></i>
+                    <span>Control de Caja</span>
+                </a>
+
+                <a href="administrativos.html" class="nav-item" data-view="administrativos"
+                    data-module="administrativos">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Gastos Administrativos</span>
+                </a>
+
+                <a href="contratos.html" class="nav-item" data-view="contratos" data-module="contratos">
+                    <i class="fas fa-file-contract"></i>
+                    <span>Contratos</span>
+                </a>
+
+                <a href="#" class="nav-item" id="nav-agenda" data-view="agenda" data-module="agenda">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Agenda y Notas</span>
+                </a>
+
+                <div class="nav-section-title" style="margin-top: 1rem;">Configuración</div>
+
+
+
+            </nav>
+
+            <!-- Perfil de Usuario -->
+            <div class="user-profile">
+                <div id="user-avatar" class="user-avatar">U</div>
+                <div class="user-info">
+                    <div id="user-name" class="user-name">Usuario</div>
+                    <div id="user-role" class="user-role">Rol</div>
+                </div>
+                <button id="logout-btn" class="logout-btn" title="Cerrar Sesión">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Contenido Principal -->
+        <main id="main-content" class="main-content">
+            <!-- El contenido dinámico se cargará aquí -->
+        </main>
+
+
+    </div>
+
+    <!-- Modal Agenda -->
+    <div id="agenda-modal" class="agenda-modal-overlay">
+        <div class="agenda-modal-card">
+            <div class="agenda-modal-header">
+                <div class="agenda-header-info">
+                    <i class="fas fa-calendar-alt"></i>
+                    <h2 id="agenda-month-year">Agenda y Notas</h2>
+                </div>
+                <div class="agenda-header-search">
+                    <div class="search-box-agenda">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="agenda-search-input" placeholder="Buscar notas o eventos..." oninput="handleAgendaSearch()">
+                    </div>
+                </div>
+                <div class="agenda-header-actions">
+                    <div class="agenda-date-picker-container">
+                        <button id="agenda-datepicker-btn" class="agenda-nav-btn" title="Seleccionar Fecha"><i class="fas fa-calendar-day"></i></button>
+                        <input type="date" id="agenda-date-input" style="position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0;">
+                    </div>
+                    <button id="prev-week" class="agenda-nav-btn" title="Semana Anterior"><i class="fas fa-chevron-left"></i></button>
+                    <button id="agenda-today-btn" class="agenda-today-btn" onclick="goToToday()">Hoy</button>
+                    <button id="next-week" class="agenda-nav-btn" title="Semana Siguiente"><i class="fas fa-chevron-right"></i></button>
+                    <button class="agenda-close-btn" onclick="closeAgendaModal()">&times;</button>
+                </div>
+            </div>
+            <div class="agenda-modal-body">
+                <aside class="agenda-sidebar">
+                    <div class="agenda-sidebar-section">
+                        <h3><i class="fas fa-sticky-note"></i> Notas Rápidas</h3>
+                        <div id="quick-notes-container" class="quick-notes-container">
+                            <!-- Notas rápidas sin fecha -->
+                        </div>
+                        <button class="add-quick-note-btn" onclick="addQuickNote()">
+                            <i class="fas fa-plus"></i> Añadir Nota
+                        </button>
+                    </div>
+
+                    <!-- Nueva sección para resultados de búsqueda global -->
+                    <div id="agenda-search-results-section" class="agenda-sidebar-section" style="display: none;">
+                        <h3><i class="fas fa-search"></i> Resultados Agenda</h3>
+                        <div id="agenda-search-results-container" class="quick-notes-container">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </div>
+
+                    <div class="agenda-sidebar-section">
+                        <h3><i class="fas fa-tags"></i> Categorías</h3>
+                        <div class="category-filters">
+                            <label class="cat-filter"><input type="checkbox" checked data-category="trabajo"> <span class="cat-dot trabajo"></span> Trabajo</label>
+                            <label class="cat-filter"><input type="checkbox" checked data-category="personal"> <span class="cat-dot personal"></span> Personal</label>
+                            <label class="cat-filter"><input type="checkbox" checked data-category="importante"> <span class="cat-dot importante"></span> Muy Importante</label>
+                            <label class="cat-filter"><input type="checkbox" checked data-category="finanzas"> <span class="cat-dot finanzas"></span> Finanzas</label>
+                        </div>
+                    </div>
+                </aside>
+                <div class="agenda-main-content">
+                    <div class="agenda-grid-container">
+                        <div id="agenda-grid" class="agenda-grid">
+                            <!-- Se generará dinámicamente -->
+                        </div>
+                        <div id="current-time-indicator" class="time-indicator"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loader Global -->
+    <div id="app-loader" class="app-loader hidden">
+        <div class="app-loader-card">
+            <div class="app-loader-main">
+                <div class="app-loader-spinner"></div>
+                <div id="app-loader-text" class="app-loader-text">Cargando...</div>
+            </div>
+            <div class="powered-by-chip powered-by-chip-dark">
+                <span>POWERED BY</span>
+                <picture>
+                    <source srcset="img/LPwebp/lpsolutionswithe.webp" type="image/webp">
+                    <img src="img/LPpng/lpsolutionswithe.png" alt="LP SOLUTIONS" class="powered-by-logo">
+                </picture>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/modules/socios.js"></script>
+    <script src="js/modules/socios_edit.js"></script>
+    <script src="js/modules/solicitud_credito.js"></script>
+    <script src="js/image-utils.js"></script>
+    <script src="js/modules/creditos.js"></script>
+    <script src="js/modules/creditos_preferenciales.js"></script>
+    <script src="js/modules/polizas.js"></script>
+    <script src="js/modules/precancelaciones.js"></script>
+    <script src="js/modules/resumen_general.js"></script>
+    <script src="js/modules/ahorros.js"></script>
+    <script src="js/modules/simulador.js"></script>
+    <script src="js/modules/aportes.js"></script>
+    <script src="js/modules/bancos.js"></script>
+    <script src="js/modules/administrativos.js"></script>
+    <script src="js/modules/agenda.js"></script>
+    <script src="js/modules/contratos.js"></script>
+    <script src="js/modules/caja.js"></script>
+
+    <!-- Registro de Service Worker PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then((registration) => {
+                        console.log('[PWA] Service Worker registrado');
+
+                        // Recarga cuando el nuevo SW tome el control
+                        let refreshing = false;
+                        navigator.serviceWorker.addEventListener('controllerchange', () => {
+                            if (!refreshing) {
+                                refreshing = true;
+                                window.location.reload();
+                            }
+                        });
+
+                        // Detectar si hay una actualización esperando
+                        const showUpdatePrompt = (worker) => {
+                            if (window.Swal) {
+                                Swal.fire({
+                                    title: 'Nueva versión detectada',
+                                    text: 'Actualiza la app para continuar y disfrutar de las últimas mejoras.',
+                                    icon: 'info',
+                                    confirmButtonText: 'ACTUALIZAR AHORA',
+                                    confirmButtonColor: '#0B4E32',
+                                    allowOutsideClick: false,
+                                    allowEscapeKey: false
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        worker.postMessage({ type: 'SKIP_WAITING' });
+                                    }
+                                });
+                            } else if (confirm('Nueva versión detectada. ¿Actualizar ahora?')) {
+                                worker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        };
+
+                        if (registration.waiting) {
+                            showUpdatePrompt(registration.waiting);
+                        }
+
+                        registration.onupdatefound = () => {
+                            const installingWorker = registration.installing;
+                            installingWorker.onstatechange = () => {
+                                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    showUpdatePrompt(installingWorker);
+                                }
+                            };
+                        };
+
+                        // Verificar actualizaciones periódicamente
+                        setInterval(() => registration.update(), 60 * 60 * 1000); // Cada hora
+                    })
+                    .catch((error) => console.error('[PWA] Error en registro:', error));
+            });
+        }
+    </script>
+</body>
+
+</html>

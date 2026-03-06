@@ -1,0 +1,1552 @@
+/* ==========================================
+   INKA CORP - Estilos del Módulo de Créditos
+   Gestión y monitoreo
+   ========================================== */
+
+/* Contenedor principal - hereda max-width del content-wrapper */
+.creditos-wrapper {
+    width: 100%;
+    /* NO usar overflow: hidden para que sticky funcione */
+    box-sizing: border-box;
+}
+
+/* Asegurar que todos los elementos respeten el contenedor */
+.creditos-wrapper *,
+.creditos-wrapper *::before,
+.creditos-wrapper *::after {
+    box-sizing: border-box;
+}
+
+/* Show/Hide mobile elements */
+.show-mobile {
+    display: none;
+}
+
+/* ==========================================
+   HERO SECTION
+   (Obsoleto: Ahora usa .standard-hero de styles.css)
+   ========================================== */
+.creditos-hero {
+    /* Mantenido solo como contenedor si es necesario */
+}
+
+/* ==========================================
+   MORA CARD BODY
+   ========================================== */
+.mora-card-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.mora-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.mora-divider {
+    width: 1px;
+    height: 30px;
+    background: rgba(245, 158, 11, 0.3);
+}
+
+.mora-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--warning);
+    line-height: 1;
+}
+
+.mora-label {
+    font-size: 0.65rem;
+    color: var(--warning-light);
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 0.2rem;
+}
+
+/* ==========================================
+   BOTÓN DE REFRESCAR
+   ========================================== */
+/* ==========================================
+   BOTONES DE ORDENAMIENTO Y ACCIONES
+   ========================================== */
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    /* Permitir wrap si no hay espacio */
+    flex: 1;
+}
+
+/* Refresh Button */
+.btn-refresh {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--gray-700);
+    color: var(--gray-300);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-refresh:hover {
+    background: var(--gray-600);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-refresh.loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Report Button */
+.btn-report {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1.25rem;
+    height: 40px;
+    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2);
+}
+
+.btn-report:hover {
+    background: linear-gradient(135deg, #B91C1C 0%, #991B1B 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(220, 38, 38, 0.3);
+}
+
+/* Contenedor de botones de ordenamiento */
+/* Contenedor de botones de ordenamiento */
+.sort-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    flex-wrap: wrap;
+    margin-right: auto;
+    margin-left: 0.5rem;
+}
+
+/* Botones individuales de ordenamiento */
+.btn-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0 0.5rem;
+    height: 28px;
+    width: auto !important;
+    min-width: fit-content;
+    background: transparent;
+    color: var(--gray-400);
+    border: 1px solid transparent;
+    border-radius: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Grupos modulares tipo cápsula */
+.sort-group-primary,
+.sort-group-secondary,
+.sort-group-pais {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+    flex-wrap: nowrap;
+    background: var(--gray-800);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Ocultar separadores de texto */
+.sort-separator {
+    display: none;
+}
+
+.btn-sort:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--white);
+    border-color: transparent;
+}
+
+.btn-sort.active {
+    background: var(--gray-700);
+    color: var(--white);
+    border-color: var(--border-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.btn-sort-primary.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary-light);
+}
+
+/* Botones de País */
+.btn-sort-pais {
+    padding: 0 0.5rem;
+    width: auto;
+    min-width: 32px;
+}
+
+.btn-sort-pais .fi {
+    width: 1.4em;
+    height: 1em;
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.btn-sort-pais.active {
+    background: rgba(242, 187, 58, 0.15);
+    border-color: var(--gold);
+}
+
+/* Search Wrapper */
+.search-wrapper {
+    display: flex;
+    align-items: center;
+    background: var(--gray-800);
+    border: 1px solid var(--border-color);
+    border-radius: 2rem;
+    padding: 0 1rem;
+    height: 38px;
+    width: 240px;
+    transition: all 0.2s ease;
+}
+
+.search-wrapper:focus-within {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(242, 187, 58, 0.1);
+    background: var(--gray-800);
+    width: 320px;
+}
+
+.search-wrapper i {
+    color: var(--gray-400);
+    margin-right: 0.75rem;
+}
+
+.search-input {
+    background: transparent;
+    border: none;
+    color: var(--white);
+    font-size: 0.9rem;
+    width: 100%;
+    outline: none;
+}
+
+.search-input::placeholder {
+    color: var(--gray-500);
+}
+
+/* Botón de Acción (Ojo) Mejorado */
+.btn-action {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 50% !important;
+    /* Forzar circular */
+    border: 1px solid transparent !important;
+    background: rgba(255, 255, 255, 0.03);
+    /* Casi transparente */
+    color: var(--gray-500);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-action:hover {
+    background: rgba(242, 187, 58, 0.15) !important;
+    color: var(--gold) !important;
+    transform: scale(1.1);
+    box-shadow: 0 0 8px rgba(242, 187, 58, 0.2);
+}
+
+.btn-action i {
+    font-size: 0.95rem;
+}
+
+/* Responsive adjustments for toolbar */
+/* Estilos para el selector de tipo de reporte (Slider/Segmented Control) */
+.report-mode-selector {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 25px;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.report-mode-btn {
+    flex: 1;
+    padding: 10px 15px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    z-index: 2;
+}
+
+.report-mode-btn.active {
+    color: #ffffff;
+    background: #0E5936;
+    box-shadow: 0 4px 12px rgba(14, 89, 54, 0.3);
+}
+
+.report-mode-btn i {
+    font-size: 1rem;
+}
+
+.export-options-container .filter-group-corporate {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.export-options-container .hidden-filter {
+    display: none !important;
+}
+
+@media (max-width: 1200px) {
+    .table-actions {
+        gap: 0.75rem;
+    }
+
+    .search-wrapper {
+        width: 100%;
+        /* Full width en pantallas medianas */
+        margin-left: 0;
+        margin-top: 0.5rem;
+        order: 10;
+        /* Mover al final */
+    }
+
+    .sort-buttons {
+        order: 5;
+        flex: 1;
+        overflow-x: auto;
+        /* Scroll horizontal si es necesario */
+        padding-bottom: 0.5rem;
+    }
+}
+
+/* ==========================================
+   TABLA CON SCROLL INTERNO FULLSCREEN
+   ========================================== */
+/* ==========================================
+   TABLA CON SCROLL DOCUMENTO
+   ========================================== */
+/* ==========================================
+   TABLA CON SCROLL DOCUMENTO
+   ========================================== */
+.table-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+    background: var(--gray-800);
+    border-radius: 1rem;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    margin-bottom: 2rem;
+    width: 100%;
+}
+
+.table-header {
+    flex-shrink: 0;
+    background: var(--gray-900);
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+    /* Intentar mantener en una línea */
+    gap: 1.5rem;
+
+    /* Sticky header para la barra de acciones */
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.table-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--white);
+    margin: 0;
+    white-space: nowrap;
+}
+
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    justify-content: flex-end;
+    /* Alinear todo a la derecha */
+}
+
+.table-responsive {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+}
+
+.creditos-wrapper .table-responsive table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+}
+
+.table-responsive thead {
+    position: sticky;
+    /* Ajustado por reducción de padding en header */
+    top: 65px;
+    z-index: 10;
+}
+
+.table-responsive thead th {
+    background: var(--gray-900);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--gray-400);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+    padding: 0.75rem 0.5rem;
+    text-align: left;
+    white-space: nowrap;
+}
+
+/* Celdas de datos más compactas */
+.creditos-wrapper tbody td {
+    padding: 0.6rem 0.5rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+/* Columna de socio puede ser más ancha */
+.creditos-wrapper .col-socio {
+    min-width: 150px;
+}
+
+/* Columna de acciones compacta */
+.creditos-wrapper th:last-child,
+.creditos-wrapper td:last-child {
+    text-align: center;
+    width: 60px;
+}
+
+/* Scrollbar estilizado */
+.table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: var(--gray-800);
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: var(--gray-600);
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-500);
+}
+
+/* ==========================================
+   ESTILOS DE CELDAS ESPECIALES
+   ========================================== */
+.section-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.section-header.moroso {
+    background: linear-gradient(135deg, #B91C1C 0%, #991B1B 100%);
+}
+
+.section-header.cancelado {
+    background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);
+}
+
+.section-header.precancelado {
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+}
+
+.section-header.pausado {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+}
+
+.section-header .section-count {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.15rem 0.6rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+}
+
+.row-moroso {
+    background: rgba(239, 68, 68, 0.08) !important;
+}
+
+.row-moroso:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+}
+
+.row-moroso td {
+    border-bottom-color: rgba(239, 68, 68, 0.2);
+}
+
+.pais-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.35rem;
+    color: var(--gray-300);
+}
+
+.pais-badge .fi {
+    font-size: 1.1rem;
+    vertical-align: middle;
+}
+
+/* Botón de Acción (Ojo) Mejorado */
+.btn-action {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    /* Sin borde por defecto */
+    background: transparent;
+    color: var(--gray-400);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-action:hover {
+    background: rgba(242, 187, 58, 0.1);
+    color: var(--gold);
+    transform: scale(1.1);
+}
+
+.btn-action i {
+    font-size: 1rem;
+}
+
+/* ==========================================
+   ESTADOS Y TABS
+   ========================================== */
+/* Copiado y adaptado de Polizas */
+.estado-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem !important;
+    flex-wrap: wrap;
+    background: var(--gray-800);
+    padding: 0.5rem;
+    border-radius: 1rem;
+    display: inline-flex;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 1px solid var(--border-color);
+}
+
+.estado-tab {
+    background: transparent;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    color: var(--gray-400);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.estado-tab:hover {
+    color: var(--white);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.estado-tab.active {
+    background: var(--primary);
+    color: var(--white);
+    box-shadow: var(--shadow-primary);
+}
+
+.estado-count {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.15rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    color: var(--gold);
+}
+
+.estado-tab.active .estado-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--white);
+}
+
+/* ==========================================
+   MODALES Y DETALLES
+   ========================================== */
+.credit-info-box {
+    background: rgba(0, 184, 148, 0.08);
+    border: 1.5px solid rgba(0, 184, 148, 0.3);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+
+.credit-info-box:hover {
+    transform: translateY(-2px);
+    border-color: rgba(0, 184, 148, 0.5);
+}
+
+.credit-info-label {
+    font-size: 0.75rem;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.credit-info-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gold);
+}
+
+.credit-info-box.highlight {
+    background: rgba(255, 193, 7, 0.12);
+    border-color: rgba(255, 193, 7, 0.4);
+}
+
+.credito-detail-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.detail-item label {
+    font-size: 0.75rem;
+    color: var(--gray-400);
+    text-transform: uppercase;
+}
+
+.detail-item span {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--white);
+}
+
+/* Resumen Grid Detail */
+.resumen-grid-detail {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 1rem;
+}
+
+.resumen-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    text-align: center;
+}
+
+.resumen-item.highlight {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: var(--gold);
+}
+
+.resumen-item .resumen-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.resumen-item .resumen-value {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--white);
+}
+
+.resumen-item.highlight .resumen-value {
+    color: var(--gold);
+}
+
+/* Progress Bar */
+.progress-container {
+    margin-top: 1rem;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--gray-400);
+}
+
+.progress-bar {
+    height: 8px;
+    background: var(--gray-700);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold) 0%, #D4AF37 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Amortizacion Table */
+.amortizacion-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.amortizacion-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--gray-900);
+}
+
+.amortizacion-table thead th {
+    background: var(--gray-900);
+    color: var(--gray-400);
+    padding: 0.75rem 0.5rem;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--primary);
+}
+
+.amortizacion-table td {
+    padding: 0.5rem;
+    vertical-align: middle;
+    color: var(--gray-300);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.85rem;
+}
+
+.btn-pagar-cuota {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    background: var(--gold);
+    color: var(--primary-dark);
+    font-weight: 700;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-pagar-cuota:hover {
+    background: #c9a027;
+    transform: translateY(-1px);
+}
+
+.btn-pagar-cuota:disabled {
+    background: var(--gray-600);
+    color: var(--gray-400);
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Ahorro Summary */
+.ahorro-summary {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.ahorro-item {
+    flex: 1;
+    min-width: 120px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    text-align: center;
+}
+
+.ahorro-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.ahorro-value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--white);
+}
+
+.ahorro-value.success {
+    color: #10B981;
+}
+
+/* Pago Info Box */
+.pago-info-box {
+    background: rgba(0, 184, 148, 0.08);
+    border: 1px solid rgba(0, 184, 148, 0.25);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.pago-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.pago-info-row:last-child {
+    border-bottom: none;
+}
+
+.pago-info-row span {
+    color: var(--gray-400);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.pago-info-row strong {
+    color: var(--white);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.pago-info-row.highlight {
+    background: rgba(255, 193, 7, 0.12);
+    padding: 0.75rem;
+    margin: 0;
+    border-radius: 0.5rem;
+    border-bottom: none;
+}
+
+.pago-info-row.highlight strong {
+    color: var(--gold);
+    font-size: 1.25rem;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: white;
+    border: none;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.form-label.required::after {
+    content: ' *';
+    color: var(--error);
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+
+/* ==========================================
+   CREDITOS TOOLBAR - ESTILOS BASE
+   ========================================== */
+.creditos-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    background: var(--gray-800);
+    padding: 1rem;
+    border-radius: 1rem;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
+}
+
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    min-height: 38px;
+    background: var(--gray-700);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    color: var(--gray-300);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.toolbar-btn:hover {
+    background: var(--gray-600);
+    border-color: var(--primary);
+    color: var(--white);
+}
+
+.toolbar-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--white);
+}
+
+.toolbar-btn.btn-sync {
+    padding: 0.5rem;
+    width: 38px;
+}
+
+.toolbar-separator {
+    width: 1px;
+    height: 24px;
+    background: var(--border-color);
+    flex-shrink: 0;
+}
+
+.toolbar-flag {
+    width: 20px;
+    height: 14px;
+    border-radius: 2px;
+    object-fit: cover;
+}
+
+.toolbar-search {
+    display: flex;
+    align-items: center;
+    background: var(--gray-700);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0 0.75rem;
+    height: 38px;
+    flex: 1;
+    min-width: 200px;
+    max-width: 320px;
+    transition: all 0.2s ease;
+}
+
+.toolbar-search:focus-within {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(242, 187, 58, 0.1);
+}
+
+.toolbar-search i {
+    color: var(--gray-400);
+    margin-right: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.search-input-toolbar {
+    background: transparent;
+    border: none;
+    color: var(--white);
+    font-size: 0.9rem;
+    width: 100%;
+    outline: none;
+}
+
+.search-input-toolbar::placeholder {
+    color: var(--gray-500);
+}
+
+/* Estado Counters */
+.estado-counters {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.estado-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    background: var(--gray-800);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.estado-counter:hover {
+    border-color: var(--primary);
+    background: var(--gray-700);
+}
+
+.counter-label {
+    color: var(--gray-400);
+    font-weight: 500;
+}
+
+.counter-value {
+    font-weight: 700;
+    color: var(--white);
+    padding: 0.1rem 0.4rem;
+    background: rgba(255,255,255,0.1);
+    border-radius: 0.25rem;
+}
+
+.counter-value.success {
+    color: var(--success-light);
+    background: rgba(16, 185, 129, 0.15);
+}
+
+.counter-value.danger {
+    color: var(--error);
+    background: rgba(239, 68, 68, 0.15);
+}
+
+/* ==========================================
+   RESPONSIVE - TABLET Y MÓVIL
+   ========================================== */
+@media (max-width: 1024px) {
+    .creditos-toolbar {
+        gap: 0.5rem;
+    }
+    
+    .toolbar-btn span {
+        display: none;
+    }
+    
+    .toolbar-btn {
+        padding: 0.5rem;
+        width: 38px;
+    }
+    
+    .toolbar-search {
+        order: 10;
+        flex: 1 1 100%;
+        max-width: none;
+        margin-top: 0.5rem;
+    }
+    
+    .toolbar-separator {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .creditos-hero {
+        padding: 1.5rem;
+        border-radius: 1rem;
+    }
+
+/* ==========================================
+   MODAL MOROSO WIDE
+   ========================================== */
+.modal-card.modal-moroso-wide {
+    width: 95% !important;
+    max-width: 1400px !important;
+}
+
+.modal-moroso-wide .amortizacion-table th,
+.modal-moroso-wide .amortizacion-table td {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.3rem;
+}
+
+.modal-moroso-wide .resumen-grid-detail {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+}
+
+@media (max-width: 768px) {
+    .modal-card.modal-moroso-wide {
+        width: 100% !important;
+        margin: 0;
+        border-radius: 0;
+        max-height: 100vh;
+    }
+}
+
+
+    .hero-title-creditos {
+        font-size: 1.75rem;
+    }
+
+    .creditos-hero-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    
+    .creditos-toolbar {
+        padding: 0.75rem;
+        gap: 0.4rem;
+    }
+
+    .estado-tabs {
+        width: 100%;
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start !important;
+        padding-bottom: 0.5rem;
+        -webkit-overflow-scrolling: touch;
+        left: 0;
+        transform: none;
+        border-radius: 0.75rem;
+        background: transparent;
+        border: none;
+        margin-bottom: 1rem !important;
+    }
+
+    .estado-tab {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        padding: 0.6rem 1rem;
+        background: var(--gray-800);
+        margin-right: 0.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .estado-tab.active {
+        background: var(--primary);
+    }
+
+    .table-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sort-buttons {
+        width: 100%;
+        justify-content: center;
+        padding: 0.5rem;
+    }
+    
+    .estado-counters {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 0.5rem;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .estado-counter {
+        flex-shrink: 0;
+    }
+    
+    /* Tabla responsive en móvil */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .table-responsive table {
+        min-width: 800px;
+    }
+
+    .hide-mobile {
+        display: none !important;
+    }
+
+    .show-mobile {
+        display: inline !important;
+    }
+
+    /* Secciones responsive */
+    .creditos-section-table {
+        min-width: 700px;
+    }
+
+    .section-sticky-header {
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* ==========================================
+   SECCIONES POR ESTADO CON STICKY HEADERS
+   ========================================== */
+
+.creditos-sections-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.creditos-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    /* NO usar overflow: hidden para que sticky funcione */
+}
+
+.section-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 1rem 1rem 0 0;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s ease;
+}
+
+/* Efecto de sombra cuando está sticky */
+.section-sticky-header.is-stuck {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.section-sticky-header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--section-color, var(--gold));
+    border-radius: 1rem 0 0 0;
+}
+
+.section-header-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-header-content i {
+    font-size: 1.25rem;
+}
+
+.section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: -0.25px;
+}
+
+.section-count {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.section-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 0 0 1rem 1rem;
+    background: var(--card-bg);
+}
+
+.creditos-section-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.creditos-section-table thead th {
+    background: var(--bg-secondary);
+    padding: 0.85rem 1rem;
+    font-size: 0.75rem; /* Aumento ligero de tamaño */
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+    color: var(--gray-300); /* Color de encabezado más claro para contraste */
+    font-weight: 700;
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+}
+
+/* Estilos para selectores de exportación (Botoneras) */
+.export-selector-group {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--gray-800) !important;
+    padding: 0.35rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-color);
+    margin-bottom: 5px;
+}
+
+.export-selector-btn {
+    flex: 1;
+    padding: 0.65rem 0.5rem;
+    border: none;
+    background: transparent;
+    color: var(--gray-400) !important;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.export-selector-btn:hover {
+    color: var(--primary) !important;
+    background: rgba(11, 78, 50, 0.05);
+}
+
+.export-selector-btn.active {
+    background: var(--primary) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.export-label-corporate {
+    display: block; 
+    font-weight: 700; 
+    margin-bottom: 8px; 
+    color: var(--gold); /* Cambiado a oro para resaltar sobre fondo oscuro */
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.creditos-section-table tbody tr {
+    transition: background 0.15s ease;
+    cursor: pointer;
+}
+
+/* Fondos sutiles por estado de fila */
+.credito-row.row-status-activo { background-color: rgba(16, 185, 129, 0.03); }
+.credito-row.row-status-moroso { background-color: rgba(239, 68, 68, 0.05); }
+.credito-row.row-status-pausado { background-color: rgba(245, 158, 11, 0.03); }
+.credito-row.row-status-pendiente { background-color: rgba(139, 92, 246, 0.03); }
+.credito-row.row-status-precancelado { background-color: rgba(59, 130, 246, 0.03); }
+.credito-row.row-status-cancelado { background-color: rgba(107, 114, 128, 0.02); }
+
+/* Arreglo de contraste para nombres en tabla de créditos */
+.socio-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.socio-nombre {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.socio-cedula {
+    color: var(--gray-400) !important;
+    font-size: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+    width: fit-content;
+}
+
+.creditos-section-table tbody tr:hover {
+    background: rgba(212, 175, 55, 0.08) !important;
+}
+
+.creditos-section-table tbody td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.creditos-section-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Progress badge para cuotas pagadas */
+.progress-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--gray-300);
+}
+
+/* Estado counter activo */
+.estado-counter.active {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: var(--gold);
+}
+
+.estado-counter.active .counter-label {
+    color: var(--gold);
+}
+
+/* Loading placeholder */
+.loading-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    color: var(--gray-400);
+    gap: 1rem;
+}
+
+.loading-placeholder i {
+    font-size: 2.5rem;
+    color: var(--gold);
+}
+
+/* ==========================================
+   FIXED HEADER CLONE (JavaScript controlled)
+   ========================================== */
+.fixed-header-clone {
+    background: var(--card-bg) !important;
+    border-bottom: 1px solid var(--border-color);
+    backdrop-filter: blur(20px);
+}
+
+.fixed-header-clone .section-sticky-header {
+    border-radius: 0;
+    margin: 0;
+    padding: 0.75rem 1rem;
+}
+
+.fixed-header-clone .sticky-table-header {
+    background: transparent;
+}
+
+.fixed-header-clone .sticky-table-header thead {
+    background: var(--bg-secondary);
+}
+
+.fixed-header-clone .sticky-table-header thead th {
+    background: var(--bg-secondary);
+    padding: 0.75rem 1rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gray-400);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.fixed-header-clone .sticky-table-header .text-right {
+    text-align: right;
+}
+
+.fixed-header-clone .sticky-table-header .text-center {
+    text-align: center;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}

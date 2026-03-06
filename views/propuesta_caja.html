@@ -1,0 +1,623 @@
+<div class="caja-plan-container">
+    <div class="caja-plan-header">
+        <div>
+            <h1><i class="fas fa-cash-register"></i> Módulo Caja (Diseño Tentativo)</h1>
+            <p>Documento de diseño previo a implementación, basado en el análisis de tus módulos actuales y del esquema de base de datos.</p>
+        </div>
+        <div class="caja-header-actions">
+            <button class="btn btn-secondary" onclick="generateCajaProposalPDF()">
+                <i class="fas fa-file-pdf"></i> Descargar PDF
+            </button>
+            <div class="badge-status">Estado: Planeación</div>
+        </div>
+    </div>
+
+    <section class="caja-card">
+        <h2><i class="fas fa-bullseye"></i> Objetivo del Módulo</h2>
+        <table class="caja-table">
+            <thead>
+                <tr>
+                    <th>Qué se quiere lograr</th>
+                    <th>Alcance tentativo</th>
+                    <th>Por qué es necesario</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Registrar cada ingreso y salida de dinero del sistema.</td>
+                    <td>Unificar en una sola bitácora los movimientos originados por Créditos, Pólizas, Bancos, Desembolsos y Gastos Administrativos (Aportes queda independiente).</td>
+                    <td>Hoy los movimientos están distribuidos por módulo; esto dificulta ver caja diaria real y auditar diferencias.</td>
+                </tr>
+                <tr>
+                    <td>Generar trazabilidad de punta a punta.</td>
+                    <td>Cada movimiento de caja debe apuntar al registro origen (tabla + id) y usuario que lo registró.</td>
+                    <td>Permite auditoría, control interno y detección temprana de errores o duplicados.</td>
+                </tr>
+                <tr>
+                    <td>Gestionar caja por usuario.</td>
+                    <td>Cada usuario opera su propia caja, con apertura/cierre y saldo independiente.</td>
+                    <td>Permite control real por responsable y evita mezclar fondos entre operadores.</td>
+                </tr>
+                <tr>
+                    <td>Habilitar transferencias entre cajas de usuarios.</td>
+                    <td>Traspasos usuario a usuario con evidencia fotográfica obligatoria y trazabilidad doble (salida/entrada).</td>
+                    <td>Cubre faltantes operativos sin perder control ni respaldo documental.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="caja-card">
+        <h2><i class="fas fa-search-dollar"></i> Diagnóstico del Sistema Actual (Escaneo)</h2>
+        <table class="caja-table">
+            <thead>
+                <tr>
+                    <th>Módulo fuente</th>
+                    <th>Tabla actual</th>
+                    <th>Tipo en caja</th>
+                    <th>Hallazgo</th>
+                    <th>Riesgo sin Caja</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Créditos (cobro de cuotas)</td>
+                    <td>ic_creditos_pagos</td>
+                    <td>Ingreso</td>
+                    <td>Registra monto, método, fecha y cobrador; no existe libro único de caja consolidado.</td>
+                    <td>Ingresos reales dispersos y difícil conciliación diaria.</td>
+                </tr>
+                <tr>
+                    <td>Créditos Preferenciales (cobro de cuotas)</td>
+                    <td>ic_creditos_preferenciales_pagos</td>
+                    <td>Ingreso</td>
+                    <td>Gestiona cuotas de la línea preferencial; opera similar a créditos normales pero con otros términos.</td>
+                    <td>Flujo de caja fraccionado al no estar en el libro diario.</td>
+                </tr>
+                <tr>
+                    <td>Precancelaciones</td>
+                    <td>ic_creditos_precancelacion</td>
+                    <td>Ingreso</td>
+                    <td>Guarda monto_precancelacion, pero no se consolida automáticamente a una caja central.</td>
+                    <td>No se visualiza el impacto total de cobros extraordinarios.</td>
+                </tr>
+                <tr>
+                    <td>Aportes</td>
+                    <td>ic_aportes_semanales</td>
+                    <td>Fuera de alcance Caja</td>
+                    <td>Se maneja como ventana/módulo independiente y no debe consolidarse en caja operativa central.</td>
+                    <td>Si se mezcla con caja, se distorsiona el control que deseas mantener separado.</td>
+                </tr>
+                <tr>
+                    <td>Gastos Administrativos</td>
+                    <td>ic_gastos_administrativos</td>
+                    <td>Egreso</td>
+                    <td>Registra monto/motivo/fecha con evidencia, pero sin impacto automático en saldo de caja.</td>
+                    <td>Posible subestimación de egresos al cierre diario.</td>
+                </tr>
+                <tr>
+                    <td>Pólizas (pago al inversionista)</td>
+                    <td>ic_polizas_pagos</td>
+                    <td>Egreso</td>
+                    <td>Liquida capital/interés y registra operación, pero sin tablero único de caja.</td>
+                    <td>Dificultad para controlar salidas fuertes por vencimientos.</td>
+                </tr>
+                <tr>
+                    <td>Pólizas (nueva captación)</td>
+                    <td>ic_polizas</td>
+                    <td>Ingreso</td>
+                    <td>Cuando un inversionista crea una póliza, está colocando dinero en el sistema.</td>
+                    <td>Si no se registra, se subestima la liquidez real disponible.</td>
+                </tr>
+                <tr>
+                    <td>Situación Bancaria (pagos de cuotas)</td>
+                    <td>ic_situacion_bancaria_detalle</td>
+                    <td>Egreso</td>
+                    <td>Controla cuotas pagadas del crédito bancario externo; no existe consolidado de caja operativo.</td>
+                    <td>Flujo bancario fuera del balance de caja diaria.</td>
+                </tr>
+                <tr>
+                    <td>Situación Bancaria (nuevo movimiento)</td>
+                    <td>ic_situacion_bancaria</td>
+                    <td>Mixto</td>
+                    <td>Si el movimiento es CREDITO entra dinero; si es POLIZA sale dinero.</td>
+                    <td>Sin esta regla, la caja queda invertida o incompleta frente al banco.</td>
+                </tr>
+                <tr>
+                    <td>Ahorro programado (devolución al socio)</td>
+                    <td>ic_creditos_ahorro</td>
+                    <td>Egreso</td>
+                    <td>La devolución de ahorro acumulado implica salida real de caja.</td>
+                    <td>Si se omite, el saldo de caja queda sobreestimado.</td>
+                </tr>
+                <tr>
+                    <td>Desembolso de créditos</td>
+                    <td>ic_creditos (fecha_desembolso/capital)</td>
+                    <td>Egreso</td>
+                    <td>La colocación del crédito representa salida de caja, pero no hay asiento explícito en una tabla de caja.</td>
+                    <td>Caja inflada al no reflejar egreso por desembolso.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="caja-card">
+        <h2><i class="fas fa-sitemap"></i> Arquitectura Tentativa del Módulo Caja</h2>
+        <table class="caja-table">
+            <thead>
+                <tr>
+                    <th>Componente</th>
+                    <th>Función</th>
+                    <th>Dato mínimo</th>
+                    <th>Por qué</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Libro de movimientos</td>
+                    <td>Guardar cada ingreso/egreso en orden temporal.</td>
+                    <td>fecha, tipo, monto, modulo_origen, tabla_origen, id_origen, usuario_caja, observacion</td>
+                    <td>Es la base para auditoría y reportes contables operativos.</td>
+                </tr>
+                <tr>
+                    <td>Caja por usuario</td>
+                    <td>Controlar saldo independiente por cada usuario habilitado.</td>
+                    <td>id_usuario, saldo_actual, estado_caja, fecha_apertura, fecha_cierre</td>
+                    <td>Permite responsabilidad individual y operación paralela sin cruces.</td>
+                </tr>
+                <tr>
+                    <td>Motor de integración</td>
+                    <td>Crear movimiento de caja al registrar transacción en módulo origen.</td>
+                    <td>evento_origen + reglas de signo (Ingreso/Egreso)</td>
+                    <td>Evita doble digitación y reduce errores humanos.</td>
+                </tr>
+                <tr>
+                    <td>Transferencias entre usuarios</td>
+                    <td>Permitir traspaso de saldo entre cajas con validaciones.</td>
+                    <td>usuario_origen, usuario_destino, monto, evidencia_url, motivo, estado</td>
+                    <td>Resuelve faltantes operativos y deja evidencia auditable.</td>
+                </tr>
+                <tr>
+                    <td>Conciliación</td>
+                    <td>Cruzar saldos de caja vs bancos y movimientos pendientes.</td>
+                    <td>saldo_sistema, saldo_banco, diferencia, motivo</td>
+                    <td>Detecta inconsistencias antes de que se acumulen.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="caja-card">
+        <h2><i class="fas fa-database"></i> Tablas Nuevas Recomendadas (Tentativas)</h2>
+        <table class="caja-table">
+            <thead>
+                <tr>
+                    <th>Tabla propuesta</th>
+                    <th>Campos clave</th>
+                    <th>Relación</th>
+                    <th>Motivo técnico</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ic_caja_movimientos</td>
+                    <td>id_movimiento, id_usuario_caja, fecha_movimiento, tipo_movimiento, categoria, monto, modulo_origen, tabla_origen, id_origen, metodo_pago, referencia, comprobante_url, registrado_por, created_at</td>
+                    <td>Se enlaza lógicamente con registros de ic_creditos_pagos, ic_polizas_pagos, ic_gastos_administrativos, ic_situacion_bancaria_detalle e ic_creditos (desembolso).</td>
+                    <td>Concentrador único de flujo monetario por usuario.</td>
+                </tr>
+                <tr>
+                    <td>ic_caja_usuarios</td>
+                    <td>id_caja_usuario, id_usuario, saldo_actual, estado_caja, fecha_apertura, fecha_cierre, observacion</td>
+                    <td>Relaciona ic_users con su estado/saldo operativo de caja.</td>
+                    <td>Define la "caja individual" que solicitaste para cada usuario.</td>
+                </tr>
+                <tr>
+                    <td>ic_caja_cierres</td>
+                    <td>id_cierre, id_usuario_caja, fecha, saldo_apertura, ingresos, egresos, saldo_cierre, estado_cierre, cerrado_por, observacion</td>
+                    <td>Se alimenta de ic_caja_movimientos filtrados por usuario y fecha.</td>
+                    <td>Control diario formal de caja por responsable.</td>
+                </tr>
+                <tr>
+                    <td>ic_caja_transferencias</td>
+                    <td>id_transferencia, id_usuario_origen, id_usuario_destino, monto, fecha_transferencia, motivo, evidencia_url, estado, aprobado_por, created_at</td>
+                    <td>Genera dos asientos en ic_caja_movimientos: TRANSFER_OUT y TRANSFER_IN.</td>
+                    <td>Formaliza traspasos entre usuarios con evidencia fotográfica.</td>
+                </tr>
+                <tr>
+                    <td>ic_caja_ajustes</td>
+                    <td>id_ajuste, fecha, tipo_ajuste, monto, motivo, autorizado_por, evidencia_url</td>
+                    <td>Impacta ic_caja_movimientos con tipo AJUSTE.</td>
+                    <td>Gobierna correcciones con trazabilidad.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="caja-card">
+        <h2><i class="fas fa-random"></i> Reglas de Integración por Módulo</h2>
+        <table class="caja-table">
+            <thead>
+                <tr>
+                    <th>Evento de negocio</th>
+                    <th>Origen actual</th>
+                    <th>Movimiento en Caja</th>
+                    <th>Regla de signo</th>
+                    <th>Por qué</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Pago de cuota de crédito</td>
+                    <td>Insert en ic_creditos_pagos</td>
+                    <td>Registrar en ic_caja_movimientos categoría COBRO_CREDITO</td>
+                    <td>Ingreso (+)</td>
+                    <td>Es entrada directa de efectivo/transferencia.</td>
+                </tr>
+                <tr>
+                    <td>Registro de aporte semanal</td>
+                    <td>Insert en ic_aportes_semanales</td>
+                    <td>No genera asiento en caja central</td>
+                    <td>No aplica</td>
+                    <td>Se mantiene independiente por decisión operativa.</td>
+                </tr>
+                <tr>
+                    <td>Gasto administrativo</td>
+                    <td>Upsert en ic_gastos_administrativos</td>
+                    <td>Categoría GASTO_ADMIN</td>
+                    <td>Egreso (-)</td>
+                    <td>Salida operativa de dinero.</td>
+                </tr>
+                <tr>
+                    <td>Liquidación/pago de póliza</td>
+                    <td>Insert en ic_polizas_pagos</td>
+                    <td>Categoría PAGO_POLIZA</td>
+                    <td>Egreso (-)</td>
+                    <td>Desembolso al inversionista.</td>
+                </tr>
+                <tr>
+                    <td>Nueva póliza (captación inversionista)</td>
+                    <td>Insert en ic_polizas (estado ACTIVO)</td>
+                    <td>Categoría INGRESO_POLIZA</td>
+                    <td>Ingreso (+)</td>
+                    <td>El inversionista entrega dinero al sistema.</td>
+                </tr>
+                <tr>
+                    <td>Nuevo movimiento en situación bancaria</td>
+                    <td>Insert en ic_situacion_bancaria</td>
+                    <td>Categoría segun tipo_transaccion</td>
+                    <td>CREDITO: Ingreso (+) / POLIZA: Egreso (-)</td>
+                    <td>Refleja correctamente el efecto del banco en caja.</td>
+                </tr>
+                <tr>
+                    <td>Pago de cuota bancaria externa</td>
+                    <td>Update/registro en ic_situacion_bancaria_detalle</td>
+                    <td>Categoría PAGO_BANCO_EXTERNO</td>
+                    <td>Egreso (-)</td>
+                    <td>Reduce caja por obligaciones financieras.</td>
+                </tr>
+                <tr>
+                    <td>Devolución de ahorro programado al socio</td>
+                    <td>Update en ic_creditos_ahorro (estado = DEVUELTO)</td>
+                    <td>Categoría DEVOLUCION_AHORRO</td>
+                    <td>Egreso (-)</td>
+                    <td>Es salida real de fondos al socio.</td>
+                </tr>
+                <tr>
+                    <td>Ahorro programado cobrado en cuota</td>
+                    <td>Insert en ic_creditos_pagos</td>
+                    <td>No crear asiento adicional</td>
+                    <td>No aplica</td>
+                    <td>Ya viene incluido en el cobro de cuota; evita doble contabilización.</td>
+                </tr>
+                <tr>
+                    <td>Desembolso de nuevo crédito</td>
+                    <td>Alta de crédito aprobado (ic_creditos)</td>
+                    <td>Categoría DESEMBOLSO_CREDITO</td>
+                    <td>Egreso (-)</td>
+                    <td>Representa salida inicial de capital colocado.</td>
+                </tr>
+                <tr>
+                    <td>Transferencia usuario a usuario</td>
+                    <td>Insert en ic_caja_transferencias</td>
+                    <td>Crear 2 asientos: TRANSFER_OUT (origen) y TRANSFER_IN (destino)</td>
+                    <td>Salida en origen / Ingreso en destino</td>
+                    <td>Garantiza trazabilidad completa del traspaso interno.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="caja-card">
+        <h2><i class="fas fa-road"></i> Fases de Implementación Tentativa</h2>
+        <table class="caja-table">
+            <thead>
+                <tr>
+                    <th>Fase</th>
+                    <th>Entregable</th>
+                    <th>Tareas principales</th>
+                    <th>Resultado esperado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Fase 1 - Datos Base</td>
+                    <td>Esquema SQL Caja</td>
+                    <td>Crear tablas ic_caja_usuarios, ic_caja_movimientos, ic_caja_cierres, ic_caja_transferencias, ic_caja_ajustes + índices por usuario/fecha/origen.</td>
+                    <td>Base estable para registrar caja.</td>
+                </tr>
+                <tr>
+                    <td>Fase 2 - Integración Núcleo</td>
+                    <td>Hooks de registro automático</td>
+                    <td>Conectar Créditos, Gastos Administrativos y Desembolsos a caja por usuario (Aportes queda fuera).</td>
+                    <td>Primer flujo consolidado real con saldos individuales por operador.</td>
+                </tr>
+                <tr>
+                    <td>Fase 3 - Integración Completa</td>
+                    <td>Integración Pólizas/Bancos + Transferencias</td>
+                    <td>Completar eventos restantes y habilitar transferencias usuario a usuario con evidencia fotográfica obligatoria.</td>
+                    <td>Cobertura total de movimientos monetarios del sistema.</td>
+                </tr>
+                <tr>
+                    <td>Fase 4 - Vista Operativa Caja</td>
+                    <td>UI funcional del módulo</td>
+                    <td>KPIs diarios, tabla de movimientos, filtros por fecha/módulo/tipo, apertura y cierre.</td>
+                    <td>Operación diaria de tesorería desde un único punto.</td>
+                </tr>
+                <tr>
+                    <td>Fase 5 - Auditoría y Conciliación</td>
+                    <td>Reportes y cierres auditables</td>
+                    <td>Reporte diario/mensual, conciliación con bancos, alertas de diferencia.</td>
+                    <td>Control financiero confiable y verificable.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="caja-card">
+        <h2><i class="fas fa-exclamation-triangle"></i> Riesgos y Controles Propuestos</h2>
+        <table class="caja-table">
+            <thead>
+                <tr>
+                    <th>Riesgo</th>
+                    <th>Control recomendado</th>
+                    <th>Por qué funciona</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Doble registro del mismo evento</td>
+                    <td>Llave única por (tabla_origen, id_origen, categoria) en ic_caja_movimientos.</td>
+                    <td>Impide duplicados aun si el usuario repite acción.</td>
+                </tr>
+                <tr>
+                    <td>Transferencias internas sin soporte</td>
+                    <td>Evidencia fotográfica obligatoria + validación de saldo disponible + doble confirmación.</td>
+                    <td>Evita traspasos ficticios y asegura respaldo documental.</td>
+                </tr>
+                <tr>
+                    <td>Eliminación directa de movimientos</td>
+                    <td>No permitir delete físico; usar reversa/ajuste con motivo y autorización.</td>
+                    <td>Preserva historial auditado.</td>
+                </tr>
+                <tr>
+                    <td>Descuadres al cierre</td>
+                    <td>Cierre diario obligatorio con validación de saldo teórico vs saldo declarado.</td>
+                    <td>Fuerza control operativo antes de cerrar jornada.</td>
+                </tr>
+                <tr>
+                    <td>Falta de responsables claros</td>
+                    <td>Registrar siempre usuario/rol en cada movimiento y cierre.</td>
+                    <td>Permite trazabilidad por persona y turno.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="caja-card">
+        <h2><i class="fas fa-check-circle"></i> Definición de MVP Recomendado</h2>
+        <table class="caja-table">
+            <thead>
+                <tr>
+                    <th>Incluido en MVP</th>
+                    <th>No incluido aún</th>
+                    <th>Razón</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Libro de movimientos + filtros básicos + saldo diario.</td>
+                    <td>Analítica avanzada (proyecciones, IA, alertas predictivas).</td>
+                    <td>Primero asegurar control y exactitud operativa.</td>
+                </tr>
+                <tr>
+                    <td>Caja por usuario + integración automática con Créditos, Gastos y Desembolsos.</td>
+                    <td>Integración completa con todos los casos especiales complejos.</td>
+                    <td>Entrega rápida de valor sin romper flujos actuales.</td>
+                </tr>
+                <tr>
+                    <td>Transferencia entre usuarios con evidencia fotográfica obligatoria.</td>
+                    <td>Aprobaciones multinivel y automatizaciones avanzadas.</td>
+                    <td>Cubre tu necesidad operativa inmediata de traspaso de saldos.</td>
+                </tr>
+                <tr>
+                    <td>Apertura y cierre diario manual asistido por usuario.</td>
+                    <td>Cierre totalmente automático.</td>
+                    <td>La validación humana inicial reduce riesgo de errores por operador.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="caja-card">
+        <h2><i class="fas fa-clipboard-check"></i> Checklist de Eventos que No Deben Faltar</h2>
+        <table class="caja-table">
+            <thead>
+                <tr>
+                    <th>Evento</th>
+                    <th>Impacto esperado en caja</th>
+                    <th>Estado recomendado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Precancelación de crédito</td>
+                    <td>Ingreso (+)</td>
+                    <td>Incluir desde el inicio</td>
+                </tr>
+                <tr>
+                    <td>Cobro de cuota Créditos Preferenciales</td>
+                    <td>Ingreso (+)</td>
+                    <td>Incluir en fase core</td>
+                </tr>
+                <tr>
+                    <td>Movimiento Bancario (Depósito/Retiro)</td>
+                    <td>Ingreso o Egreso (+/-)</td>
+                    <td>Fase Integración Bancos</td>
+                </tr>
+                <tr>
+                    <td>Pago cuota crédito bancario externo</td>
+                    <td>Egreso (-)</td>
+                    <td>Fase Integración Bancos</td>
+                </tr>
+                <tr>
+                    <td>Reversa/anulación de pagos o gastos</td>
+                    <td>Movimiento inverso al original</td>
+                    <td>Implementar con motivo obligatorio</td>
+                </tr>
+                <tr>
+                    <td>Pago de interés de renovación de póliza</td>
+                    <td>Egreso (-)</td>
+                    <td>Incluir en fase de integración de pólizas</td>
+                </tr>
+                <tr>
+                    <td>Ajustes manuales autorizados</td>
+                    <td>Ingreso o egreso según ajuste</td>
+                    <td>Solo con autorización y evidencia</td>
+                </tr>
+                <tr>
+                    <td>Transferencia entre usuarios</td>
+                    <td>Salida origen / Entrada destino</td>
+                    <td>Evidencia fotográfica obligatoria</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+</div>
+
+<style>
+.caja-plan-container {
+    padding: 1.5rem;
+    display: grid;
+    gap: 1rem;
+}
+
+.caja-plan-header {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.caja-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.caja-plan-header h1 {
+    font-size: 1.4rem;
+    color: var(--primary);
+    margin-bottom: 0.25rem;
+}
+
+.caja-plan-header p {
+    color: var(--gray-500);
+}
+
+.badge-status {
+    background: var(--gold-light);
+    color: var(--gold-dark);
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.caja-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    padding: 1rem;
+}
+
+.caja-card h2 {
+    margin-bottom: 0.8rem;
+    color: var(--primary);
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.caja-table {
+    width: 100%;
+    border-collapse: collapse;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-color);
+}
+
+.caja-table thead th {
+    background: var(--gray-900);
+    color: var(--gray-300);
+    font-weight: 700;
+    font-size: 0.88rem;
+    text-align: left;
+    padding: 0.7rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.caja-table tbody td {
+    padding: 0.7rem;
+    font-size: 0.88rem;
+    color: var(--gray-400);
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: top;
+}
+
+.caja-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.caja-table tbody tr:hover {
+    background: var(--black-soft);
+}
+
+@media (max-width: 1100px) {
+    .caja-plan-header {
+        flex-direction: column;
+    }
+
+    .caja-header-actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .badge-status {
+        align-self: flex-start;
+    }
+
+    .caja-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
+</style>
+

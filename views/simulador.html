@@ -1,0 +1,226 @@
+<!-- Vista Simulador de Créditos y Pólizas - INKA CORP -->
+<div class="content-wrapper simulador-wrapper">
+    <!-- Hero Header del Módulo -->
+    <div class="simulador-hero">
+        <div class="hero-bg-simulador"></div>
+        <div class="hero-content-simulador">
+            <div class="hero-icon-simulador">
+                <i class="fas fa-calculator"></i>
+            </div>
+            <h1 class="hero-title-simulador">Simulador</h1>
+            <p class="hero-subtitle-simulador">Calcula tu crédito o póliza</p>
+        </div>
+    </div>
+
+    <!-- Toggle Tipo de Simulación -->
+    <div class="simulador-toggle-container">
+        <div class="simulador-toggle">
+            <button type="button" class="toggle-btn active" data-tipo="credito" id="toggle-credito">
+                <i class="fas fa-hand-holding-usd"></i>
+                <span>Crédito</span>
+            </button>
+            <button type="button" class="toggle-btn" data-tipo="poliza" id="toggle-poliza">
+                <i class="fas fa-certificate"></i>
+                <span>Póliza</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Formulario de Simulación -->
+    <div class="simulador-card">
+        <h2 class="simulador-card-title">
+            <i class="fas fa-edit"></i>
+            <span id="form-title">Datos del Crédito</span>
+        </h2>
+
+        <form id="simulador-form">
+            <!-- Campos Comunes -->
+            <div class="simulador-form-grid">
+                <!-- Nombre del Socio (Opcional) -->
+                <div class="form-group full-width">
+                    <label class="form-label">Nombre del Socio (opcional)</label>
+                    <input type="text" id="sim-nombre" class="form-input" placeholder="Nombre para el documento">
+                </div>
+
+                <!-- Capital / Inversión -->
+                <div class="form-group">
+                    <label class="form-label" id="label-capital">Capital Solicitado ($)</label>
+                    <input type="number" id="sim-capital" class="form-input" value="10000" min="100" step="100"
+                        required>
+                </div>
+
+                <!-- Tasa de Interés -->
+                <div class="form-group">
+                    <label class="form-label" id="label-interes">Tasa de Interés Mensual (%)</label>
+                    <input type="number" id="sim-interes" class="form-input" value="2" min="0.1" max="15" step="0.1"
+                        required>
+                </div>
+
+                <!-- Plazo -->
+                <div class="form-group">
+                    <label class="form-label">Plazo (meses)</label>
+                    <input type="number" id="sim-plazo" class="form-input" value="12" min="1" max="60" step="1"
+                        required>
+                </div>
+
+                <!-- Campos específicos de Crédito -->
+                <div class="form-group credito-field">
+                    <label class="form-label">Fecha de Desembolso</label>
+                    <input type="date" id="sim-fecha-desembolso" class="form-input">
+                </div>
+
+                <div class="form-group credito-field">
+                    <label class="form-label">Día de Pago Mensual</label>
+                    <select id="sim-dia-pago" class="form-select">
+                        <option value="10">Día 10 de cada mes</option>
+                        <option value="15" selected>Día 15 de cada mes</option>
+                        <option value="20">Día 20 de cada mes</option>
+                        <option value="25">Día 25 de cada mes</option>
+                    </select>
+                </div>
+
+                <!-- Campos específicos de Póliza -->
+                <div class="form-group poliza-field hidden">
+                    <label class="form-label">Fecha de Inicio</label>
+                    <input type="date" id="sim-fecha-inicio" class="form-input">
+                </div>
+            </div>
+
+            <!-- Info Box Crédito -->
+            <div class="simulador-info-box credito-field" id="info-credito">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>Beneficios del Crédito:</strong>
+                    <ul>
+                        <li>Cuotas fijas mensuales durante todo el plazo</li>
+                        <li>El <strong>ahorro programado</strong> se devuelve al cancelar el crédito</li>
+                        <li>Precancelación disponible a partir del 3er mes</li>
+                        <li>Renovación del crédito en cualquier momento</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Info Box Póliza -->
+            <div class="simulador-info-box poliza-field hidden" id="info-poliza">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>Sobre la Póliza:</strong>
+                    <ul>
+                        <li>Inversión segura con tasa fija</li>
+                        <li>Intereses pagados al vencimiento</li>
+                        <li>Opciones de capitalización o retiro</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="simulador-actions">
+                <button type="button" class="btn btn-primary" id="btn-calcular">
+                    <i class="fas fa-chart-line"></i>
+                    Calcular Simulación
+                </button>
+                <button type="button" class="btn btn-secondary" id="btn-limpiar">
+                    <i class="fas fa-eraser"></i>
+                    Limpiar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Resultados de la Simulación -->
+    <div id="simulador-resultados" class="hidden">
+        <!-- Resumen -->
+        <div class="simulador-card">
+            <h2 class="simulador-card-title">
+                <i class="fas fa-chart-pie"></i>
+                <span id="resumen-title">Resumen del Crédito</span>
+            </h2>
+
+            <div class="simulador-resumen-grid">
+                <div class="resumen-item">
+                    <span class="resumen-label" id="res-label-capital">Capital Solicitado</span>
+                    <span class="resumen-value" id="res-capital">$0.00</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label" id="res-label-interes-total">Total Intereses</span>
+                    <span class="resumen-value" id="res-intereses">$0.00</span>
+                </div>
+                <div class="resumen-item highlight credito-only">
+                    <span class="resumen-label">Total Ahorro Programado</span>
+                    <span class="resumen-value" id="res-ahorro">$0.00</span>
+                    <small class="resumen-subtext">(se devuelve al socio)</small>
+                </div>
+                <div class="resumen-item highlight">
+                    <span class="resumen-label" id="res-label-cuota-total">Cuota Mensual</span>
+                    <span class="resumen-value" id="res-cuota-total">$0.00</span>
+                    <small class="resumen-subtext">(incluye ahorro programado)</small>
+                </div>
+                <div class="resumen-item total-neto">
+                    <span class="resumen-label" id="res-label-total">Total Neto a Pagar</span>
+                    <span class="resumen-value" id="res-total">$0.00</span>
+                    <small class="resumen-nota">(sin ahorro - se devuelve al socio)</small>
+                </div>
+                <!-- Campos solo póliza -->
+                <div class="resumen-item poliza-only hidden">
+                    <span class="resumen-label">Fecha de Vencimiento</span>
+                    <span class="resumen-value" id="res-vencimiento">-</span>
+                </div>
+                <div class="resumen-item poliza-only hidden highlight">
+                    <span class="resumen-label">Valor al Vencimiento</span>
+                    <span class="resumen-value" id="res-valor-final">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Nota Ahorro Programado (Solo Crédito) -->
+            <div class="simulador-info-box success credito-only" id="nota-ahorro">
+                <i class="fas fa-piggy-bank"></i>
+                <div>
+                    <strong>💰 Ahorro Programado:</strong> <span id="nota-ahorro-monto">$0.00</span>
+                    <p>Este monto será devuelto al socio al cancelar completamente el crédito, o puede usarse para pagar
+                        la última cuota.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Amortización -->
+        <div class="simulador-card">
+            <h2 class="simulador-card-title">
+                <i class="fas fa-table"></i>
+                <span id="tabla-title">Tabla de Amortización</span>
+            </h2>
+
+            <div class="simulador-table-container">
+                <table class="simulador-table">
+                    <thead id="tabla-header">
+                        <!-- Dinámico -->
+                    </thead>
+                    <tbody id="tabla-body">
+                        <!-- Dinámico -->
+                    </tbody>
+                    <tfoot id="tabla-footer">
+                        <!-- Dinámico -->
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botón Generar PDF -->
+        <div class="simulador-card simulador-pdf-section">
+            <h2 class="simulador-card-title">
+                <i class="fas fa-file-pdf"></i>
+                Generar Documento
+            </h2>
+
+            <div class="pdf-disclaimer">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Este documento es una <strong>SIMULACIÓN</strong>. Los valores pueden variar según las condiciones
+                    finales aprobadas.</p>
+            </div>
+
+            <button type="button" class="btn btn-primary btn-large" id="btn-generar-pdf">
+                <i class="fas fa-download"></i>
+                Descargar PDF de Simulación
+            </button>
+        </div>
+    </div>
+</div>

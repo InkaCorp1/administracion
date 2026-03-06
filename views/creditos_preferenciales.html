@@ -1,0 +1,259 @@
+<!-- Vista Administración de Créditos Preferenciales - INKA CORP -->
+<div class="content-wrapper creditos-pref-wrapper">
+    <!-- Hero Header del Módulo (Usa "standard-hero" para consistencia global) -->
+    <div class="standard-hero creditos-pref-hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <div class="hero-icon">
+                <i class="fas fa-star"></i>
+            </div>
+            <h1 class="hero-title">Créditos Preferenciales</h1>
+            <p class="hero-subtitle">Gestión y monitoreo</p>
+        </div>
+
+        <!-- Stats integrados en hero -->
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <span class="hero-value" id="stat-pref-total">0</span>
+                <span class="hero-label">Total</span>
+            </div>
+            <div class="hero-stat warning">
+                <span class="hero-value" id="stat-pref-pendientes">0</span>
+                <span class="hero-label">Pendientes</span>
+            </div>
+            <div class="hero-stat highlight">
+                <span class="hero-value" id="stat-pref-desembolsados">0</span>
+                <span class="hero-label">Desembolsados</span>
+            </div>
+            <div class="hero-stat highlight">
+                <span class="hero-value" id="stat-pref-monto">$0</span>
+                <span class="hero-label">Monto Total</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Herramientas de Filtros -->
+    <div class="creditos-pref-toolbar">
+        <!-- Botón Sincronizar -->
+        <button class="toolbar-btn btn-sync" onclick="refreshCreditosPreferencialesCache()" title="Sincronizar datos">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+
+        <!-- Separador -->
+        <div class="toolbar-separator"></div>
+
+        <!-- Filtro Estado -->
+        <button id="btn-estado-filter-pref" class="toolbar-btn active" onclick="toggleEstadoFilterPref()"
+            title="Ordenar por Estado">
+            <i class="fas fa-filter"></i>
+            <span>Estado</span>
+        </button>
+
+        <!-- Ordenamiento -->
+        <button class="toolbar-btn sort-btn active" data-sort="fecha" onclick="sortCreditosPref('fecha')"
+            title="Ordenar por fecha">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Fecha</span>
+            <i class="fas fa-sort-down sort-icon"></i>
+        </button>
+        <button class="toolbar-btn sort-btn" data-sort="monto" onclick="sortCreditosPref('monto')"
+            title="Ordenar por monto">
+            <span>$ Monto</span>
+            <i class="fas fa-sort sort-icon"></i>
+        </button>
+
+        <!-- Búsqueda -->
+        <div class="toolbar-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-creditos-pref" class="search-input-toolbar"
+                placeholder="Buscar por código, nombre o beneficiario...">
+        </div>
+    </div>
+
+    <!-- Filtros y Vista -->
+    <div class="view-controls-wrapper" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap;">
+        <!-- Contadores de Estado (compactos) -->
+        <div id="estado-counters-pref" class="estado-counters" style="margin-bottom: 0;">
+            <span class="estado-counter active" data-estado="" onclick="filterCreditosPrefByEstado('')">
+                <span class="counter-label">Todos</span>
+                <span id="count-pref-all" class="counter-value">0</span>
+            </span>
+            <span class="estado-counter" data-estado="PENDIENTE" onclick="filterCreditosPrefByEstado('PENDIENTE')">
+                <span class="counter-label">Pendientes</span>
+                <span id="count-pref-pendiente" class="counter-value warning">0</span>
+            </span>
+            <span class="estado-counter" data-estado="APROBADO" onclick="filterCreditosPrefByEstado('APROBADO')">
+                <span class="counter-label">Aprobados</span>
+                <span id="count-pref-aprobado" class="counter-value success">0</span>
+            </span>
+            <span class="estado-counter" data-estado="DESEMBOLSADO" onclick="filterCreditosPrefByEstado('DESEMBOLSADO')">
+                <span class="counter-label">Desembolsados</span>
+                <span id="count-pref-desembolsado" class="counter-value" style="color: #3B82F6;">0</span>
+            </span>
+            <span class="estado-counter" data-estado="RECHAZADO" onclick="filterCreditosPrefByEstado('RECHAZADO')">
+                <span class="counter-label">Rechazados</span>
+                <span id="count-pref-rechazado" class="counter-value danger">0</span>
+            </span>
+        </div>
+
+        <!-- Switcher de Vista -->
+        <div class="view-switcher">
+            <button class="view-btn active" id="view-gallery-btn" onclick="switchViewPref('gallery')" title="Vista Galería">
+                <i class="fas fa-th-large"></i>
+                <span>Galería</span>
+            </button>
+            <button class="view-btn" id="view-table-btn" onclick="switchViewPref('table')" title="Vista Tabla">
+                <i class="fas fa-table"></i>
+                <span>Tabla</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenedor Galería -->
+    <div id="creditos-pref-gallery-container" class="creditos-pref-gallery-container">
+        <!-- Se llena dinámicamente -->
+    </div>
+
+    <!-- Contenedor de Secciones por Estado -->
+    <div id="creditos-pref-sections-container" class="creditos-pref-sections-container hidden">
+        <!-- Las secciones se generan dinámicamente -->
+        <div class="loading-placeholder">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Cargando créditos preferenciales...</span>
+        </div>
+    </div>
+
+    <!-- Mensaje cuando no hay resultados -->
+    <div id="creditos-pref-empty" class="hidden" style="text-align: center; padding: 3rem;">
+        <i class="fas fa-folder-open" style="font-size: 3rem; color: var(--gray-600); margin-bottom: 1rem;"></i>
+        <p style="color: var(--gray-400);">No se encontraron créditos preferenciales</p>
+    </div>
+</div>
+
+<!-- Modal Ver Detalle de Crédito Preferencial -->
+<div id="ver-credito-pref-modal" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card">
+        <div class="modal-header"
+            style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);">
+            <h2 class="modal-title" style="color: var(--gold);">
+                <i class="fas fa-star"></i>
+                <span id="modal-codigo-credito-pref">Detalle del Crédito Preferencial</span>
+            </h2>
+            <button class="modal-close" data-close-modal>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Info del Socio -->
+            <div class="credito-detail-section">
+                <h3 class="section-title"><i class="fas fa-user"></i> Información del Socio</h3>
+                <div class="detail-grid">
+                    <div class="detail-item" style="grid-column: 1 / -1;">
+                        <span class="detail-info-label">Socio</span>
+                        <span id="det-pref-idsocio">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-info-label">Domicilio</span>
+                        <span id="det-pref-domicilio">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-info-label">País</span>
+                        <span id="det-pref-pais">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-info-label">Estado Civil</span>
+                        <span id="det-pref-estadocivil">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info del Beneficiario -->
+            <div class="credito-detail-section">
+                <h3 class="section-title"><i class="fas fa-star"></i> Información del Beneficiario</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-info-label">Nombre</span>
+                        <span id="det-pref-beneficiario">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-info-label">WhatsApp</span>
+                        <span id="det-pref-whatsapp">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumen del Crédito Preferencial -->
+            <div class="credito-detail-section">
+                <h3 class="section-title"><i class="fas fa-coins"></i> Resumen del Crédito</h3>
+                <div class="resumen-grid-detail">
+                    <div class="resumen-item">
+                        <span class="resumen-label">Tipo</span>
+                        <span class="resumen-value" id="det-pref-tipo">-</span>
+                    </div>
+                    <div class="resumen-item">
+                        <span class="resumen-label">Porcentaje</span>
+                        <span class="resumen-value" id="det-pref-porcentaje">-</span>
+                    </div>
+                    <div class="resumen-item highlight">
+                        <span class="resumen-label">Monto</span>
+                        <span class="resumen-value" id="det-pref-monto">$0.00</span>
+                    </div>
+                    <div class="resumen-item highlight">
+                        <span class="resumen-label">Monto Final</span>
+                        <span class="resumen-value" id="det-pref-montofinal">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fechas -->
+            <div class="credito-detail-section">
+                <h3 class="section-title"><i class="fas fa-calendar-alt"></i> Fechas</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-info-label">Solicitud</span>
+                        <span id="det-pref-fecha-solicitud">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-info-label">Aprobación</span>
+                        <span id="det-pref-fecha-aprobacion">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-info-label">Estado</span>
+                        <span id="det-pref-estado">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Motivos y Observaciones -->
+            <div class="credito-detail-section">
+                <h3 class="section-title"><i class="fas fa-comment-alt"></i> Observaciones</h3>
+                <div class="detail-grid">
+                    <div class="detail-item" style="grid-column: 1 / -1;">
+                        <span class="detail-info-label">Motivo</span>
+                        <span id="det-pref-motivo">-</span>
+                    </div>
+                    <div class="detail-item" style="grid-column: 1 / -1;">
+                        <span class="detail-info-label">Motivo Respuesta</span>
+                        <span id="det-pref-motivorespuesta">-</span>
+                    </div>
+                    <div class="detail-item" style="grid-column: 1 / -1;">
+                        <span class="detail-info-label">Motivo Recargo</span>
+                        <span id="det-pref-motivorecargo">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fotografía -->
+            <div class="credito-detail-section" id="pref-fotografia-section" style="display: none;">
+                <h3 class="section-title"><i class="fas fa-image"></i> Fotografía</h3>
+                <div style="text-align: center;">
+                    <img id="det-pref-fotografia" src="" alt="Fotografía" style="max-width: 100%; max-height: 300px; border-radius: 0.5rem;">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-close-modal>Cerrar</button>
+        </div>
+    </div>
+</div>

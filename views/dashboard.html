@@ -1,0 +1,1201 @@
+<!-- Vista Dashboard - INKA CORP -->
+<div class="content-wrapper dashboard-wrapper">
+    <!-- Hero Section -->
+    <div class="dashboard-hero">
+        <div class="hero-bg-pattern"></div>
+        <div class="hero-content">
+            <h1 id="dashboard-greeting">Buenos días, <span class="text-gold">Usuario</span></h1>
+            <p class="hero-subtitle">Resumen de tu sistema de gestión</p>
+        </div>
+        <div class="hero-decoration">
+            <i class="fas fa-chart-line"></i>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="dashboard-stats">
+        <div class="stat-card stat-socios">
+            <div class="stat-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Total Socios</span>
+                <span id="dash-total-socios" class="stat-value">0</span>
+            </div>
+            <div class="stat-trend">
+                <i class="fas fa-user-check"></i>
+            </div>
+        </div>
+        <div class="stat-card stat-creditos">
+            <div class="stat-icon">
+                <i class="fas fa-hand-holding-usd"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Créditos Activos</span>
+                <span id="dash-creditos-activos" class="stat-value">0</span>
+            </div>
+            <div class="stat-trend">
+                <i class="fas fa-chart-line"></i>
+            </div>
+        </div>
+        <div class="stat-card stat-mora">
+            <div class="stat-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">En Mora</span>
+                <div class="stat-mora-display">
+                    <span id="dash-cantidad-mora" class="stat-value">0</span>
+                    <span class="stat-mora-separator">|</span>
+                    <span id="dash-porcentaje-mora" class="stat-value-pct">0%</span>
+                </div>
+            </div>
+            <div class="stat-trend danger">
+                <i class="fas fa-arrow-up"></i>
+            </div>
+        </div>
+        <div class="stat-card stat-cartera">
+            <div class="stat-icon">
+                <i class="fas fa-wallet"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Cartera Total</span>
+                <span id="dash-cartera-total" class="stat-value">$0</span>
+            </div>
+            <div class="stat-trend success">
+                <i class="fas fa-coins"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="dashboard-content-grid">
+        <!-- Contenedor De Alertas Prioritarias (Desembolsos y Pólizas) -->
+        <div id="priority-alerts-container" class="priority-alerts-layout">
+            <!-- Skeleton Loader (visible mientras carga) -->
+            <div id="priority-alerts-skeleton" class="priority-alerts-skeleton">
+                <i class="fas fa-circle-notch fa-spin"></i>
+                <span>Verificando alertas prioritarias...</span>
+            </div>
+
+            <!-- Pólizas por Vencer (solo visible cuando hay) -->
+            <div id="polizas-vencimiento-section" class="desembolsos-section hidden">
+                <div class="section-header" style="background: linear-gradient(135deg, rgba(242, 187, 58, 0.1) 0%, rgba(211, 144, 13, 0.05) 100%);">
+                    <h3 class="section-title" style="color: var(--gold-dark);"><i class="fas fa-clock"></i> Pólizas por Vencer</h3>
+                    <span id="polizas-vencimiento-count" class="section-badge warning" style="background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);">0</span>
+                </div>
+                <div id="polizas-vencimiento-list" class="desembolsos-list">
+                    <div class="activity-empty">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Cargando...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Desembolsos Pendientes (solo visible cuando hay) -->
+            <div id="desembolsos-pendientes-section" class="desembolsos-section hidden">
+                <div class="section-header">
+                    <h3 class="section-title warning"><i class="fas fa-money-bill-wave"></i> Desembolsos Pendientes</h3>
+                    <span id="desembolsos-count" class="section-badge warning">0</span>
+                </div>
+                <div id="desembolsos-pendientes-list" class="desembolsos-list">
+                    <div class="activity-empty">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Cargando...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Access Modules -->
+        <div class="quick-access-section">
+            <div class="section-header">
+                <h3 class="section-title"><i class="fas fa-bolt"></i> Acceso Rápido</h3>
+            </div>
+            <div class="modules-grid">
+                <div class="module-card" data-view="resumen_general">
+                    <div class="module-icon resumen">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="module-info">
+                        <span class="module-name">Resumen General</span>
+                        <span class="module-desc">KPis y consolidado</span>
+                    </div>
+                    <i class="fas fa-chevron-right module-arrow"></i>
+                </div>
+                <div class="module-card" data-view="socios">
+                    <div class="module-icon socios">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="module-info">
+                        <span class="module-name">Socios</span>
+                        <span class="module-desc">Gestión de socios</span>
+                    </div>
+                    <i class="fas fa-chevron-right module-arrow"></i>
+                </div>
+                <div class="module-card" data-view="creditos">
+                    <div class="module-icon creditos">
+                        <i class="fas fa-hand-holding-usd"></i>
+                    </div>
+                    <div class="module-info">
+                        <span class="module-name">Créditos</span>
+                        <span class="module-desc">Monitoreo de créditos</span>
+                    </div>
+                    <i class="fas fa-chevron-right module-arrow"></i>
+                </div>
+                <div class="module-card" data-view="ahorros">
+                    <div class="module-icon ahorros">
+                        <i class="fas fa-piggy-bank"></i>
+                    </div>
+                    <div class="module-info">
+                        <span class="module-name">Ahorros</span>
+                        <span class="module-desc">Ahorros programados</span>
+                    </div>
+                    <i class="fas fa-chevron-right module-arrow"></i>
+                </div>
+                <div class="module-card" data-view="polizas">
+                    <div class="module-icon polizas">
+                        <i class="fas fa-certificate"></i>
+                    </div>
+                    <div class="module-info">
+                        <span class="module-name">Pólizas</span>
+                        <span class="module-desc">Inversiones y pólizas</span>
+                    </div>
+                    <i class="fas fa-chevron-right module-arrow"></i>
+                </div>
+                <div class="module-card" data-view="precancelaciones">
+                    <div class="module-icon precancelaciones">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <div class="module-info">
+                        <span class="module-name">Precancelaciones</span>
+                        <span class="module-desc">Cancelación anticipada</span>
+                    </div>
+                    <i class="fas fa-chevron-right module-arrow"></i>
+                </div>
+                <div class="module-card" data-view="solicitud_credito">
+                    <div class="module-icon solicitudes">
+                        <i class="fas fa-file-signature"></i>
+                    </div>
+                    <div class="module-info">
+                        <span class="module-name">Solicitudes</span>
+                        <span class="module-desc">Solicitudes de crédito</span>
+                    </div>
+                    <i class="fas fa-chevron-right module-arrow"></i>
+                </div>
+                <div class="module-card" data-view="bancos">
+                    <div class="module-icon bancos">
+                        <i class="fas fa-university"></i>
+                    </div>
+                    <div class="module-info">
+                        <span class="module-name">Bancos</span>
+                        <span class="module-desc">Situación bancaria</span>
+                    </div>
+                    <i class="fas fa-chevron-right module-arrow"></i>
+                </div>
+                <div class="module-card" data-view="caja">
+                    <div class="module-icon caja">
+                        <i class="fas fa-cash-register"></i>
+                    </div>
+                    <div class="module-info">
+                        <span class="module-name">Caja</span>
+                        <span class="module-desc">Ingresos y egresos</span>
+                    </div>
+                    <i class="fas fa-chevron-right module-arrow"></i>
+                </div>
+                <div class="module-card" data-view="simulador">
+                    <div class="module-icon simulador">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <div class="module-info">
+                        <span class="module-name">Simulador</span>
+                        <span class="module-desc">Simula créditos y pólizas</span>
+                    </div>
+                    <i class="fas fa-chevron-right module-arrow"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Socios Morosos -->
+        <div class="morosos-section">
+            <div class="section-header">
+                <h3 class="section-title danger"><i class="fas fa-exclamation-circle"></i> Socios en Mora</h3>
+                <span id="morosos-count" class="section-badge">0</span>
+            </div>
+            <div id="socios-morosos-list" class="morosos-list">
+                <div class="activity-empty">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Dashboard Hero Mejorado */
+    .dashboard-hero {
+        position: relative;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        border-radius: 1.25rem;
+        padding: 2.5rem;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(11, 78, 50, 0.3);
+    }
+
+    .hero-bg-pattern {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image:
+            radial-gradient(circle at 20% 80%, rgba(242, 187, 58, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+        pointer-events: none;
+    }
+
+    .dashboard-hero .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .dashboard-hero .hero-content h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 0.5rem;
+    }
+
+    .dashboard-hero .hero-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.95rem;
+    }
+
+    .hero-decoration {
+        position: absolute;
+        right: 2rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 5rem;
+        color: rgba(255, 255, 255, 0.08);
+    }
+
+    .text-gold {
+        color: var(--gold);
+    }
+
+    /* Stats Cards Mejoradas */
+    .dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        position: relative;
+        background: var(--gray-800);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-card .stat-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+    }
+
+    .stat-socios .stat-icon {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
+        color: #60a5fa;
+    }
+
+    .stat-creditos .stat-icon {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%);
+        color: #34d399;
+    }
+
+    .stat-mora .stat-icon {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%);
+        color: #fbbf24;
+    }
+
+    .stat-cartera .stat-icon {
+        background: linear-gradient(135deg, rgba(242, 187, 58, 0.2) 0%, rgba(242, 187, 58, 0.1) 100%);
+        color: var(--gold);
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--gray-400);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--white);
+        line-height: 1;
+    }
+
+    .stat-mora-display {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+    }
+
+    .stat-mora-separator {
+        color: var(--gray-500);
+        font-weight: 300;
+    }
+
+    .stat-value-pct {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #fbbf24;
+    }
+
+    .stat-trend {
+        position: absolute;
+        right: 1rem;
+        top: 1rem;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        color: var(--gray-500);
+    }
+
+    .stat-trend.success {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+    }
+
+    .stat-trend.danger {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+    }
+
+    /* Content Grid */
+    .dashboard-content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    /* Section Headers */
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .section-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--white);
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .section-title i {
+        font-size: 1rem;
+        color: var(--gold);
+        background: rgba(242, 187, 58, 0.15);
+        padding: 0.4rem;
+        border-radius: 0.5rem;
+    }
+
+    .section-title.danger i {
+        color: #f87171;
+        background: rgba(239, 68, 68, 0.15);
+    }
+
+    .section-badge {
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        color: white;
+        padding: 0.3rem 0.85rem;
+        border-radius: 2rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    /* Quick Access */
+    .quick-access-section {
+        background: var(--gray-800);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        padding: 1.5rem;
+    }
+
+    .quick-access-section .section-header,
+    .morosos-section .section-header {
+        background: var(--gray-900);
+        margin: -1.5rem -1.5rem 1.25rem -1.5rem;
+        padding: 1rem 1.5rem;
+        border-radius: 1rem 1rem 0 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .morosos-section .section-header {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+    }
+
+    .modules-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .module-card {
+        background: var(--gray-900);
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .module-card:hover {
+        border-color: var(--gold);
+        background: rgba(242, 187, 58, 0.05);
+        transform: translateX(5px);
+    }
+
+    .module-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.625rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    .module-icon.resumen {
+        background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%);
+        color: #4ade80;
+    }
+
+    .module-icon.socios {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
+        color: #60a5fa;
+    }
+
+    .module-icon.creditos {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%);
+        color: #34d399;
+    }
+
+    .module-icon.ahorros {
+        background: linear-gradient(135deg, rgba(242, 187, 58, 0.2) 0%, rgba(242, 187, 58, 0.1) 100%);
+        color: var(--gold);
+    }
+
+    .module-icon.polizas {
+        background: linear-gradient(135deg, rgba(5, 150, 105, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%);
+        color: #10b981;
+    }
+
+    .module-icon.precancelaciones {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%);
+        color: #a78bfa;
+    }
+
+    .module-icon.solicitudes {
+        background: linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(236, 72, 153, 0.1) 100%);
+        color: #f472b6;
+    }
+
+    .module-icon.simulador {
+        background: linear-gradient(135deg, rgba(11, 78, 50, 0.2) 0%, rgba(11, 78, 50, 0.1) 100%);
+        color: #34d399;
+    }
+
+    .module-icon.bancos {
+        background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(14, 165, 233, 0.1) 100%);
+        color: #38bdf8;
+    }
+
+    .module-icon.caja {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%);
+        color: var(--gold);
+    }
+
+    .module-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .module-name {
+        font-weight: 600;
+        color: var(--white);
+        font-size: 0.95rem;
+    }
+
+    .module-desc {
+        font-size: 0.75rem;
+        color: var(--gray-400);
+    }
+
+    .module-arrow {
+        color: var(--gray-500);
+        font-size: 0.8rem;
+        transition: all 0.2s ease;
+    }
+
+    .module-card:hover .module-arrow {
+        color: var(--gold);
+        transform: translateX(3px);
+    }
+
+    /* Morosos Section */
+    .morosos-section {
+        background: var(--gray-800);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        border-top: 3px solid #f87171;
+    }
+
+    .morosos-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        max-height: 450px;
+        overflow-y: auto;
+    }
+
+    .moroso-item {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        padding: 0.875rem;
+        background: var(--gray-900);
+        border-radius: 0.625rem;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: 1px solid transparent;
+    }
+
+    .moroso-item:hover {
+        border-color: rgba(248, 113, 113, 0.3);
+        background: rgba(248, 113, 113, 0.05);
+    }
+
+    .moroso-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .moroso-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .moroso-nombre {
+        font-weight: 600;
+        color: var(--white);
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .moroso-credito {
+        font-size: 0.75rem;
+        color: var(--gray-400);
+    }
+
+    .moroso-stats {
+        text-align: right;
+        flex-shrink: 0;
+    }
+
+    .moroso-monto {
+        font-weight: 700;
+        color: #f87171;
+        font-size: 0.95rem;
+    }
+
+    .moroso-dias {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.6rem;
+        border-radius: 1rem;
+        margin-top: 0.25rem;
+        display: inline-block;
+        font-weight: 600;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Agrupación por país */
+    .morosos-pais-group {
+        margin-bottom: 0.75rem;
+    }
+
+    .morosos-pais-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .morosos-pais-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: var(--gray-900);
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+        border-left: 3px solid var(--gold);
+    }
+
+    .pais-flag-mini {
+        width: 18px;
+        height: 12px;
+        border-radius: 2px;
+        object-fit: cover;
+    }
+
+    .pais-nombre {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--gray-300);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        flex: 1;
+    }
+
+    .pais-count {
+        background: var(--gold);
+        color: var(--gray-900);
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 0.15rem 0.5rem;
+        border-radius: 1rem;
+    }
+
+    /* Activity Empty */
+    .activity-empty {
+        text-align: center;
+        padding: 2rem;
+        color: var(--gray-500);
+    }
+
+    .activity-empty i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.5;
+    }
+
+    /* Scrollbar */
+    .morosos-list::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .morosos-list::-webkit-scrollbar-track {
+        background: var(--gray-800);
+    }
+
+    .morosos-list::-webkit-scrollbar-thumb {
+        background: var(--gray-600);
+        border-radius: 2px;
+    }
+
+    /* Priority Alerts Layout */
+    .priority-alerts-layout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        grid-column: 1 / -1;
+        margin-bottom: 0.5rem;
+        width: 100%;
+        min-height: 20px;
+    }
+
+    /* Skeleton Loader para alertas */
+    .priority-alerts-skeleton {
+        grid-column: 1 / -1;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px dashed var(--border-color);
+        border-radius: 1rem;
+        padding: 2.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        width: 100%;
+        animation: pulse-skeleton 2s infinite ease-in-out;
+    }
+
+    .priority-alerts-skeleton i {
+        font-size: 1.5rem;
+        color: var(--gold);
+    }
+
+    .priority-alerts-skeleton span {
+        color: var(--gray-400);
+        font-size: 0.9rem;
+        letter-spacing: 0.5px;
+    }
+
+    @keyframes pulse-skeleton {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+    }
+
+    /* Clases de ancho dinámico por contenido */
+    .desembolsos-section.width-50 {
+        width: calc(50% - 0.75rem);
+        flex: 0 0 auto;
+    }
+
+    .desembolsos-section.width-50 .desembolsos-list {
+        grid-template-columns: 1fr;
+    }
+
+    .desembolsos-section.width-100 {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+
+    .desembolsos-section.width-100 .desembolsos-list {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    }
+
+    .desembolsos-section {
+        background: var(--gray-800);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        border-top: 3px solid #f59e0b;
+        transition: all 0.3s ease;
+    }
+
+    .desembolsos-section.critical-alert {
+        border-top-color: #ef4444;
+    }
+
+    .desembolsos-section.hidden {
+        display: none;
+    }
+
+    .desembolsos-section .section-header {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
+        margin: -1.5rem -1.5rem 1.25rem -1.5rem;
+        padding: 1rem 1.5rem;
+        border-radius: 1rem 1rem 0 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .desembolsos-section.critical-alert .section-header {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+    }
+
+    .section-title.warning i {
+        color: #fbbf24;
+        background: rgba(245, 158, 11, 0.15);
+    }
+
+    .section-title.danger i {
+        color: #f87171;
+        background: rgba(239, 68, 68, 0.15);
+    }
+
+    .section-badge.warning {
+        background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+    }
+
+    .section-badge.danger {
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    .desembolsos-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1rem;
+    }
+
+    .desembolso-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        padding: 1.25rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .desembolso-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dark) 100%);
+    }
+
+    .desembolso-card:hover {
+        border-color: var(--gold);
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .desembolso-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .desembolso-socio {
+        flex: 1;
+    }
+
+    .desembolso-nombre {
+        font-weight: 700;
+        color: var(--white);
+        font-size: 1rem;
+        letter-spacing: -0.01em;
+    }
+
+    .desembolso-cedula {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        font-weight: 500;
+    }
+
+    .desembolso-monto {
+        text-align: right;
+    }
+
+    .desembolso-monto-valor {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--gold-dark);
+        line-height: 1;
+    }
+
+    .desembolso-monto-label {
+        font-size: 0.65rem;
+        color: var(--gray-400);
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-top: 0.25rem;
+    }
+
+    .desembolso-info {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+        padding: 0.875rem;
+        background: var(--gray-900);
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+    }
+
+    .desembolso-info-item {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        text-align: center;
+    }
+
+    .desembolso-info-label {
+        font-size: 0.6rem;
+        color: var(--gray-400);
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .desembolso-info-value {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--white);
+    }
+
+    .desembolso-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .desembolso-btn {
+        flex: 1;
+        padding: 0.75rem;
+        border-radius: 0.75rem;
+        border: none;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .desembolso-btn-docs {
+        background: rgba(59, 130, 246, 0.08);
+        color: #2563eb;
+        border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+
+    .desembolso-btn-docs:hover {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: #2563eb;
+        transform: translateY(-2px);
+    }
+
+    .desembolso-btn-desembolsar {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(11, 78, 50, 0.2);
+    }
+
+    .desembolso-btn-desembolsar:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(11, 78, 50, 0.3);
+    }
+
+    .desembolso-btn-anular {
+        width: 48px;
+        align-self: stretch;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.75rem;
+        background: rgba(239, 68, 68, 0.08);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 1.1rem;
+    }
+
+    .desembolso-btn-anular:hover {
+        background: #ef4444;
+        color: white;
+        border-color: #ef4444;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+    }
+
+    /* ==========================================
+       RESPONSIVE DESIGN - SOLO PC/TABLET
+       Los móviles usan movil.html
+       ========================================== */
+
+    /* Extra Large Screens (1400px+) */
+    @media (min-width: 1400px) {
+        .dashboard-stats {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+
+        .dashboard-content-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .desembolsos-list {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    /* Large Screens (1200px - 1399px) */
+    @media (max-width: 1399px) and (min-width: 1200px) {
+        .dashboard-stats {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+        }
+
+        .desembolsos-list {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    /* Medium-Large Screens (992px - 1199px) */
+    @media (max-width: 1199px) and (min-width: 992px) {
+        .dashboard-wrapper {
+            padding: 1.5rem;
+        }
+
+        .dashboard-stats {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-card {
+            padding: 1.15rem;
+        }
+
+        .stat-value {
+            font-size: 1.6rem;
+        }
+
+        .dashboard-content-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+
+        .desembolsos-list {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    /* Tablets Landscape (768px - 991px) */
+    @media (max-width: 991px) and (min-width: 768px) {
+        .dashboard-wrapper {
+            padding: 1.25rem;
+            padding-top: 4rem;
+        }
+
+        .dashboard-hero {
+            padding: 2rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .dashboard-hero .hero-content h1 {
+            font-size: 1.6rem;
+        }
+
+        .hero-decoration {
+            right: 1.5rem;
+            font-size: 4rem;
+        }
+
+        .dashboard-stats {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-card {
+            padding: 1rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+        }
+
+        .stat-value-pct {
+            font-size: 1.15rem;
+        }
+
+        .dashboard-content-grid {
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+
+        .quick-access-section,
+        .morosos-section,
+        .desembolsos-section {
+            padding: 1.25rem;
+        }
+
+        .desembolsos-list {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.875rem;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .module-card {
+            flex-direction: column;
+            text-align: center;
+            padding: 1.25rem;
+        }
+
+        .module-arrow {
+            display: none;
+        }
+    }
+
+    /* Print styles for dashboard */
+    @media print {
+        .dashboard-wrapper {
+            padding: 0;
+        }
+
+        .dashboard-hero {
+            background: #0B4E32 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .stat-card,
+        .quick-access-section,
+        .morosos-section,
+        .desembolsos-section {
+            break-inside: avoid;
+        }
+
+        .morosos-list {
+            max-height: none;
+            overflow: visible;
+        }
+    }
+</style>

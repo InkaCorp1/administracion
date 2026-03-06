@@ -1,0 +1,419 @@
+<div class="socios-edit-container">
+    <!-- Header de navegación -->
+    <div class="edit-header">
+        <div class="edit-header-left">
+            <button id="btn-back-to-socios" class="btn-back">
+                <i class="fas fa-arrow-left"></i>
+                <span>Volver a Socios</span>
+            </button>
+            <h1 class="edit-title">Actualizar Información del Socio</h1>
+        </div>
+        <div class="edit-header-actions">
+            <span id="save-status" class="save-status"></span>
+            <button id="btn-save-socio" class="btn-save">
+                <i class="fas fa-save"></i>
+                <span>Guardar Cambios</span>
+            </button>
+        </div>
+    </div>
+
+    <form id="form-edit-socio" class="edit-form">
+        <div class="edit-grid">
+            <!-- Columna Datos Principales -->
+            <div class="edit-section">
+                <div class="section-title">
+                    <i class="fas fa-user"></i>
+                    <span>Datos Personales</span>
+                </div>
+                <div class="section-content">
+                    <div class="input-group">
+                        <label>Nombre Completo</label>
+                        <input type="text" name="nombre" id="edit-nombre" required>
+                    </div>
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label>Cédula/ID</label>
+                            <input type="text" name="cedula" id="edit-cedula" required>
+                        </div>
+                        <div class="input-group">
+                            <label>WhatsApp (Sin +)</label>
+                            <input type="number" name="whatsapp" id="edit-whatsapp">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Domicilio</label>
+                        <textarea name="domicilio" id="edit-domicilio" rows="2"></textarea>
+                    </div>
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label>País de Residencia</label>
+                            <select name="paisresidencia" id="edit-pais">
+                                <option value="ECUADOR">ECUADOR</option>
+                                <option value="ESTADOS UNIDOS">ESTADOS UNIDOS</option>
+                                <option value="PERÚ">PERÚ</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Estado Civil</label>
+                            <select name="estadocivil" id="edit-estado-civil">
+                                <option value="SOLTERO/A">Soltero/a</option>
+                                <option value="CASADO/A">Casado/a</option>
+                                <option value="UNIÓN LIBRE">Unión Libre</option>
+                                <option value="DIVORCIADO/A">Divorciado/a</option>
+                                <option value="VIUDO/A">Viudo/a</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title mt-20">
+                    <i class="fas fa-heart"></i>
+                    <span>Información del Cónyuge</span>
+                </div>
+                <div class="section-content" id="section-conyuge">
+                    <div class="input-group">
+                        <label>Nombre del Cónyuge</label>
+                        <input type="text" name="nombreconyuge" id="edit-nombreconyuge">
+                    </div>
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label>Cédula Cónyuge</label>
+                            <input type="text" name="cedulaconyuge" id="edit-cedulaconyuge">
+                        </div>
+                        <div class="input-group">
+                            <label>WhatsApp Cónyuge</label>
+                            <input type="text" name="whatsappconyuge" id="edit-whatsappconyuge">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title mt-20">
+                    <i class="fas fa-user-friends"></i>
+                    <span>Referencia Personal</span>
+                </div>
+                <div class="section-content">
+                    <div class="input-group">
+                        <label>Nombre Referencia</label>
+                        <input type="text" name="nombrereferencia" id="edit-nombrereferencia">
+                    </div>
+                    <div class="input-group">
+                        <label>WhatsApp Referencia</label>
+                        <input type="number" name="whatsappreferencia" id="edit-whatsappreferencia">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna Documentos e Imágenes -->
+            <div class="edit-section">
+                <div class="section-title">
+                    <i class="fas fa-images"></i>
+                    <span>Expediente Digital (Imágenes WebP)</span>
+                </div>
+                <div class="image-upload-grid">
+                    <!-- Foto Identidad -->
+                    <div class="image-upload-card" data-field="fotoidentidad">
+                        <label>Foto de Identidad / Perfil</label>
+                        <div class="image-preview" id="preview-fotoidentidad">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Seleccionar Imagen</span>
+                        </div>
+                        <input type="file" id="file-fotoidentidad" accept="image/*" class="hidden-input">
+                    </div>
+
+                    <!-- Foto Domicilio -->
+                    <div class="image-upload-card" data-field="fotodomicilio">
+                        <label>Comprobante de Domicilio</label>
+                        <div class="image-preview" id="preview-fotodomicilio">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Seleccionar Imagen</span>
+                        </div>
+                        <input type="file" id="file-fotodomicilio" accept="image/*" class="hidden-input">
+                    </div>
+
+                    <!-- Foto Bien -->
+                    <div class="image-upload-card" data-field="fotobien">
+                        <label>Garantía / Bien</label>
+                        <div class="image-preview" id="preview-fotobien">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Seleccionar Imagen</span>
+                        </div>
+                        <input type="file" id="file-fotobien" accept="image/*" class="hidden-input">
+                    </div>
+
+                    <!-- Foto Firma -->
+                    <div class="image-upload-card" data-field="fotofirma">
+                        <label>Firma del Socio</label>
+                        <div class="image-preview" id="preview-fotofirma">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Seleccionar Imagen</span>
+                        </div>
+                        <input type="file" id="file-fotofirma" accept="image/*" class="hidden-input">
+                    </div>
+
+                    <!-- Foto Doc Cónyuge -->
+                    <div class="image-upload-card conyuge-doc" data-field="fotodocumentoconyuge">
+                        <label>Documento Cónyuge</label>
+                        <div class="image-preview" id="preview-fotodocumentoconyuge">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Seleccionar Imagen</span>
+                        </div>
+                        <input type="file" id="file-fotodocumentoconyuge" accept="image/*" class="hidden-input">
+                    </div>
+                </div>
+                
+                <div class="edit-info-box">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Las imágenes se convertirán automáticamente a formato <strong>WebP</strong> (comprimidas al 80%) para optimizar el almacenamiento.</p>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+.socios-edit-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    animation: fadeIn 0.3s ease;
+}
+
+.edit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    background: var(--bg-card, #1e2631);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+    border: 1px solid var(--border-color, rgba(148, 163, 184, 0.22));
+}
+
+.edit-header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.btn-back {
+    background: #202a36;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--text-secondary, #aab6c7);
+    transition: all 0.2s;
+}
+
+.btn-back:hover {
+    background: #273343;
+    color: var(--text-primary, #e8edf5);
+}
+
+.edit-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary, #e8edf5);
+    margin: 0;
+}
+
+.edit-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.save-status {
+    font-size: 0.85rem;
+    color: #34d399;
+    font-weight: 500;
+}
+
+.btn-save {
+    background: #0E5936;
+    color: var(--on-primary-title, #f3f7ff);
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(14, 89, 54, 0.2);
+}
+
+.btn-save:hover {
+    background: #115934;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(14, 89, 54, 0.3);
+}
+
+.btn-save:disabled {
+    background: #475569;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.edit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+.edit-section {
+    background: var(--bg-card, #1e2631);
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+    border: 1px solid var(--border-color, rgba(148, 163, 184, 0.22));
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    color: var(--text-primary, #e8edf5);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border-color, rgba(148, 163, 184, 0.22));
+}
+
+.input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary, #aab6c7);
+    margin-bottom: 5px;
+}
+
+.input-group input, 
+.input-group select, 
+.input-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border-color, rgba(148, 163, 184, 0.25));
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+    background: #151c25;
+    color: var(--text-primary, #e8edf5);
+}
+
+.input-group input:focus, 
+.input-group select:focus,
+.input-group textarea:focus {
+    outline: none;
+    border-color: var(--gold, #F2BB3A);
+    box-shadow: 0 0 0 2px rgba(242, 187, 58, 0.12);
+}
+
+.image-upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.image-upload-card {
+    background: #151c25;
+    border: 1.5px dashed var(--border-color, rgba(148, 163, 184, 0.3));
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.image-upload-card:hover {
+    border-color: var(--gold, #F2BB3A);
+    background: #1c2632;
+}
+
+.image-upload-card label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-secondary, #aab6c7);
+}
+
+.image-preview {
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--text-muted, #8391a4);
+    background-size: cover;
+    background-position: center;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Estilos para imágenes corruptas/rotas */
+.doc-corrupto {
+    background: rgba(239, 68, 68, 0.05) !important;
+    border: 1px dashed #ef4444 !important;
+}
+
+.doc-corrupto .corrupto-msg {
+    display: flex !important;
+    animation: fadeInSmall 0.3s ease;
+}
+
+@keyframes fadeInSmall {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.hidden-input {
+    display: none;
+}
+
+.edit-info-box {
+    margin-top: 25px;
+    padding: 15px;
+    background: rgba(11, 78, 50, 0.16);
+    border-radius: 8px;
+    display: flex;
+    gap: 12px;
+    color: var(--text-secondary, #c7d2e0);
+    font-size: 0.85rem;
+    border: 1px solid rgba(11, 78, 50, 0.35);
+}
+
+.mt-20 { margin-top: 20px; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+    .edit-grid { grid-template-columns: 1fr; }
+}
+</style>

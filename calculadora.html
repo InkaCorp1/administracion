@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INKA CORP - Calculadora de Créditos</title>
+    <style>
+        :root {
+            --primary: #0B4E32;
+            --primary-dark: #073D27;
+            --gold: #F2BB3A;
+            --gold-dark: #D3900D;
+            --gray-100: #F5F5F5;
+            --gray-200: #EEEEEE;
+            --gray-300: #E0E0E0;
+            --gray-600: #757575;
+            --gray-800: #424242;
+            --white: #FFFFFF;
+            --error: #DC2626;
+            --success: #10B981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: var(--gold);
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--white);
+            opacity: 0.8;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 1rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card-title {
+            color: var(--primary);
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .form-input,
+        .form-select {
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--gray-300);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(11, 78, 50, 0.15);
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--gold);
+            box-shadow: 0 4px 15px rgba(11, 78, 50, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(11, 78, 50, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--gray-200);
+            color: var(--gray-800);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-300);
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Resumen de cálculos */
+        .resumen-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .resumen-item {
+            background: var(--gray-100);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            text-align: center;
+            border-left: 4px solid var(--primary);
+        }
+
+        .resumen-item.highlight {
+            background: linear-gradient(135deg, rgba(11, 78, 50, 0.1) 0%, rgba(11, 78, 50, 0.05) 100%);
+            border-left-color: var(--gold);
+        }
+
+        .resumen-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .resumen-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .resumen-item.highlight .resumen-value {
+            color: var(--gold-dark);
+        }
+
+        /* Tabla de amortización */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 0.75rem;
+            border: 1px solid var(--gray-300);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        thead th {
+            background: var(--primary);
+            color: var(--white);
+            padding: 1rem 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        tbody td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        tbody tr:hover {
+            background: rgba(11, 78, 50, 0.05);
+        }
+
+        tbody tr:nth-child(even) {
+            background: var(--gray-100);
+        }
+
+        tbody tr:nth-child(even):hover {
+            background: rgba(11, 78, 50, 0.08);
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-gold {
+            color: var(--gold-dark);
+            font-weight: 600;
+        }
+
+        .text-primary {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Footer de tabla */
+        tfoot td {
+            background: var(--gray-200);
+            font-weight: 700;
+            padding: 1rem 0.75rem;
+        }
+
+        /* Info box */
+        .info-box {
+            background: rgba(11, 78, 50, 0.08);
+            border: 1px solid rgba(11, 78, 50, 0.2);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: var(--gray-800);
+        }
+
+        .info-box strong {
+            color: var(--primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏦 INKA CORP - Calculadora de Créditos</h1>
+            <p>Simulador de tabla de amortización con ahorro programado</p>
+        </div>
+
+        <!-- Formulario de entrada -->
+        <div class="card">
+            <h2 class="card-title">📋 Datos del Crédito</h2>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Capital Solicitado ($)</label>
+                    <input type="number" id="capital" class="form-input" value="10000" min="100" step="100">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tasa de Interés Mensual (%)</label>
+                    <input type="number" id="interesMensual" class="form-input" value="2" min="0.1" max="10" step="0.1">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Plazo (meses)</label>
+                    <input type="number" id="plazo" class="form-input" value="12" min="1" max="60" step="1">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Fecha de Desembolso</label>
+                    <input type="date" id="fechaDesembolso" class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Día de Pago Mensual</label>
+                    <select id="diaPago" class="form-select">
+                        <option value="10">Día 10 de cada mes</option>
+                        <option value="15" selected>Día 15 de cada mes</option>
+                        <option value="20">Día 20 de cada mes</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>ℹ️ Información:</strong> Los intereses se calculan por días transcurridos (tasa diaria = tasa
+                anual / 365).
+                Los gastos administrativos varían según el capital:
+                <strong>&lt;$5,000:</strong> 3.8% |
+                <strong>$5,000-$20,000:</strong> 2.3% |
+                <strong>≥$20,000:</strong> 1.8%.
+                El <strong>ahorro programado</strong> es el 10% del total a pagar (capital + intereses) dividido entre
+                las cuotas. La cuota se redondea hacia arriba.
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" onclick="calcularCredito()">
+                    📊 Calcular Tabla de Amortización
+                </button>
+                <button class="btn btn-secondary" onclick="limpiarFormulario()">
+                    🔄 Limpiar
+                </button>
+            </div>
+        </div>
+
+        <!-- Resultados -->
+        <div id="resultados" class="hidden">
+            <!-- Resumen -->
+            <div class="card">
+                <h2 class="card-title">💰 Resumen del Crédito</h2>
+
+                <div class="resumen-grid">
+                    <div class="resumen-item">
+                        <div class="resumen-label">Capital Solicitado</div>
+                        <div class="resumen-value" id="res-capital">$0.00</div>
+                    </div>
+                    <div class="resumen-item">
+                        <div class="resumen-label">Gastos Administrativos</div>
+                        <div class="resumen-value" id="res-gastos">$0.00</div>
+                    </div>
+                    <div class="resumen-item">
+                        <div class="resumen-label">Capital Financiado</div>
+                        <div class="resumen-value" id="res-capital-financiado">$0.00</div>
+                    </div>
+                    <div class="resumen-item">
+                        <div class="resumen-label">Total Intereses</div>
+                        <div class="resumen-value" id="res-intereses">$0.00</div>
+                    </div>
+                    <div class="resumen-item">
+                        <div class="resumen-label">Días Totales</div>
+                        <div class="resumen-value" id="res-dias">0</div>
+                    </div>
+                    <div class="resumen-item highlight">
+                        <div class="resumen-label">Total Ahorro Programado</div>
+                        <div class="resumen-value" id="res-ahorro">$0.00</div>
+                    </div>
+                    <div class="resumen-item highlight">
+                        <div class="resumen-label">Cuota Mensual (sin ahorro)</div>
+                        <div class="resumen-value" id="res-cuota">$0.00</div>
+                    </div>
+                    <div class="resumen-item highlight">
+                        <div class="resumen-label">Cuota Total (con ahorro)</div>
+                        <div class="resumen-value" id="res-cuota-total">$0.00</div>
+                    </div>
+                    <div class="resumen-item">
+                        <div class="resumen-label">Total a Pagar</div>
+                        <div class="resumen-value" id="res-total">$0.00</div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <strong>📌 Nota:</strong> El ahorro programado de <span id="nota-ahorro">$0.00</span> será devuelto
+                    al socio al cancelar completamente el crédito.
+                </div>
+            </div>
+
+            <!-- Tabla de Amortización -->
+            <div class="card">
+                <h2 class="card-title">📅 Tabla de Amortización</h2>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-center">#</th>
+                                <th>Fecha Vencimiento</th>
+                                <th class="text-right">Días</th>
+                                <th class="text-right">Capital</th>
+                                <th class="text-right">Interés</th>
+                                <th class="text-right">Gastos Adm.</th>
+                                <th class="text-right">Cuota Base</th>
+                                <th class="text-right">Ahorro Prog.</th>
+                                <th class="text-right">Total Cuota</th>
+                                <th class="text-right">Saldo Capital</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-amortizacion">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                        <tfoot id="tabla-totales">
+                            <!-- Se llena dinámicamente -->
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Generar PDF -->
+            <div class="card" id="pdf-section">
+                <h2 class="card-title">📄 Generar Documento PDF</h2>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Nombre del Socio (opcional)</label>
+                        <input type="text" id="nombreSocio" class="form-input" placeholder="Nombre para el documento">
+                    </div>
+                </div>
+
+                <div class="info-box"
+                    style="margin: 1rem 0; background: rgba(242, 187, 58, 0.15); border-color: var(--gold);">
+                    <strong>⚠️ SIMULACIÓN:</strong> Este documento es informativo. Los valores pueden variar según las
+                    condiciones finales aprobadas.
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="generarPDF()">
+                        📥 Descargar PDF de Simulación
+                    </button>
+                </div>
+            </div>
+
+            <!-- Simulador de Precancelación -->
+            <div class="card" id="precancelacion-card">
+                <h2 class="card-title">⚡ Simular Precancelación</h2>
+
+                <div class="info-box" style="margin-bottom: 1.5rem;">
+                    <strong>ℹ️ Nota:</strong> Esta simulación asume que el crédito está <strong>al día</strong> hasta la
+                    fecha seleccionada
+                    (todas las cuotas vencidas han sido pagadas). Se calculará el monto necesario para cancelar
+                    anticipadamente el crédito.
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Fecha de Precancelación</label>
+                        <input type="date" id="fechaPrecancelacion" class="form-input">
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="simularPrecancelacion()">
+                        💵 Simular Precancelación
+                    </button>
+                </div>
+
+                <!-- Resultados de Precancelación -->
+                <div id="resultado-precancelacion" class="hidden" style="margin-top: 1.5rem;">
+                    <div class="resumen-grid">
+                        <div class="resumen-item">
+                            <div class="resumen-label">Cuotas Pagadas</div>
+                            <div class="resumen-value" id="prec-cuotas-pagadas">0</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="resumen-label">Cuotas Restantes</div>
+                            <div class="resumen-value" id="prec-cuotas-restantes">0</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="resumen-label">Capital Pendiente</div>
+                            <div class="resumen-value" id="prec-capital-pendiente">$0.00</div>
+                        </div>
+                        <div class="resumen-item">
+                            <div class="resumen-label">Interés Perdonado</div>
+                            <div class="resumen-value" id="prec-interes-perdonado">$0.00</div>
+                        </div>
+                        <div class="resumen-item highlight">
+                            <div class="resumen-label">Ahorro Acumulado (devolución)</div>
+                            <div class="resumen-value" id="prec-ahorro-devolver">$0.00</div>
+                        </div>
+                        <div class="resumen-item highlight">
+                            <div class="resumen-label">Monto para Precancelar</div>
+                            <div class="resumen-value" id="prec-monto-total">$0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="info-box">
+                        <strong>📋 Detalle:</strong>
+                        <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                            <li>El socio paga <strong id="prec-detalle-pagar">$0.00</strong> para precancelar</li>
+                            <li>Se le devuelve <strong id="prec-detalle-devolver">$0.00</strong> de ahorro programado
+                            </li>
+                            <li>Se ahorra <strong id="prec-detalle-ahorro">$0.00</strong> en intereses</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jsPDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        // Establecer fecha de hoy por defecto
+        document.getElementById('fechaDesembolso').valueAsDate = new Date();
+
+        function calcularCredito() {
+            // Obtener valores del formulario
+            const capital = parseFloat(document.getElementById('capital').value);
+            const interesMensual = parseFloat(document.getElementById('interesMensual').value) / 100;
+            const plazo = parseInt(document.getElementById('plazo').value);
+            const fechaDesembolso = new Date(document.getElementById('fechaDesembolso').value);
+            const diaPago = parseInt(document.getElementById('diaPago').value);
+
+            // Validaciones
+            if (isNaN(capital) || capital <= 0) {
+                alert('Por favor ingrese un capital válido');
+                return;
+            }
+
+            if (isNaN(fechaDesembolso.getTime())) {
+                alert('Por favor ingrese una fecha de desembolso válida');
+                return;
+            }
+
+            // 1. Calcular gastos administrativos (porcentaje fijo sobre capital)
+            let gastosAdministrativos;
+            if (capital < 5000) {
+                gastosAdministrativos = capital * 0.038; // 3.8%
+            } else if (capital < 20000) {
+                gastosAdministrativos = capital * 0.023; // 2.3%
+            } else {
+                gastosAdministrativos = capital * 0.018; // 1.8%
+            }
+
+            // El capital financiado NO incluye gastos admin (se suman al total a pagar)
+            const capitalBase = capital;
+
+            // 2. Calcular fecha base (igual que sistema anterior)
+            // Si el día del préstamo <= día de pago + 2, la fecha base es el día de pago del mismo mes
+            // Si no, va al siguiente mes
+            const fechaBase = new Date(fechaDesembolso.getTime());
+            if (fechaDesembolso.getDate() <= diaPago + 2) {
+                fechaBase.setDate(diaPago);
+            } else {
+                fechaBase.setMonth(fechaBase.getMonth() + 1);
+                fechaBase.setDate(diaPago);
+            }
+
+            // Fecha de fin de crédito
+            const finCredito = new Date(fechaBase.getTime());
+            finCredito.setMonth(finCredito.getMonth() + plazo);
+
+            // Días totales desde desembolso hasta fin de crédito
+            const unDiaEnMs = 1000 * 60 * 60 * 24;
+            const diasTotales = Math.round((finCredito.getTime() - fechaDesembolso.getTime()) / unDiaEnMs);
+
+            // Fecha del primer pago
+            const fechaPrimerPago = new Date(fechaBase.getTime());
+            fechaPrimerPago.setMonth(fechaPrimerPago.getMonth() + 1);
+
+            // 3. Generar fechas de pago
+            const fechasPago = [];
+            for (let i = 0; i < plazo; i++) {
+                const fechaPago = new Date(fechaPrimerPago.getTime());
+                fechaPago.setMonth(fechaPrimerPago.getMonth() + i);
+                fechasPago.push(fechaPago);
+            }
+
+            // 4. Calcular interés total usando tasa diaria
+            // Tasa anual = tasa mensual * 12
+            // Tasa diaria = tasa anual / 365
+            // Interés total = capital * tasa diaria * días totales
+            const tasaAnual = interesMensual * 12;
+            const tasaDiaria = tasaAnual / 365;
+            const interesTotal = capitalBase * tasaDiaria * diasTotales;
+
+            // 5. Total a pagar (capital + interés + gastos)
+            const totalAPagar = capitalBase + interesTotal + gastosAdministrativos;
+
+            // 6. Calcular cuota mensual base (redondeada hacia arriba)
+            const cuotaCalculada = totalAPagar / plazo;
+            const cuotaBase = Math.ceil(cuotaCalculada);
+
+            // 7. Calcular ahorro programado: 10% del (capital + intereses) / plazo
+            const ahorroProgramadoTotal = (capitalBase + interesTotal) * 0.10;
+            const ahorroPorCuota = Math.ceil(ahorroProgramadoTotal / plazo);
+            const cuotaConAhorro = cuotaBase + ahorroPorCuota;
+
+            // 8. Generar tabla de amortización
+            const amortizacion = [];
+            let saldoCapital = capitalBase;
+            let fechaAnterior = fechaDesembolso;
+            let totalCapitalPagado = 0;
+            let totalInteresPagado = 0;
+            let totalAhorroPagado = 0;
+            let totalCuotasPagadas = 0;
+
+            // Calcular interés por cuota usando suma de dígitos (rule of 78s modificada)
+            const sumOfDigits = plazo * (plazo + 1) / 2;
+            const gastosPorCuota = gastosAdministrativos / plazo;
+            let interesAcumulado = 0;
+
+            for (let i = 0; i < plazo; i++) {
+                const fechaVencimiento = fechasPago[i];
+                const diasPeriodo = Math.ceil((fechaVencimiento - fechaAnterior) / unDiaEnMs);
+
+                // 1. Interés preliminar (Rule of 78s)
+                let interesDelMes = (sumOfDigits > 0) ? interesTotal * ((plazo - i) / sumOfDigits) : 0;
+
+                // 2. Capital de la cuota
+                let capitalPeriodo = cuotaBase - interesDelMes - gastosPorCuota;
+                let cuotaDeEsteMes = cuotaBase;
+
+                // 3. Ajustar última cuota para saldar capital
+                if (i === plazo - 1) {
+                    capitalPeriodo = saldoCapital;
+                    const interesRestante = interesTotal - (interesAcumulado);
+                    const gastosRestante = gastosAdministrativos - (gastosPorCuota * (plazo - 1));
+                    cuotaDeEsteMes = capitalPeriodo + interesRestante + gastosRestante;
+                }
+
+                // 4. REGLA SOLICITADA: El interés es el remanente de la cuota base
+                // Esto asegura que: capital + interés + gastos = cuotaDeEsteMes
+                const pagoGastos = (i === plazo - 1) ? (gastosAdministrativos - (gastosPorCuota * (plazo - 1))) : gastosPorCuota;
+                interesDelMes = cuotaDeEsteMes - capitalPeriodo - pagoGastos;
+
+                saldoCapital -= capitalPeriodo;
+                if (saldoCapital < 0.01) saldoCapital = 0;
+
+                interesAcumulado += interesDelMes;
+                totalCapitalPagado += capitalPeriodo;
+                totalInteresPagado += interesDelMes;
+                totalAhorroPagado += ahorroPorCuota;
+                totalCuotasPagadas += cuotaDeEsteMes + ahorroPorCuota;
+
+                amortizacion.push({
+                    numero: i + 1,
+                    fechaVencimiento: fechaVencimiento,
+                    dias: diasPeriodo,
+                    capital: capitalPeriodo,
+                    interes: interesDelMes,
+                    gastos: pagoGastos,
+                    cuotaBase: cuotaDeEsteMes,
+                    ahorro: ahorroPorCuota,
+                    cuotaTotal: cuotaDeEsteMes + ahorroPorCuota,
+                    saldoCapital: saldoCapital
+                });
+
+                fechaAnterior = fechaVencimiento;
+            }
+
+            // 9. Mostrar resultados
+            mostrarResultados({
+                capital: capital,
+                gastosAdmin: gastosAdministrativos,
+                capitalFinanciado: capitalBase,
+                interesTotal: interesTotal,
+                diasTotales: diasTotales,
+                ahorroTotal: ahorroPorCuota * plazo,
+                cuotaBase: cuotaBase,
+                cuotaConAhorro: cuotaConAhorro,
+                totalPagar: totalCuotasPagadas,
+                fechaBase: fechaBase,
+                fechaPrimerPago: fechaPrimerPago,
+                fechaFinCredito: finCredito,
+                amortizacion: amortizacion,
+                totales: {
+                    capital: totalCapitalPagado,
+                    interes: totalInteresPagado,
+                    ahorro: totalAhorroPagado,
+                    cuotas: totalCuotasPagadas
+                }
+            });
+        }
+
+        function mostrarResultados(datos) {
+            // Guardar datos para precancelación
+            ultimaAmortizacion = datos.amortizacion;
+            ultimosDatos = datos;
+
+            // Mostrar sección de resultados
+            document.getElementById('resultados').classList.remove('hidden');
+
+            // Llenar resumen
+            document.getElementById('res-capital').textContent = formatMoney(datos.capital);
+            document.getElementById('res-gastos').textContent = formatMoney(datos.gastosAdmin);
+            document.getElementById('res-capital-financiado').textContent = formatMoney(datos.capitalFinanciado);
+            document.getElementById('res-intereses').textContent = formatMoney(datos.interesTotal);
+            document.getElementById('res-dias').textContent = datos.diasTotales + ' días';
+            document.getElementById('res-ahorro').textContent = formatMoney(datos.ahorroTotal);
+            document.getElementById('res-cuota').textContent = formatMoney(datos.cuotaBase);
+            document.getElementById('res-cuota-total').textContent = formatMoney(datos.cuotaConAhorro);
+            document.getElementById('res-total').textContent = formatMoney(datos.totalPagar);
+            document.getElementById('nota-ahorro').textContent = formatMoney(datos.ahorroTotal);
+
+            // Llenar tabla de amortización
+            const tbody = document.getElementById('tabla-amortizacion');
+            tbody.innerHTML = '';
+
+            datos.amortizacion.forEach(cuota => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-center">${cuota.numero}</td>
+                    <td>${formatDate(cuota.fechaVencimiento)}</td>
+                    <td class="text-right">${cuota.dias}</td>
+                    <td class="text-right">${formatMoney(cuota.capital)}</td>
+                    <td class="text-right">${formatMoney(cuota.interes)}</td>
+                    <td class="text-right">${formatMoney(cuota.gastos)}</td>
+                    <td class="text-right">${formatMoney(cuota.cuotaBase)}</td>
+                    <td class="text-right text-gold">${formatMoney(cuota.ahorro)}</td>
+                    <td class="text-right text-primary">${formatMoney(cuota.cuotaTotal)}</td>
+                    <td class="text-right">${formatMoney(cuota.saldoCapital)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Llenar totales
+            const tfoot = document.getElementById('tabla-totales');
+            tfoot.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-right"><strong>TOTALES:</strong></td>
+                    <td class="text-right">${formatMoney(datos.totales.capital)}</td>
+                    <td class="text-right">${formatMoney(datos.totales.interes)}</td>
+                    <td class="text-right">${formatMoney(datos.gastosAdmin)}</td>
+                    <td class="text-right">${formatMoney(datos.totales.capital + datos.totales.interes + datos.gastosAdmin)}</td>
+                    <td class="text-right text-gold">${formatMoney(datos.totales.ahorro)}</td>
+                    <td class="text-right text-primary">${formatMoney(datos.totales.cuotas)}</td>
+                    <td class="text-right">$0.00</td>
+                </tr>
+            `;
+
+            // Scroll a resultados
+            document.getElementById('resultados').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function formatMoney(amount) {
+            return '$' + amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        function formatDate(date) {
+            const options = { year: 'numeric', month: 'short', day: '2-digit' };
+            return date.toLocaleDateString('es-ES', options);
+        }
+
+        function limpiarFormulario() {
+            document.getElementById('capital').value = '10000';
+            document.getElementById('interesMensual').value = '2';
+            document.getElementById('plazo').value = '12';
+            document.getElementById('diaPago').value = '15';
+            document.getElementById('fechaDesembolso').valueAsDate = new Date();
+            document.getElementById('resultados').classList.add('hidden');
+            document.getElementById('resultado-precancelacion').classList.add('hidden');
+        }
+
+        // Variable global para almacenar la última amortización calculada
+        let ultimaAmortizacion = null;
+        let ultimosDatos = null;
+
+        // Función para simular precancelación
+        function simularPrecancelacion() {
+            if (!ultimaAmortizacion || ultimaAmortizacion.length === 0) {
+                alert('Primero debe calcular la tabla de amortización');
+                return;
+            }
+
+            const fechaPrecancelacionStr = document.getElementById('fechaPrecancelacion').value;
+            if (!fechaPrecancelacionStr) {
+                alert('Por favor seleccione una fecha de precancelación');
+                return;
+            }
+
+            const fechaPrecancelacion = new Date(fechaPrecancelacionStr);
+            const fechaDesembolso = new Date(document.getElementById('fechaDesembolso').value);
+
+            // Validar que la fecha de precancelación sea posterior al desembolso
+            if (fechaPrecancelacion <= fechaDesembolso) {
+                alert('La fecha de precancelación debe ser posterior a la fecha de desembolso');
+                return;
+            }
+
+            // Obtener tasa de interés
+            const interesMensual = parseFloat(document.getElementById('interesMensual').value) / 100;
+            const tasaAnual = interesMensual * 12;
+            const tasaDiaria = tasaAnual / 365;
+
+            // Determinar cuántas cuotas se han pagado (cuotas con fecha de vencimiento anterior o igual a la fecha de precancelación)
+            let cuotasPagadas = 0;
+            let capitalPagado = 0;
+            let interesPagado = 0;
+            let ahorroPagado = 0;
+            let fechaUltimaCuotaPagada = fechaDesembolso;
+
+            for (const cuota of ultimaAmortizacion) {
+                if (cuota.fechaVencimiento <= fechaPrecancelacion) {
+                    cuotasPagadas++;
+                    capitalPagado += cuota.capital;
+                    interesPagado += cuota.interes;
+                    ahorroPagado += cuota.ahorro;
+                    fechaUltimaCuotaPagada = cuota.fechaVencimiento;
+                } else {
+                    break;
+                }
+            }
+
+            const cuotasRestantes = ultimaAmortizacion.length - cuotasPagadas;
+
+            // Si ya se pagaron todas las cuotas
+            if (cuotasRestantes === 0) {
+                alert('El crédito ya estaría completamente pagado en esa fecha');
+                return;
+            }
+
+            // Calcular capital pendiente (saldo después de las cuotas pagadas)
+            let capitalPendiente;
+            if (cuotasPagadas === 0) {
+                capitalPendiente = ultimosDatos.capitalFinanciado;
+            } else {
+                capitalPendiente = ultimaAmortizacion[cuotasPagadas - 1].saldoCapital;
+            }
+
+            // Calcular interés restante que se perdonaría (de las cuotas que no se pagarán)
+            let interesRestante = 0;
+            let ahorroRestante = 0;
+
+            for (let i = cuotasPagadas; i < ultimaAmortizacion.length; i++) {
+                interesRestante += ultimaAmortizacion[i].interes;
+                ahorroRestante += ultimaAmortizacion[i].ahorro;
+            }
+
+            // CALCULAR INTERÉS PROPORCIONAL POR DÍAS TRANSCURRIDOS
+            // Días desde la última cuota pagada hasta la fecha de precancelación
+            const unDiaEnMs = 1000 * 60 * 60 * 24;
+            const diasTranscurridos = Math.max(0, Math.round((fechaPrecancelacion - fechaUltimaCuotaPagada) / unDiaEnMs));
+
+            // Interés sobre el capital pendiente por los días transcurridos
+            const interesProporcional = capitalPendiente * tasaDiaria * diasTranscurridos;
+
+            // Para precancelar: se paga el capital pendiente + interés proporcional por días
+            // El interés restante (menos el proporcional) se perdona
+            // El ahorro acumulado (pagado) se devuelve al socio
+
+            const montoPrecancelar = capitalPendiente + interesProporcional;
+            const interesPerdonado = interesRestante - interesProporcional;
+            const ahorroDevolver = ahorroPagado;
+
+            // Mostrar resultados
+            document.getElementById('prec-cuotas-pagadas').textContent = cuotasPagadas;
+            document.getElementById('prec-cuotas-restantes').textContent = cuotasRestantes;
+            document.getElementById('prec-capital-pendiente').textContent = formatMoney(capitalPendiente);
+            document.getElementById('prec-interes-perdonado').textContent = formatMoney(Math.max(0, interesPerdonado));
+            document.getElementById('prec-ahorro-devolver').textContent = formatMoney(ahorroDevolver);
+            document.getElementById('prec-monto-total').textContent = formatMoney(montoPrecancelar);
+
+            // Actualizar detalle con info de días
+            document.getElementById('prec-detalle-pagar').textContent = formatMoney(montoPrecancelar);
+            document.getElementById('prec-detalle-devolver').textContent = formatMoney(ahorroDevolver);
+            document.getElementById('prec-detalle-ahorro').textContent = formatMoney(Math.max(0, interesPerdonado));
+
+            // Agregar info de días e interés proporcional al detalle
+            const detalleBox = document.querySelector('#resultado-precancelacion .info-box');
+            detalleBox.innerHTML = `
+                <strong>📋 Detalle:</strong>
+                <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                    <li>Días desde última cuota: <strong>${diasTranscurridos} días</strong></li>
+                    <li>Interés proporcional (${diasTranscurridos} días): <strong>${formatMoney(interesProporcional)}</strong></li>
+                    <li>El socio paga <strong>${formatMoney(montoPrecancelar)}</strong> para precancelar (Capital + Interés proporcional)</li>
+                    <li>Se le devuelve <strong>${formatMoney(ahorroDevolver)}</strong> de ahorro programado</li>
+                    <li>Se ahorra <strong>${formatMoney(Math.max(0, interesPerdonado))}</strong> en intereses</li>
+                </ul>
+            `;
+
+            // Mostrar sección de resultados
+            document.getElementById('resultado-precancelacion').classList.remove('hidden');
+            document.getElementById('resultado-precancelacion').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ==========================================
+        // GENERACIÓN DE PDF
+        // ==========================================
+        function generarPDF() {
+            if (!ultimaAmortizacion || ultimaAmortizacion.length === 0) {
+                alert('Primero debe calcular la tabla de amortización');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Colores corporativos
+            const primaryColor = [11, 78, 50];
+            const goldColor = [242, 187, 58];
+            const grayColor = [100, 116, 139];
+            const darkGray = [51, 65, 85];
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 20;
+
+            // Obtener datos
+            const nombre = document.getElementById('nombreSocio').value.trim() || 'Socio';
+            const capital = parseFloat(document.getElementById('capital').value);
+            const interesMensual = parseFloat(document.getElementById('interesMensual').value);
+            const plazo = parseInt(document.getElementById('plazo').value);
+
+            // Calcular totales
+            let totalCapital = 0, totalInteres = 0, totalAhorro = 0, totalCuota = 0;
+            ultimaAmortizacion.forEach(row => {
+                totalCapital += row.capital;
+                totalInteres += row.interes;
+                totalAhorro += row.ahorro;
+                totalCuota += row.cuotaTotal;
+            });
+
+            const cuotaConAhorro = ultimaAmortizacion[0].cuotaTotal;
+            const cuotaBase = ultimaAmortizacion[0].cuotaBase;
+            const totalNetoAPagar = cuotaBase * plazo;
+            const totalBruto = totalNetoAPagar + totalAhorro;
+            const costoCredito = totalNetoAPagar - capital;
+
+            // Calcular gastos admin mensuales
+            let tasaGastosTotal = capital < 5000 ? 3.8 : (capital < 20000 ? 2.3 : 1.8);
+            const tasaGastosMensual = (tasaGastosTotal / plazo).toFixed(2);
+
+            // Fecha actual formateada
+            const hoy = new Date();
+            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+            const fechaFormateada = hoy.getDate() + ' de ' + meses[hoy.getMonth()] + ' de ' + hoy.getFullYear();
+
+            let y = margin;
+
+            // ==========================================
+            // PÁGINA 1 - CARTA FORMAL
+            // ==========================================
+
+            // Header corporativo
+            doc.setFillColor(...primaryColor);
+            doc.rect(0, 0, pageWidth, 25, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text('INKA CORP', margin, 15);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Cooperativa de Ahorro y Credito', margin, 21);
+
+            // Fecha
+            doc.setTextColor(...goldColor);
+            doc.setFontSize(9);
+            doc.text(fechaFormateada, pageWidth - margin, 15, { align: 'right' });
+
+            y = 35;
+
+            // Título
+            doc.setTextColor(...primaryColor);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('SIMULACION DE CREDITO', pageWidth / 2, y, { align: 'center' });
+
+            y += 10;
+
+            // Aviso
+            doc.setFillColor(254, 243, 199);
+            doc.roundedRect(margin, y, pageWidth - 2 * margin, 10, 2, 2, 'F');
+            doc.setTextColor(146, 64, 14);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.text('DOCUMENTO INFORMATIVO - Los valores son referenciales y pueden variar', pageWidth / 2, y + 6.5, { align: 'center' });
+
+            y += 18;
+
+            // Saludo formal
+            doc.setTextColor(...darkGray);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Estimado/a Socio/a ' + nombre + ':', margin, y);
+
+            y += 10;
+
+            // Párrafo introductorio
+            doc.setFontSize(10);
+            doc.text('Por medio de la presente, le hacemos llegar la simulacion de su credito con las siguientes condiciones:', margin, y);
+
+            y += 12;
+
+            // Recuadro detalle del crédito
+            doc.setFillColor(248, 250, 252);
+            doc.roundedRect(margin, y, pageWidth - 2 * margin, 48, 3, 3, 'F');
+            doc.setDrawColor(...primaryColor);
+            doc.roundedRect(margin, y, pageWidth - 2 * margin, 48, 3, 3, 'S');
+
+            y += 8;
+            doc.setTextColor(...primaryColor);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('DETALLE DEL CREDITO', margin + 5, y);
+
+            y += 8;
+            const col1X = margin + 5;
+            const col2X = pageWidth / 2 + 5;
+
+            doc.setFontSize(9);
+            doc.setTextColor(...grayColor);
+            doc.setFont('helvetica', 'normal');
+
+            // Fila 1
+            doc.text('Capital Solicitado:', col1X, y);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...primaryColor);
+            doc.text(formatMoney(capital), col1X + 40, y);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...grayColor);
+            doc.text('Tasa de Interes:', col2X, y);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...primaryColor);
+            doc.text(interesMensual.toFixed(2) + '% mensual', col2X + 30, y);
+
+            y += 7;
+
+            // Fila 2
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...grayColor);
+            doc.text('Plazo:', col1X, y);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...primaryColor);
+            doc.text(plazo + ' meses', col1X + 40, y);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...grayColor);
+            doc.text('Cuota Mensual (inc. ahorro):', col2X, y);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...primaryColor);
+            doc.text(formatMoney(cuotaConAhorro), col2X + 48, y);
+
+            y += 7;
+
+            // Fila 3
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...grayColor);
+            doc.text('Ahorro Programado/Cuota:', col1X, y);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...goldColor);
+            doc.text(formatMoney(totalAhorro / plazo), col1X + 48, y);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...grayColor);
+            doc.text('Total Intereses + Gastos:', col2X, y);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...primaryColor);
+            doc.text(formatMoney(costoCredito), col2X + 42, y);
+
+            y += 15;
+
+            // Recuadro de totales con desglose
+            doc.setFillColor(248, 250, 252);
+            doc.setDrawColor(...primaryColor);
+            doc.roundedRect(margin + 5, y, pageWidth - 2 * margin - 10, 32, 3, 3, 'FD');
+
+            // Línea 1: Total a Pagar
+            doc.setTextColor(...grayColor);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.text('TOTAL A PAGAR (Capital + Intereses + Ahorro):', margin + 10, y + 7);
+            doc.setTextColor(...primaryColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.text(formatMoney(totalBruto), pageWidth - margin - 15, y + 7, { align: 'right' });
+
+            // Línea 2: (-) Ahorro
+            doc.setTextColor(16, 185, 129);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.text('(-) Ahorro Programado (se devuelve al socio):', margin + 10, y + 15);
+            doc.setFont('helvetica', 'bold');
+            doc.text('- ' + formatMoney(totalAhorro), pageWidth - margin - 15, y + 15, { align: 'right' });
+
+            // Línea divisoria
+            doc.setDrawColor(...goldColor);
+            doc.setLineWidth(0.5);
+            doc.line(margin + 10, y + 19, pageWidth - margin - 10, y + 19);
+
+            // Línea 3: TOTAL NETO
+            doc.setFillColor(...primaryColor);
+            doc.roundedRect(margin + 8, y + 21, pageWidth - 2 * margin - 16, 9, 2, 2, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.text('TOTAL NETO A CANCELAR DEL CREDITO:', margin + 12, y + 27);
+            doc.setTextColor(...goldColor);
+            doc.setFontSize(10);
+            doc.text(formatMoney(totalNetoAPagar), pageWidth - margin - 17, y + 27, { align: 'right' });
+
+            y += 42;
+
+            // Nota ahorro programado
+            doc.setTextColor(...grayColor);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'italic');
+            doc.text('* Todo credito incluye un Ahorro Programado obligatorio, pensando en el bienestar del socio.', margin, y);
+            y += 4;
+            if (totalAhorro >= cuotaConAhorro) {
+                doc.text('  Este ahorro se devuelve integramente al finalizar el credito, o puede usarse para pagar', margin, y);
+                y += 4;
+                doc.text('  la ultima cuota. El valor total del ahorro programado de este credito sera de ' + formatMoney(totalAhorro) + '.', margin, y);
+            } else {
+                doc.text('  Este ahorro se devuelve integramente al socio al finalizar el credito.', margin, y);
+                y += 4;
+                doc.text('  El valor total del ahorro programado de este credito sera de ' + formatMoney(totalAhorro) + '.', margin, y);
+            }
+
+            y += 10;
+
+            // Condiciones Generales
+            doc.setTextColor(...primaryColor);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('CONDICIONES GENERALES', margin, y);
+
+            doc.setDrawColor(...goldColor);
+            doc.setLineWidth(0.5);
+            y += 2;
+            doc.line(margin, y, margin + 45, y);
+            y += 6;
+
+            doc.setTextColor(...darkGray);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+
+            const condiciones = [
+                '- Gastos administrativos: ' + tasaGastosMensual + '% mensual sobre el capital.',
+                '- Ahorro programado: se devuelve al socio al finalizar el credito.',
+                '- Pagos mensuales en la fecha acordada.',
+                '- Precancelacion disponible a partir del 3er mes.',
+                '- Renovacion del credito disponible en cualquier momento.'
+            ];
+
+            condiciones.forEach(linea => {
+                doc.text(linea, margin, y);
+                y += 4;
+            });
+
+            y += 6;
+
+            // Cierre
+            doc.setTextColor(...darkGray);
+            doc.setFontSize(9);
+            doc.text('Quedamos a su disposicion para cualquier consulta.', margin, y);
+            y += 8;
+            doc.text('Atentamente,', margin, y);
+            y += 10;
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...primaryColor);
+            doc.text('INKA CORP', margin, y);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...grayColor);
+            doc.setFontSize(8);
+            y += 4;
+            doc.text('Departamento de Creditos', margin, y);
+
+            // Footer página 1
+            doc.setDrawColor(200, 200, 200);
+            doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+            doc.setTextColor(150, 150, 150);
+            doc.setFontSize(7);
+            doc.text('Pagina 1 de 2', pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+            // ==========================================
+            // PÁGINA 2 - TABLA DE AMORTIZACIÓN
+            // ==========================================
+            doc.addPage();
+            y = margin;
+
+            // Header página 2
+            doc.setFillColor(...primaryColor);
+            doc.rect(0, 0, pageWidth, 20, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('INKA CORP', margin, 13);
+            doc.setTextColor(...goldColor);
+            doc.text('TABLA DE AMORTIZACION', pageWidth - margin, 13, { align: 'right' });
+
+            y = 30;
+
+            // Info socio y fecha
+            doc.setTextColor(...darkGray);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Socio: ' + nombre, margin, y);
+            doc.text('Fecha: ' + fechaFormateada, pageWidth - margin, y, { align: 'right' });
+
+            y += 10;
+
+            // Tabla
+            const tableHeaders = ['#', 'Fecha', 'Capital', 'Interes', 'Ahorro', 'Cuota', 'Saldo'];
+            const colWidths = [12, 28, 28, 28, 25, 28, 28];
+            const startX = margin;
+
+            // Header de tabla
+            let xPos = startX;
+            tableHeaders.forEach((header, i) => {
+                doc.setFillColor(...primaryColor);
+                doc.rect(xPos, y, colWidths[i], 8, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'bold');
+                doc.text(header, xPos + colWidths[i] / 2, y + 5.5, { align: 'center' });
+                xPos += colWidths[i];
+            });
+
+            y += 8;
+
+            // Rows
+            doc.setFontSize(7);
+            ultimaAmortizacion.forEach((row, index) => {
+                const bgColor = index % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
+                xPos = startX;
+
+                doc.setFillColor(...bgColor);
+                doc.rect(startX, y, colWidths.reduce((a, b) => a + b, 0), 6, 'F');
+
+                const fechaRow = new Date(row.fechaVencimiento);
+                const fechaStr = fechaRow.getDate().toString().padStart(2, '0') + '/' +
+                    (fechaRow.getMonth() + 1).toString().padStart(2, '0') + '/' +
+                    (fechaRow.getFullYear() % 100).toString().padStart(2, '0');
+
+                const rowData = [
+                    (index + 1).toString(),
+                    fechaStr,
+                    formatMoney(row.capital),
+                    formatMoney(row.interes),
+                    formatMoney(row.ahorro),
+                    formatMoney(row.cuotaTotal),
+                    formatMoney(row.saldoCapital)
+                ];
+
+                doc.setTextColor(...darkGray);
+                doc.setFont('helvetica', 'normal');
+                rowData.forEach((cell, i) => {
+                    const align = i === 0 ? 'center' : 'right';
+                    doc.text(cell, xPos + colWidths[i] - 2, y + 4, { align: align });
+                    xPos += colWidths[i];
+                });
+
+                y += 6;
+
+                if (y > pageHeight - 35) {
+                    doc.addPage();
+                    y = margin;
+                }
+            });
+
+            // Fila de totales
+            doc.setFillColor(...goldColor);
+            xPos = startX;
+            doc.rect(startX, y, colWidths.reduce((a, b) => a + b, 0), 8, 'F');
+            doc.setTextColor(...primaryColor);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7);
+
+            const totalesData = ['TOTALES', '', formatMoney(totalCapital), formatMoney(totalInteres), formatMoney(totalAhorro), formatMoney(totalCuota), '$0.00'];
+            totalesData.forEach((cell, i) => {
+                const align = i === 0 ? 'left' : 'right';
+                doc.text(cell, xPos + (i === 0 ? 2 : colWidths[i] - 2), y + 5.5, { align: align });
+                xPos += colWidths[i];
+            });
+
+            y += 15;
+
+            // Nota ahorro
+            doc.setFillColor(16, 185, 129);
+            doc.roundedRect(margin, y, pageWidth - 2 * margin, 18, 2, 2, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.text('AHORRO PROGRAMADO: ' + formatMoney(totalAhorro), margin + 5, y + 6);
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Este monto sera devuelto integramente al socio al cancelar el credito.', margin + 5, y + 12);
+            if (totalAhorro >= cuotaConAhorro) {
+                doc.text('Puede utilizarse para pagar la ultima cuota del credito.', margin + 5, y + 16);
+            }
+
+            // Footer página 2
+            doc.setDrawColor(200, 200, 200);
+            doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+            doc.setTextColor(150, 150, 150);
+            doc.setFontSize(7);
+            doc.text('Pagina 2 de 2', pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+            // Guardar PDF
+            const fileName = 'Simulacion_Credito_' + nombre.replace(/\s+/g, '_') + '_' + new Date().toISOString().split('T')[0] + '.pdf';
+            doc.save(fileName);
+        }
+    </script>
+</body>
+
+</html>
