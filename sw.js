@@ -3,8 +3,9 @@
  * PWA Offline Support
  */
 
-const CACHE_NAME = 'inkacorp-v29.2.0';
-const STATIC_CACHE = 'inkacorp-static-v29.2.0';
+const SW_VERSION = '29.2.1';
+const CACHE_NAME = `inkacorp-v${SW_VERSION}`;
+const STATIC_CACHE = `inkacorp-static-v${SW_VERSION}`;
 
 // Archivos esenciales para cachear (Shell de la app)
 const ESSENTIAL_FILES = [
@@ -47,7 +48,7 @@ const MODULE_FILES = [
 
 // Instalación del Service Worker
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing v29.2.0...');
+    console.log(`[SW] Installing v${SW_VERSION}...`);
     const allFiles = [...ESSENTIAL_FILES, ...MODULE_FILES];
     event.waitUntil(
         caches.open(STATIC_CACHE)
@@ -66,16 +67,16 @@ self.addEventListener('install', (event) => {
     );
 });
 
-// Mensajes del Cliente
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
-});
+function broadcastServiceWorkerVersion() {
+    return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        .then((clients) => Promise.all(
+            clients.map((client) => client.postMessage({ type: 'SW_VERSION', version: SW_VERSION }))
+        ));
+}
 
 // Activación - limpiar caches antiguos
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating v29.2.0...');
+    console.log(`[SW] Activating v${SW_VERSION}...`);
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
@@ -84,6 +85,7 @@ self.addEventListener('activate', (event) => {
                     .map((name) => caches.delete(name))
             );
         }).then(() => self.clients.claim())
+            .then(() => broadcastServiceWorkerVersion())
     );
 });
 
@@ -147,9 +149,17 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// Escuchar mensajes del cliente
 self.addEventListener('message', (event) => {
     if (event.data === 'SKIP_WAITING' || (event.data && event.data.type === 'SKIP_WAITING')) {
         self.skipWaiting();
+        return;
+    }
+
+    if (event.data && event.data.type === 'GET_VERSION') {
+        if (event.source && typeof event.source.postMessage === 'function') {
+            event.source.postMessage({ type: 'SW_VERSION', version: SW_VERSION });
+        } else {
+            event.waitUntil(broadcastServiceWorkerVersion());
+        }
     }
 });

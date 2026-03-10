@@ -1,5 +1,13 @@
 # CHANGELOG - INKA CORP
 
+## [29.2.1] - 2026-03-10
+### Mejorado
+- **Notificaciones de Pago Uniformes:** El botón de confirmación ahora refleja el estado real del envío de notificaciones en escritorio y móvil, incluyendo confirmación visual para socio y José.
+- **Sincronía PWA de Versión:** La interfaz ahora puede refrescar la versión visible desde el Service Worker activo, reduciendo desalineaciones entre caché, móvil y escritorio.
+
+### Corregido
+- **Despliegue en Producción:** Se alinearon archivos críticos de créditos, móvil y Service Worker para evitar diferencias entre raíz y producción.
+
 ## [29.2.0] - 2026-03-05
 ### Añadido
 - **Estados de Crédito en PDF (PC y Móvil):** Ya se pueden generar documentos PDF del estado de pagos directamente desde el detalle del crédito, incluyendo tabla de amortización y resumen para ponerse al día cuando existe mora.

@@ -588,6 +588,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function initApp() {
     console.log(`%c INKA CORP - APP VERSION: ${window.APP_VERSION || 'v1.0'} `, 'background: #1e40af; color: #fff; font-weight: bold;');
     syncAppVersionLabels(document);
+    initServiceWorkerVersionSync();
     
     // Verificar sesión
     const { isAuthenticated, user } = await checkSession();
@@ -1176,6 +1177,30 @@ function syncAppVersionLabels(root = document) {
     root.querySelectorAll('[data-app-version]').forEach((el) => {
         el.textContent = version;
     });
+}
+
+function initServiceWorkerVersionSync() {
+    if (!('serviceWorker' in navigator)) return;
+
+    if (!window.__inkaSwVersionListenerBound) {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data?.type === 'SW_VERSION' && event.data.version) {
+                window.APP_VERSION = event.data.version;
+                window.SW_VERSION = event.data.version;
+                syncAppVersionLabels(document);
+            }
+        });
+        window.__inkaSwVersionListenerBound = true;
+    }
+
+    navigator.serviceWorker.ready
+        .then((registration) => {
+            const activeWorker = registration.active || navigator.serviceWorker.controller;
+            if (activeWorker) {
+                activeWorker.postMessage({ type: 'GET_VERSION' });
+            }
+        })
+        .catch((error) => console.warn('[PWA] No se pudo sincronizar versión del SW:', error));
 }
 
 // ==========================================
@@ -2321,7 +2346,7 @@ window.loadDesembolsosPendientes = loadDesembolsosPendientes;
  */
 function checkAndShowChangelog() {
     const lastVersion = localStorage.getItem('last_seen_version');
-    const currentVersion = window.APP_VERSION || '27.0.0';
+    const currentVersion = window.APP_VERSION || '0.0.0';
 
     if (lastVersion !== currentVersion) {
         showChangelog(currentVersion);

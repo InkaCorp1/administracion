@@ -1943,8 +1943,7 @@ async function openPaymentModal(detalleId, btn = null) {
 
         // Configurar botón confirmar
         const btnConfirmar = document.getElementById('btn-confirmar-pago');
-        btnConfirmar.disabled = false;
-        btnConfirmar.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Pago';
+        resetConfirmPaymentButton(btnConfirmar);
         btnConfirmar.onclick = () => confirmarPago();
 
         // Abrir modal
@@ -2008,8 +2007,12 @@ async function confirmarPago() {
     }
 
     const btnConfirmar = document.getElementById('btn-confirmar-pago');
-    btnConfirmar.disabled = true;
-    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+    setConfirmPaymentButtonState(btnConfirmar, {
+        tone: 'processing',
+        text: 'Procesando pago...',
+        icon: 'fas fa-spinner fa-spin',
+        disabled: true
+    });
 
     try {
         const supabase = window.getSupabaseClient();
@@ -2067,8 +2070,7 @@ async function confirmarPago() {
                 text: 'Por favor complete todos los campos resaltados en rojo y suba la evidencia del comprobante.',
                 icon: 'warning'
             });
-            btnConfirmar.disabled = false;
-            btnConfirmar.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Pago';
+            resetConfirmPaymentButton(btnConfirmar);
             return;
         }
 
@@ -2101,15 +2103,13 @@ async function confirmarPago() {
             } else {
                 showToast(`No puedes cobrar un monto menor a la cuota base ($${formatMoney(montoBase)})`, 'warning');
             }
-            btnConfirmar.disabled = false;
-            btnConfirmar.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Pago';
+            resetConfirmPaymentButton(btnConfirmar);
             return;
         }
 
         if (!isConvenio && Math.abs(montoPagado - totalEsperado) > 0.01) {
             showToast('El monto no coincide. Esperado: ' + formatMoney(totalEsperado) + ' (Base: ' + formatMoney(montoBase) + ' + Mora: ' + formatMoney(totalMora) + ')', 'warning');
-            btnConfirmar.disabled = false;
-            btnConfirmar.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Pago';
+            resetConfirmPaymentButton(btnConfirmar);
             return;
         }
 
@@ -2127,7 +2127,12 @@ async function confirmarPago() {
         }
 
         // Subir comprobante a Storage (una sola vez para todos los pagos)
-        btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo comprobante...';
+        setConfirmPaymentButtonState(btnConfirmar, {
+            tone: 'processing',
+            text: 'Subiendo comprobante...',
+            icon: 'fas fa-spinner fa-spin',
+            disabled: true
+        });
         const uploadResult = await uploadReceiptToStorage(
             selectedComprobanteFile,
             currentViewingCredito.id_credito,
@@ -2136,8 +2141,7 @@ async function confirmarPago() {
 
         if (!uploadResult.success) {
             showToast('Error al subir comprobante: ' + uploadResult.error, 'error');
-            btnConfirmar.disabled = false;
-            btnConfirmar.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Pago';
+            resetConfirmPaymentButton(btnConfirmar);
             return;
         }
 
@@ -2292,42 +2296,78 @@ async function confirmarPago() {
             }
 
             const whatsapp = currentViewingCredito.socio?.whatsapp || '';
+            setConfirmPaymentButtonState(btnConfirmar, {
+                tone: 'processing',
+                text: 'Enviando notificación al socio...',
+                icon: 'fas fa-spinner fa-spin',
+                disabled: true
+            });
+
             const socioResult = await sendPaymentWebhook({
                 whatsapp: whatsapp,
                 image_base64: image_base64,
                 message: message
             });
 
-            // Enviar copia al webhook de n8n
-            await sendImageNotificationWebhook({
+            const socioNotificationPayload = {
                 whatsapp: whatsapp,
                 image_base64: image_base64,
                 message: message
+            };
+
+            const socioWebhookResult = await sendImageNotificationWebhook(socioNotificationPayload);
+
+            const detailList = cantidadCuotas === 1
+                ? `🔢 Cuota: ${reciboData.numeroCuota} de ${reciboData.plazo}\n📊 Estado: ${reciboData.estadoCuota}${totalMora > 0 ? ` (Mora: ${formatMoney(totalMora)})` : ''}`
+                : `🔢 Cuotas pagadas: ${cantidadCuotas}\n💰 Detalle: ${montoBase.toFixed(2)}${totalMora > 0 ? ` + Mora: ${totalMora.toFixed(2)}` : ''}`;
+
+            const socioNotificationSuccess = socioResult.success && socioWebhookResult.success;
+
+            setConfirmPaymentButtonState(btnConfirmar, {
+                tone: socioNotificationSuccess ? 'success' : 'error',
+                text: socioNotificationSuccess ? 'Notificación al socio exitosa' : 'Notificación al socio fallida',
+                icon: socioNotificationSuccess ? 'fas fa-check-circle' : 'fas fa-exclamation-circle',
+                disabled: true
+            });
+            await waitMilliseconds(900);
+
+            const socioStatusMessage = socioNotificationSuccess
+                ? 'Te comentamos que el socio ya ha sido notificado correctamente vía WhatsApp. ✅'
+                : 'Atención: el intento de notificación directa al socio por WhatsApp no se completó correctamente. ⚠️';
+
+            const ownerMessage = `JOSÉ KLEVER NISHVE CORO se ha registrado el pago de un crédito con los siguientes detalles:\n\n👤 Socio: ${reciboData.socioNombre.toUpperCase()}\n🆔 Cédula: ${reciboData.socioCedula}\n📑 Crédito: ${reciboData.codigoCredito}\n${detailList}\n💵 TOTAL RECIBIDO: ${formatMoney(montoPagado)}\n📅 Fecha Pago: ${formatDate(fechaPago)}\n🕐 Registro: ${fechaRegistro}\n💳 Método: ${metodoPago}\n\n${socioStatusMessage}`;
+
+            setConfirmPaymentButtonState(btnConfirmar, {
+                tone: 'processing',
+                text: 'Enviando notificación a José...',
+                icon: 'fas fa-spinner fa-spin',
+                disabled: true
             });
 
-            if (socioResult.success) {
-                const noticeimage_base64 = cantidadCuotas === 1 ? await generateNoticeCanvas(reciboData) : await generateMultiQuotaNoticeCanvas(reciboData);
-                const detailList = cantidadCuotas === 1
-                    ? `🔢 Cuota: ${reciboData.numeroCuota} de ${reciboData.plazo}\n📊 Estado: ${reciboData.estadoCuota}${totalMora > 0 ? ` (Mora: ${formatMoney(totalMora)})` : ''}`
-                    : `🔢 Cuotas pagadas: ${cantidadCuotas}\n💰 Detalle: ${montoBase.toFixed(2)}${totalMora > 0 ? ` + Mora: ${totalMora.toFixed(2)}` : ''}`;
+            await waitRandomNotificationDelay();
 
-                const ownerMessage = `JOSÉ KLEVER NISHVE CORO se ha registrado el pago de un crédito con los siguientes detalles:\n\n👤 Socio: ${reciboData.socioNombre.toUpperCase()}\n🆔 Cédula: ${reciboData.socioCedula}\n📑 Crédito: ${reciboData.codigoCredito}\n${detailList}\n💵 TOTAL RECIBIDO: ${formatMoney(montoPagado)}\n📅 Fecha Pago: ${formatDate(fechaPago)}\n🕐 Registro: ${fechaRegistro}\n💳 Método: ${metodoPago}\n\nTe comentamos que el socio ya ha sido notificado correctamente vía WhatsApp. ✅`;
+            const joseWebhookResult = await sendImageNotificationWebhook({
+                whatsapp: '19175309618',
+                image_base64: image_base64,
+                message: ownerMessage
+            });
 
-                await sendOwnerWebhook({
-                    whatsapp: whatsapp, // Enviamos el whatsapp del socio como referencia o destino si el hook lo requiere
-                    image_base64: noticeimage_base64,
-                    message: ownerMessage
-                });
-
-                // Enviar también al webhook de n8n para el administrador
-                await sendImageNotificationWebhook({
-                    whatsapp: '19175309618',
-                    image_base64: noticeimage_base64,
-                    message: ownerMessage
-                });
-            }
+            setConfirmPaymentButtonState(btnConfirmar, {
+                tone: joseWebhookResult.success ? 'success' : 'error',
+                text: joseWebhookResult.success ? 'Notificación a José exitosa' : 'Notificación a José fallida',
+                icon: joseWebhookResult.success ? 'fas fa-check-circle' : 'fas fa-exclamation-circle',
+                disabled: true
+            });
+            await waitMilliseconds(900);
         } catch (errorNotif) {
             console.error('Error en el sistema de notificaciones:', errorNotif);
+            setConfirmPaymentButtonState(btnConfirmar, {
+                tone: 'error',
+                text: 'Error en notificaciones',
+                icon: 'fas fa-exclamation-circle',
+                disabled: true
+            });
+            await waitMilliseconds(900);
             // No bloqueamos el flujo principal si fallan las notificaciones
         }
 
@@ -2359,9 +2399,60 @@ async function confirmarPago() {
     } catch (error) {
         console.error('Error al registrar pago:', error);
         showAlert('Error al registrar el pago: ' + (error.message || error), 'Error', 'error');
-        btnConfirmar.disabled = false;
-        btnConfirmar.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Pago';
+        resetConfirmPaymentButton(btnConfirmar);
     }
+}
+
+function setConfirmPaymentButtonState(button, { tone = 'default', text = 'Confirmar Pago', icon = 'fas fa-check-circle', disabled = false } = {}) {
+    if (!button) return;
+
+    const styles = {
+        default: {
+            background: '',
+            borderColor: '',
+            color: '',
+            boxShadow: ''
+        },
+        processing: {
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+            borderColor: '#1d4ed8',
+            color: '#ffffff',
+            boxShadow: '0 10px 24px rgba(37, 99, 235, 0.28)'
+        },
+        success: {
+            background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+            borderColor: '#15803d',
+            color: '#ffffff',
+            boxShadow: '0 10px 24px rgba(22, 163, 74, 0.28)'
+        },
+        error: {
+            background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+            borderColor: '#b91c1c',
+            color: '#ffffff',
+            boxShadow: '0 10px 24px rgba(220, 38, 38, 0.28)'
+        }
+    };
+
+    const selectedStyle = styles[tone] || styles.default;
+    button.disabled = disabled;
+    button.innerHTML = `<i class="${icon}"></i> ${text}`;
+    button.style.background = selectedStyle.background;
+    button.style.borderColor = selectedStyle.borderColor;
+    button.style.color = selectedStyle.color;
+    button.style.boxShadow = selectedStyle.boxShadow;
+}
+
+function resetConfirmPaymentButton(button) {
+    setConfirmPaymentButtonState(button, {
+        tone: 'default',
+        text: 'Confirmar Pago',
+        icon: 'fas fa-check-circle',
+        disabled: false
+    });
+}
+
+function waitMilliseconds(delayMs) {
+    return new Promise(resolve => setTimeout(resolve, delayMs));
 }
 
 // ==========================================
@@ -3409,6 +3500,11 @@ async function sendOwnerWebhook(payload) {
         console.error('Error enviando aviso al admin:', error);
         return { success: false, error: error.message };
     }
+}
+
+function waitRandomNotificationDelay(minMs = 2000, maxMs = 6000) {
+    const delayMs = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+    return waitMilliseconds(delayMs);
 }
 
 /**

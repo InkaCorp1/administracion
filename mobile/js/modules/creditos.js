@@ -968,7 +968,9 @@ window.openPaymentModalMobile = async function(detalleId, btn) {
         if (cameraInput) cameraInput.onchange = (e) => handleLiteReceiptSelect(e.target);
         if (galleryInput) galleryInput.onchange = (e) => handleLiteReceiptSelect(e.target);
 
-        document.getElementById('btn-lite-confirmar-pago').onclick = confirmarPagoLite;
+        const confirmButton = document.getElementById('btn-lite-confirmar-pago');
+        resetLiteConfirmPaymentButton(confirmButton);
+        confirmButton.onclick = confirmarPagoLite;
 
         // Reset convenio
         const convenioToggle = document.getElementById('pago-lite-convenio-toggle');
@@ -1151,7 +1153,6 @@ window.clearLiteReceipt = function() {
  */
 async function confirmarPagoLite() {
     const btn = document.getElementById('btn-lite-confirmar-pago');
-    const originalContent = btn.innerHTML;
     
     try {
         const count = parseInt(document.getElementById('pago-lite-cuotas-select').value);
@@ -1238,13 +1239,23 @@ async function confirmarPagoLite() {
             }
         }
 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando Pago...';
+        setLiteConfirmPaymentButtonState(btn, {
+            tone: 'processing',
+            text: 'Procesando pago...',
+            icon: 'fas fa-spinner fa-spin',
+            disabled: true
+        });
 
         const supabase = window.getSupabaseClient();
         const { data: { user } } = await supabase.auth.getUser();
 
         // 1. Subir a bucket 'inkacorp' con subcarpeta unificada
+        setLiteConfirmPaymentButtonState(btn, {
+            tone: 'processing',
+            text: 'Subiendo comprobante...',
+            icon: 'fas fa-spinner fa-spin',
+            disabled: true
+        });
         const uploadRes = await window.uploadFileToStorage(currentSelectedReceiptFile, 'creditos/pagos', idCredito, 'inkacorp');
 
         if (!uploadRes.success) {
@@ -1255,19 +1266,22 @@ async function confirmarPagoLite() {
 
         // 2. Registrar cuota por cuota
         const cuotasAPagar = currentPaymentCuotas.slice(0, count);
+        const cuotasConMora = cuotasAPagar.map((cuota) => ({
+            ...cuota,
+            ...calcularMoraLite(cuota.fecha_vencimiento, fechaPago)
+        }));
         const montoBaseCalculado = cuotasAPagar.reduce((sum, c) => sum + parseFloat(c.cuota_total || 0), 0);
         const excedenteConvenio = isConvenio ? (montoVal - montoBaseCalculado) : 0;
         
         // Calcular total original para las observaciones del convenio
         let totalOriginal = 0;
-        cuotasAPagar.forEach(c => {
-            const m = calcularMoraLite(c.fecha_vencimiento, fechaPago);
-            totalOriginal += (parseFloat(c.cuota_total || 0) + m.montoMora);
+        cuotasConMora.forEach(c => {
+            totalOriginal += (parseFloat(c.cuota_total || 0) + c.montoMora);
         });
 
-        for (let i = 0; i < cuotasAPagar.length; i++) {
-            const cuota = cuotasAPagar[i];
-            const moraInfo = calcularMoraLite(cuota.fecha_vencimiento, fechaPago);
+        for (let i = 0; i < cuotasConMora.length; i++) {
+            const cuota = cuotasConMora[i];
+            const moraInfo = cuota;
             const cuotaBaseVal = parseFloat(cuota.cuota_total || 0);
             const montoOriginalCuota = cuotaBaseVal + moraInfo.montoMora;
             
@@ -1307,6 +1321,100 @@ async function confirmarPagoLite() {
             if (errorPago) throw errorPago;
         }
 
+        try {
+            const currentCredito = liteCreditosData.find(item => item.id_credito === idCredito);
+            const fechaRegistro = formatEcuadorDateTimeLite();
+            const totalMora = cuotasConMora.reduce((sum, cuota) => sum + (cuota.montoMora || 0), 0);
+            const montoPagadoTotal = isConvenio
+                ? montoVal
+                : cuotasConMora.reduce((sum, cuota) => sum + parseFloat(cuota.cuota_total || 0) + (cuota.montoMora || 0), 0);
+            const imageBase64 = await fileToBase64(currentSelectedReceiptFile);
+
+            let socioMessage;
+            if (count === 1) {
+                const cuota = cuotasConMora[0];
+                const moraTexto = cuota.estaEnMora
+                    ? `\n⚠️ *MORA:* ${cuota.diasMora} días × $2 = ${formatMoneyLite(cuota.montoMora)}`
+                    : '';
+
+                socioMessage = `¡HOLA ${(currentCredito?.socio?.nombre || 'SOCIO').toUpperCase()}! 👋\n\n✅ *PAGO REGISTRADO EXITOSAMENTE*\n\nMuchas gracias por realizar tu pago de cuota ${cuota.numero_cuota} de ${currentCredito?.plazo || '-'}, te informamos que ha sido registrado correctamente.\n\n📋 *DETALLES DEL PAGO:*\n━━━━━━━━━━━━━━━\n🔢 Cuota: ${cuota.numero_cuota} de ${currentCredito?.plazo || '-'}\n📊 Estado: ${cuota.estaEnMora ? 'EN MORA' : 'A TIEMPO'}${moraTexto}\n💰 *TOTAL PAGADO:* ${formatMoneyLite(montoPagadoTotal)}\n━━━━━━━━━━━━━━━\n📅 Fecha de pago: ${window.formatDate(fechaPago)}\n🕐 Registrado: ${fechaRegistro}\n💳 Método: ${metodo}\n\n🏦 _INKA CORP - Tu confianza, nuestro compromiso_`;
+            } else {
+                const listaCuotas = cuotasConMora
+                    .map(cuota => `  • Cuota ${cuota.numero_cuota}: ${formatMoneyLite(parseFloat(cuota.cuota_total || 0) + (cuota.montoMora || 0))}`)
+                    .join('\n');
+                const moraTexto = totalMora > 0 ? `\n⚠️ *MORA TOTAL:* ${formatMoneyLite(totalMora)}` : '';
+
+                socioMessage = `¡HOLA ${(currentCredito?.socio?.nombre || 'SOCIO').toUpperCase()}! 👋\n\n✅ *PAGO MÚLTIPLE REGISTRADO*\n\nMuchas gracias por adelantar ${count} cuotas de tu crédito. Tu pago ha sido registrado correctamente.\n\n📋 *DETALLE DE CUOTAS PAGADAS:*\n━━━━━━━━━━━━━━━\n${listaCuotas}\n━━━━━━━━━━━━━━━\n💵 Subtotal cuotas: ${formatMoneyLite(montoBaseCalculado)}${moraTexto}\n💰 *TOTAL PAGADO:* ${formatMoneyLite(montoPagadoTotal)}\n━━━━━━━━━━━━━━━\n📅 Fecha de pago: ${window.formatDate(fechaPago)}\n🕐 Registrado: ${fechaRegistro}\n💳 Método: ${metodo}\n\n🏦 _INKA CORP - Tu confianza, nuestro compromiso_`;
+            }
+
+            setLiteConfirmPaymentButtonState(btn, {
+                tone: 'processing',
+                text: 'Enviando notificación al socio...',
+                icon: 'fas fa-spinner fa-spin',
+                disabled: true
+            });
+
+            const socioPayload = {
+                whatsapp: currentCredito?.socio?.whatsapp || '',
+                image_base64: imageBase64,
+                message: socioMessage
+            };
+
+            const socioResult = await sendPaymentWebhookLite(socioPayload);
+            const socioWebhookResult = await sendImageNotificationWebhookLite(socioPayload);
+            const socioNotificationSuccess = socioResult.success && socioWebhookResult.success;
+
+            setLiteConfirmPaymentButtonState(btn, {
+                tone: socioNotificationSuccess ? 'success' : 'error',
+                text: socioNotificationSuccess ? 'Notificación al socio exitosa' : 'Notificación al socio fallida',
+                icon: socioNotificationSuccess ? 'fas fa-check-circle' : 'fas fa-exclamation-circle',
+                disabled: true
+            });
+            await waitMillisecondsLite(900);
+
+            const detailList = count === 1
+                ? `🔢 Cuota: ${cuotasConMora[0].numero_cuota} de ${currentCredito?.plazo || '-'}\n📊 Estado: ${cuotasConMora[0].estaEnMora ? 'EN MORA' : 'A TIEMPO'}${totalMora > 0 ? ` (Mora: ${formatMoneyLite(totalMora)})` : ''}`
+                : `🔢 Cuotas pagadas: ${count}\n💰 Detalle: ${montoBaseCalculado.toFixed(2)}${totalMora > 0 ? ` + Mora: ${totalMora.toFixed(2)}` : ''}`;
+
+            const socioStatusMessage = socioNotificationSuccess
+                ? 'Te comentamos que el socio ya ha sido notificado correctamente vía WhatsApp. ✅'
+                : 'Atención: el intento de notificación directa al socio por WhatsApp no se completó correctamente. ⚠️';
+
+            const joseMessage = `JOSÉ KLEVER NISHVE CORO se ha registrado el pago de un crédito con los siguientes detalles:\n\n👤 Socio: ${(currentCredito?.socio?.nombre || 'SOCIO').toUpperCase()}\n🆔 Cédula: ${currentCredito?.socio?.cedula || 'N/A'}\n📑 Crédito: ${currentCredito?.codigo_credito || idCredito}\n${detailList}\n💵 TOTAL RECIBIDO: ${formatMoneyLite(montoPagadoTotal)}\n📅 Fecha Pago: ${window.formatDate(fechaPago)}\n🕐 Registro: ${fechaRegistro}\n💳 Método: ${metodo}\n\n${socioStatusMessage}`;
+
+            setLiteConfirmPaymentButtonState(btn, {
+                tone: 'processing',
+                text: 'Enviando notificación a José...',
+                icon: 'fas fa-spinner fa-spin',
+                disabled: true
+            });
+
+            await waitRandomNotificationDelayLite();
+
+            const joseWebhookResult = await sendImageNotificationWebhookLite({
+                whatsapp: '19175309618',
+                image_base64: imageBase64,
+                message: joseMessage
+            });
+
+            setLiteConfirmPaymentButtonState(btn, {
+                tone: joseWebhookResult.success ? 'success' : 'error',
+                text: joseWebhookResult.success ? 'Notificación a José exitosa' : 'Notificación a José fallida',
+                icon: joseWebhookResult.success ? 'fas fa-check-circle' : 'fas fa-exclamation-circle',
+                disabled: true
+            });
+            await waitMillisecondsLite(900);
+        } catch (errorNotif) {
+            console.error('Error en notificaciones móviles de pago:', errorNotif);
+            setLiteConfirmPaymentButtonState(btn, {
+                tone: 'error',
+                text: 'Error en notificaciones',
+                icon: 'fas fa-exclamation-circle',
+                disabled: true
+            });
+            await waitMillisecondsLite(900);
+        }
+
         if (window.Swal) {
             await Swal.fire({
                 icon: 'success',
@@ -1327,8 +1435,125 @@ async function confirmarPagoLite() {
         console.error('Error procesando pago:', error);
         if (window.Swal) Swal.fire('Error', error.message || 'No se pudo registrar el pago', 'error');
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
+        resetLiteConfirmPaymentButton(btn);
+    }
+}
+
+function setLiteConfirmPaymentButtonState(button, { tone = 'default', text = 'Confirmar y Registrar', icon = 'fas fa-check-circle', disabled = false } = {}) {
+    if (!button) return;
+
+    const styles = {
+        default: {
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+            borderColor: '#1d4ed8',
+            color: '#ffffff',
+            boxShadow: '0 4px 12px rgba(30, 64, 175, 0.3)'
+        },
+        processing: {
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+            borderColor: '#1d4ed8',
+            color: '#ffffff',
+            boxShadow: '0 10px 24px rgba(37, 99, 235, 0.28)'
+        },
+        success: {
+            background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+            borderColor: '#15803d',
+            color: '#ffffff',
+            boxShadow: '0 10px 24px rgba(22, 163, 74, 0.28)'
+        },
+        error: {
+            background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+            borderColor: '#b91c1c',
+            color: '#ffffff',
+            boxShadow: '0 10px 24px rgba(220, 38, 38, 0.28)'
+        }
+    };
+
+    const selectedStyle = styles[tone] || styles.default;
+    button.disabled = disabled;
+    button.innerHTML = `<i class="${icon}"></i> ${text}`;
+    button.style.background = selectedStyle.background;
+    button.style.borderColor = selectedStyle.borderColor;
+    button.style.color = selectedStyle.color;
+    button.style.boxShadow = selectedStyle.boxShadow;
+}
+
+function resetLiteConfirmPaymentButton(button) {
+    setLiteConfirmPaymentButtonState(button, {
+        tone: 'default',
+        text: 'Confirmar y Registrar',
+        icon: 'fas fa-check-circle',
+        disabled: false
+    });
+}
+
+function waitMillisecondsLite(delayMs) {
+    return new Promise(resolve => setTimeout(resolve, delayMs));
+}
+
+function waitRandomNotificationDelayLite(minMs = 2000, maxMs = 6000) {
+    const delayMs = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+    return waitMillisecondsLite(delayMs);
+}
+
+function formatMoneyLite(amount) {
+    return '$' + parseFloat(amount || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function formatEcuadorDateTimeLite() {
+    return new Date().toLocaleString('es-EC', {
+        timeZone: 'America/Guayaquil',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('No se pudo convertir el comprobante a base64'));
+        reader.readAsDataURL(file);
+    });
+}
+
+async function sendPaymentWebhookLite(payload) {
+    const WEBHOOK_URL = 'https://lpwebhook.luispinta.com/webhook/recibosocios';
+
+    try {
+        const response = await fetch(WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        return { success: true };
+    } catch (error) {
+        console.error('Error enviando webhook móvil al socio:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+async function sendImageNotificationWebhookLite(payload) {
+    const WEBHOOK_URL_N8N = 'https://lpn8nwebhook.luispintasolutions.com/webhook/notificarimagenes';
+
+    try {
+        const response = await fetch(WEBHOOK_URL_N8N, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return { success: true };
+    } catch (error) {
+        console.error('Error enviando webhook móvil a n8n:', error);
+        return { success: false, error: error.message };
     }
 }
 
