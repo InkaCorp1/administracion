@@ -2276,6 +2276,13 @@ async function confirmarPago() {
             let image_base64;
             let message;
 
+            setConfirmPaymentButtonState(btnConfirmar, {
+                tone: 'processing',
+                text: 'Generando comprobante...',
+                icon: 'fas fa-receipt',
+                disabled: true
+            });
+
             if (cantidadCuotas === 1) {
                 const cuota = cuotasConMora[0];
                 reciboData.numeroCuota = cuota.numero_cuota;
@@ -2331,14 +2338,21 @@ async function confirmarPago() {
 
             const ownerMessage = `JOSÉ KLEVER NISHVE CORO se ha registrado el pago de un crédito con los siguientes detalles:\n\n👤 Socio: ${reciboData.socioNombre.toUpperCase()}\n🆔 Cédula: ${reciboData.socioCedula}\n📑 Crédito: ${reciboData.codigoCredito}\n${detailList}\n💵 TOTAL RECIBIDO: ${formatMoney(montoPagado)}\n📅 Fecha Pago: ${formatDate(fechaPago)}\n🕐 Registro: ${fechaRegistro}\n💳 Método: ${metodoPago}\n\n${socioStatusMessage}`;
 
+            await waitRandomNotificationDelay((remainingSeconds) => {
+                setConfirmPaymentButtonState(btnConfirmar, {
+                    tone: 'processing',
+                    text: `Esperando ${remainingSeconds} s para enviar a Jose...`,
+                    icon: 'fas fa-hourglass-half',
+                    disabled: true
+                });
+            });
+
             setConfirmPaymentButtonState(btnConfirmar, {
                 tone: 'processing',
                 text: 'Enviando notificación a José...',
                 icon: 'fas fa-spinner fa-spin',
                 disabled: true
             });
-
-            await waitRandomNotificationDelay();
 
             const joseWebhookResult = await sendImageNotificationWebhook({
                 whatsapp: '19175309618',
@@ -2447,6 +2461,27 @@ function resetConfirmPaymentButton(button) {
 
 function waitMilliseconds(delayMs) {
     return new Promise(resolve => setTimeout(resolve, delayMs));
+}
+
+function formatNotificationDelaySeconds(delayMs) {
+    return Math.max(1, Math.ceil(delayMs / 1000));
+}
+
+async function waitRandomNotificationDelay(updateStatus, minMs = 2000, maxMs = 6000) {
+    const delayMs = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+    let remainingMs = delayMs;
+
+    while (remainingMs > 0) {
+        if (typeof updateStatus === 'function') {
+            updateStatus(formatNotificationDelaySeconds(remainingMs));
+        }
+
+        const chunkMs = Math.min(1000, remainingMs);
+        await waitMilliseconds(chunkMs);
+        remainingMs -= chunkMs;
+    }
+
+    return delayMs;
 }
 
 // ==========================================
@@ -3454,11 +3489,6 @@ async function generateMultiQuotaNoticeCanvas(data) {
  */
 async function sendOwnerWebhook(payload) {
     return sendImageNotificationWebhook(payload);
-}
-
-function waitRandomNotificationDelay(minMs = 2000, maxMs = 6000) {
-    const delayMs = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
-    return waitMilliseconds(delayMs);
 }
 
 /**

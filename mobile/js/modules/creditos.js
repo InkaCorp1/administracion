@@ -1328,6 +1328,14 @@ async function confirmarPagoLite() {
             const montoPagadoTotal = isConvenio
                 ? montoVal
                 : cuotasConMora.reduce((sum, cuota) => sum + parseFloat(cuota.cuota_total || 0) + (cuota.montoMora || 0), 0);
+
+            setLiteConfirmPaymentButtonState(btn, {
+                tone: 'processing',
+                text: 'Generando comprobante...',
+                icon: 'fas fa-receipt',
+                disabled: true
+            });
+
             const imageBase64 = await fileToBase64(currentSelectedReceiptFile);
 
             let socioMessage;
@@ -1381,14 +1389,21 @@ async function confirmarPagoLite() {
 
             const joseMessage = `JOSÉ KLEVER NISHVE CORO se ha registrado el pago de un crédito con los siguientes detalles:\n\n👤 Socio: ${(currentCredito?.socio?.nombre || 'SOCIO').toUpperCase()}\n🆔 Cédula: ${currentCredito?.socio?.cedula || 'N/A'}\n📑 Crédito: ${currentCredito?.codigo_credito || idCredito}\n${detailList}\n💵 TOTAL RECIBIDO: ${formatMoneyLite(montoPagadoTotal)}\n📅 Fecha Pago: ${window.formatDate(fechaPago)}\n🕐 Registro: ${fechaRegistro}\n💳 Método: ${metodo}\n\n${socioStatusMessage}`;
 
+            await waitRandomNotificationDelayLite((remainingSeconds) => {
+                setLiteConfirmPaymentButtonState(btn, {
+                    tone: 'processing',
+                    text: `Esperando ${remainingSeconds} s para enviar a Jose...`,
+                    icon: 'fas fa-hourglass-half',
+                    disabled: true
+                });
+            });
+
             setLiteConfirmPaymentButtonState(btn, {
                 tone: 'processing',
                 text: 'Enviando notificación a José...',
                 icon: 'fas fa-spinner fa-spin',
                 disabled: true
             });
-
-            await waitRandomNotificationDelayLite();
 
             const joseWebhookResult = await sendImageNotificationWebhookLite({
                 whatsapp: '19175309618',
@@ -1490,9 +1505,25 @@ function waitMillisecondsLite(delayMs) {
     return new Promise(resolve => setTimeout(resolve, delayMs));
 }
 
-function waitRandomNotificationDelayLite(minMs = 2000, maxMs = 6000) {
+function formatNotificationDelaySecondsLite(delayMs) {
+    return Math.max(1, Math.ceil(delayMs / 1000));
+}
+
+async function waitRandomNotificationDelayLite(updateStatus, minMs = 2000, maxMs = 6000) {
     const delayMs = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
-    return waitMillisecondsLite(delayMs);
+    let remainingMs = delayMs;
+
+    while (remainingMs > 0) {
+        if (typeof updateStatus === 'function') {
+            updateStatus(formatNotificationDelaySecondsLite(remainingMs));
+        }
+
+        const chunkMs = Math.min(1000, remainingMs);
+        await waitMillisecondsLite(chunkMs);
+        remainingMs -= chunkMs;
+    }
+
+    return delayMs;
 }
 
 function formatMoneyLite(amount) {

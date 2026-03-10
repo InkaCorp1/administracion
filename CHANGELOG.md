@@ -1,5 +1,12 @@
 # CHANGELOG - INKA CORP
 
+## [29.3.1] - 2026-03-10
+### Corregido
+- **PDF de Aportes:** Se corrigió la lógica de agrupación de comprobantes en el reporte PDF para mostrar múltiples imágenes cuando un socio realiza varios aportes en la misma semana (ej. caso Clara Nishve).
+- **Update PWA:** Se incrementó la versión para forzar la actualización de los cambios en el módulo de aportes.
+
+## [29.3.0] - 2026-03-10
+
 ## [29.2.4] - 2026-03-10
 ### Corregido
 - **Forzado de Actualización PWA:** Se elevó el patch y se reforzó la revisión inmediata de `registration.waiting` tras `update()` para que el prompt de actualización no se pierda en escritorio ni móvil.
