@@ -2303,12 +2303,6 @@ async function confirmarPago() {
                 disabled: true
             });
 
-            const socioResult = await sendPaymentWebhook({
-                whatsapp: whatsapp,
-                image_base64: image_base64,
-                message: message
-            });
-
             const socioNotificationPayload = {
                 whatsapp: whatsapp,
                 image_base64: image_base64,
@@ -2321,7 +2315,7 @@ async function confirmarPago() {
                 ? `🔢 Cuota: ${reciboData.numeroCuota} de ${reciboData.plazo}\n📊 Estado: ${reciboData.estadoCuota}${totalMora > 0 ? ` (Mora: ${formatMoney(totalMora)})` : ''}`
                 : `🔢 Cuotas pagadas: ${cantidadCuotas}\n💰 Detalle: ${montoBase.toFixed(2)}${totalMora > 0 ? ` + Mora: ${totalMora.toFixed(2)}` : ''}`;
 
-            const socioNotificationSuccess = socioResult.success && socioWebhookResult.success;
+            const socioNotificationSuccess = socioWebhookResult.success;
 
             setConfirmPaymentButtonState(btnConfirmar, {
                 tone: socioNotificationSuccess ? 'success' : 'error',
@@ -2977,32 +2971,7 @@ async function generateReceiptCanvas(data) {
  * @param {Object} payload - Datos a enviar
  */
 async function sendPaymentWebhook(payload) {
-    const WEBHOOK_URL = 'https://lpwebhook.luispinta.com/webhook/recibosocios';
-
-    try {
-        console.log('Enviando webhook de pago a:', WEBHOOK_URL);
-        console.log('Payload:', { ...payload, image_base64: '[BASE64_IMAGE]' });
-
-        const response = await fetch(WEBHOOK_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result = await response.text();
-        console.log('Webhook enviado exitosamente. Respuesta:', result);
-        return { success: true, response: result };
-
-    } catch (error) {
-        console.error('Error enviando webhook:', error);
-        return { success: false, error: error.message };
-    }
+    return sendImageNotificationWebhook(payload);
 }
 
 
@@ -3484,22 +3453,7 @@ async function generateMultiQuotaNoticeCanvas(data) {
  * Envía el segundo webhook al administrador (Jose)
  */
 async function sendOwnerWebhook(payload) {
-    const WEBHOOK_URL_OWNER = 'https://lpwebhook.luispinta.com/webhook/recibosociosJose';
-
-    try {
-        console.log('Enviando aviso al administrador:', WEBHOOK_URL_OWNER);
-        const response = await fetch(WEBHOOK_URL_OWNER, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return { success: true };
-    } catch (error) {
-        console.error('Error enviando aviso al admin:', error);
-        return { success: false, error: error.message };
-    }
+    return sendImageNotificationWebhook(payload);
 }
 
 function waitRandomNotificationDelay(minMs = 2000, maxMs = 6000) {

@@ -1,5 +1,17 @@
 # CHANGELOG - INKA CORP
 
+## [29.2.4] - 2026-03-10
+### Corregido
+- **Forzado de Actualización PWA:** Se elevó el patch y se reforzó la revisión inmediata de `registration.waiting` tras `update()` para que el prompt de actualización no se pierda en escritorio ni móvil.
+
+## [29.2.3] - 2026-03-10
+### Corregido
+- **Patch PWA/SW Producción:** Se incrementó nuevamente la versión patch para forzar que escritorio y móvil tomen el paquete centralizado de webhooks y utilidades corregidas desde caché limpia.
+
+## [29.2.2] - 2026-03-10
+### Corregido
+- **Patch PWA/SW:** Se incrementó la versión patch para forzar la propagación del Service Worker y asegurar que clientes con caché anterior reciban el update más reciente.
+
 ## [29.2.1] - 2026-03-10
 ### Mejorado
 - **Notificaciones de Pago Uniformes:** El botón de confirmación ahora refleja el estado real del envío de notificaciones en escritorio y móvil, incluyendo confirmación visual para socio y José.

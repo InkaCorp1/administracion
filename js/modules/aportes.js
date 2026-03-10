@@ -2185,18 +2185,21 @@ async function generatePDFReporteAportes(params) {
             // AGRUPAR APORTES POR SOCIO DENTRO DE LA SEMANA (Para completar valores)
             const aportesPorSocio = {};
             group.items.forEach(item => {
+                // Obtener array de comprobantes del aporte individual
+                const itemCombs = item.comprobante_url ? (item.comprobante_url.includes('|') ? item.comprobante_url.split('|') : [item.comprobante_url]) : [];
+
                 if (!aportesPorSocio[item.id_socio]) {
                     aportesPorSocio[item.id_socio] = {
                         ...item,
                         monto: parseFloat(item.monto),
-                        comprobantes: [item.comprobante_url],
+                        comprobantes: [...itemCombs],
                         montos: [parseFloat(item.monto)],
                         fechas: [item.fecha],
                         esMerged: true
                     };
                 } else {
                     aportesPorSocio[item.id_socio].monto += parseFloat(item.monto);
-                    aportesPorSocio[item.id_socio].comprobantes.push(item.comprobante_url);
+                    aportesPorSocio[item.id_socio].comprobantes.push(...itemCombs);
                     aportesPorSocio[item.id_socio].montos.push(parseFloat(item.monto));
                     aportesPorSocio[item.id_socio].fechas.push(item.fecha);
                     if (item.es_igualacion) aportesPorSocio[item.id_socio].es_igualacion = true;
@@ -2306,7 +2309,9 @@ async function generatePDFReporteAportes(params) {
             totalAportadoPeriodo += parseFloat(aporte.monto);
 
             // Ajustar altura del box si hay muchos comprobantes
-            const comps = aporte.comprobante_url ? (aporte.comprobante_url.includes('|') ? aporte.comprobante_url.split('|') : [aporte.comprobante_url]) : (aporte.comprobantes || []);
+            const comps = (aporte.comprobantes && aporte.comprobantes.length > 0) 
+                         ? aporte.comprobantes 
+                         : (aporte.comprobante_url ? (aporte.comprobante_url.includes('|') ? aporte.comprobante_url.split('|') : [aporte.comprobante_url]) : []);
 
             const imgSize = 48;
             const imgsPerRow = 3;

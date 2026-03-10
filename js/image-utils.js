@@ -14,6 +14,13 @@ const COMPRESSION_CONFIG = {
     mimeType: 'image/webp'
 };
 
+const COMPRESSIBLE_IMAGE_TYPES = new Set([
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp'
+]);
+
 // ==========================================
 // COMPRESIÓN DE IMAGEN
 // ==========================================
@@ -37,7 +44,21 @@ async function compressImage(file, options = {}) {
             blob: file,
             wasCompressed: false,
             originalSize,
-            compressedSize: originalSize
+            compressedSize: originalSize,
+            outputMimeType: file.type || 'application/octet-stream',
+            outputExtension: getExtensionFromFile(file)
+        };
+    }
+
+    if (!COMPRESSIBLE_IMAGE_TYPES.has(file.type)) {
+        console.warn(`compressImage: Tipo no compatible para compresión (${file.type}). Usando original.`);
+        return {
+            blob: file,
+            wasCompressed: false,
+            originalSize,
+            compressedSize: originalSize,
+            outputMimeType: file.type || 'application/octet-stream',
+            outputExtension: getExtensionFromFile(file)
         };
     }
 
@@ -66,12 +87,38 @@ async function compressImage(file, options = {}) {
                 canvas.height = height;
 
                 const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    console.error('compressImage: No se pudo obtener contexto 2D');
+                    resolve({
+                        blob: file,
+                        wasCompressed: false,
+                        originalSize,
+                        compressedSize: originalSize,
+                        outputMimeType: file.type || 'application/octet-stream',
+                        outputExtension: getExtensionFromFile(file)
+                    });
+                    return;
+                }
+
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fillRect(0, 0, width, height);
                 ctx.drawImage(img, 0, 0, width, height);
 
                 // Convertir a blob
                 canvas.toBlob((blob) => {
+                    if (!blob) {
+                        console.error('compressImage: Canvas.toBlob retornó null, usando original');
+                        resolve({
+                            blob: file,
+                            wasCompressed: false,
+                            originalSize,
+                            compressedSize: originalSize,
+                            outputMimeType: file.type || 'application/octet-stream',
+                            outputExtension: getExtensionFromFile(file)
+                        });
+                        return;
+                    }
+
                     const compressedSize = blob.size;
 
                     // Si la compresión aumentó el tamaño, usar original
@@ -81,7 +128,9 @@ async function compressImage(file, options = {}) {
                             blob: file,
                             wasCompressed: false,
                             originalSize,
-                            compressedSize: originalSize
+                            compressedSize: originalSize,
+                            outputMimeType: file.type || 'application/octet-stream',
+                            outputExtension: getExtensionFromFile(file)
                         });
                     } else {
                         const savedPercent = Math.round((1 - compressedSize / originalSize) * 100);
@@ -90,7 +139,9 @@ async function compressImage(file, options = {}) {
                             blob,
                             wasCompressed: true,
                             originalSize,
-                            compressedSize
+                            compressedSize,
+                            outputMimeType: config.mimeType,
+                            outputExtension: getExtensionFromMimeType(config.mimeType)
                         });
                     }
                 }, config.mimeType, config.quality);
@@ -102,7 +153,9 @@ async function compressImage(file, options = {}) {
                     blob: file,
                     wasCompressed: false,
                     originalSize,
-                    compressedSize: originalSize
+                    compressedSize: originalSize,
+                    outputMimeType: file.type || 'application/octet-stream',
+                    outputExtension: getExtensionFromFile(file)
                 });
             };
 
@@ -115,12 +168,29 @@ async function compressImage(file, options = {}) {
                 blob: file,
                 wasCompressed: false,
                 originalSize,
-                compressedSize: originalSize
+                compressedSize: originalSize,
+                outputMimeType: file.type || 'application/octet-stream',
+                outputExtension: getExtensionFromFile(file)
             });
         };
 
         reader.readAsDataURL(file);
     });
+}
+
+function getExtensionFromMimeType(mimeType = '') {
+    const normalized = String(mimeType).toLowerCase();
+    if (normalized === 'image/jpeg') return 'jpg';
+    if (normalized === 'image/svg+xml') return 'svg';
+    return normalized.split('/')[1] || 'bin';
+}
+
+function getExtensionFromFile(file) {
+    if (file?.name && file.name.includes('.')) {
+        return file.name.split('.').pop().toLowerCase();
+    }
+
+    return getExtensionFromMimeType(file?.type || 'application/octet-stream');
 }
 
 // ==========================================
@@ -150,15 +220,7 @@ async function uploadFileToStorage(file, folder, id, bucketName = STORAGE_BUCKET
         let originalSize = file.size;
         let compressedSize = file.size;
         let contentType = file.type || 'application/octet-stream';
-        
-        // Determinar extensión: si viene de un File tiene .name, si es un Blob/URL intentamos inferir del type
-        let extension = 'bin';
-        if (file && file.name) {
-            extension = file.name.split('.').pop().toLowerCase();
-        } else if (file && file.type) {
-            extension = file.type.split('/')[1] || 'bin';
-            if (extension === 'jpeg') extension = 'jpg';
-        }
+        let extension = getExtensionFromFile(file);
 
         // 1. Si es imagen, intentar compresión
         if (file.type && file.type.startsWith('image/')) {
@@ -167,8 +229,8 @@ async function uploadFileToStorage(file, folder, id, bucketName = STORAGE_BUCKET
             wasCompressed = compressionRes.wasCompressed;
             originalSize = compressionRes.originalSize;
             compressedSize = compressionRes.compressedSize;
-            contentType = 'image/webp';
-            extension = 'webp';
+            contentType = compressionRes.outputMimeType || contentType;
+            extension = compressionRes.outputExtension || extension;
         }
 
         // 2. Generar nombre único de archivo siguiendo el estándar de carpetas

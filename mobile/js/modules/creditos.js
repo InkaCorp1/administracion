@@ -1360,9 +1360,8 @@ async function confirmarPagoLite() {
                 message: socioMessage
             };
 
-            const socioResult = await sendPaymentWebhookLite(socioPayload);
             const socioWebhookResult = await sendImageNotificationWebhookLite(socioPayload);
-            const socioNotificationSuccess = socioResult.success && socioWebhookResult.success;
+            const socioNotificationSuccess = socioWebhookResult.success;
 
             setLiteConfirmPaymentButtonState(btn, {
                 tone: socioNotificationSuccess ? 'success' : 'error',
@@ -1522,21 +1521,7 @@ function fileToBase64(file) {
 }
 
 async function sendPaymentWebhookLite(payload) {
-    const WEBHOOK_URL = 'https://lpwebhook.luispinta.com/webhook/recibosocios';
-
-    try {
-        const response = await fetch(WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        return { success: true };
-    } catch (error) {
-        console.error('Error enviando webhook móvil al socio:', error);
-        return { success: false, error: error.message };
-    }
+    return sendImageNotificationWebhookLite(payload);
 }
 
 async function sendImageNotificationWebhookLite(payload) {
