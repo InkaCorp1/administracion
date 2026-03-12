@@ -392,44 +392,170 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Muestra el changelog de la versión actual si es la primera vez que se carga
  */
-function checkAndShowChangelog() {
-    const lastVersion = localStorage.getItem('last_seen_version');
-    const currentVersion = window.APP_VERSION || '0.0.0';
+const CHANGELOG_ACCEPTED_VERSION_KEY = 'inka_changelog_accepted_version';
+const CHANGELOG_CACHE_PREFIX = 'inka_changelog_cache_';
+const CHANGELOG_CACHE_RENDERER_VERSION = '2';
 
-    if (lastVersion !== currentVersion) {
-        showChangelog(currentVersion);
-        localStorage.setItem('last_seen_version', currentVersion);
+function getChangelogCacheKey(version) {
+    return `${CHANGELOG_CACHE_PREFIX}${CHANGELOG_CACHE_RENDERER_VERSION}_${version}`;
+}
+
+function clearOldChangelogCache(currentVersion) {
+    try {
+        const currentCacheKey = getChangelogCacheKey(currentVersion);
+        const keysToDelete = [];
+
+        for (let index = 0; index < localStorage.length; index += 1) {
+            const key = localStorage.key(index);
+            if (!key || !key.startsWith(CHANGELOG_CACHE_PREFIX)) continue;
+            if (key !== currentCacheKey) {
+                keysToDelete.push(key);
+            }
+        }
+
+        keysToDelete.forEach((key) => localStorage.removeItem(key));
+    } catch (error) {
+        console.warn('[CHANGELOG] No se pudo limpiar caché anterior móvil:', error);
     }
 }
 
-function showChangelog(version) {
+function normalizeChangelogHtml(html) {
+    return String(html || '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+function getDefaultChangelogHtml(version) {
+    return normalizeChangelogHtml(`
+        <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+            <p>Hemos actualizado el sistema a la versión <b>v${version}</b>. Este despliegue incluye:</p>
+            <h4 style="color: #10b981; margin-top: 15px;">PC: Precancelaciones Legacy</h4>
+            <ul style="padding-left: 20px;">
+                <li><b>Valores correctos en PC:</b> Los créditos legacy o antiguos ahora se precancelan con cálculo ajustado.</li>
+                <li><b>Actualización obligatoria:</b> La app tomará la nueva versión activa desde el Service Worker.</li>
+            </ul>
+            <p style="margin-top: 15px; font-style: italic; color: #888;">Gracias por confiar en INKA CORP y LP Solutions.</p>
+        </div>
+    `);
+}
+
+function extractVersionChangelog(markdown, version) {
+    const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const matcher = new RegExp(`## \\[${escapedVersion}\\][\\s\\S]*?(?=\\n## \\[|\\n---|$)`);
+    const match = markdown.match(matcher);
+    return match ? match[0].trim() : '';
+}
+
+function renderChangelogSection(section, version) {
+    if (!section) {
+        return getDefaultChangelogHtml(version);
+    }
+
+    const lines = section.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const html = [];
+    let listOpen = false;
+
+    const closeList = () => {
+        if (listOpen) {
+            html.push('</ul>');
+            listOpen = false;
+        }
+    };
+
+    html.push('<div style="text-align: left; font-size: 14px; line-height: 1.6;">');
+    html.push(`<p>Hemos actualizado el sistema a la versión <b>v${version}</b>. Estos son los cambios confirmados:</p>`);
+
+    const formatInlineMarkdown = (text) => normalizeChangelogHtml(text);
+
+    lines.forEach((line) => {
+        if (line.startsWith('## [')) {
+            return;
+        }
+
+        if (line.startsWith('### ')) {
+            closeList();
+            html.push(`<h4 style="color: #10b981; margin-top: 15px;">${formatInlineMarkdown(line.slice(4))}</h4>`);
+            return;
+        }
+
+        if (line.startsWith('- ')) {
+            if (!listOpen) {
+                html.push('<ul style="padding-left: 20px;">');
+                listOpen = true;
+            }
+            html.push(`<li>${formatInlineMarkdown(line.slice(2))}</li>`);
+            return;
+        }
+
+        closeList();
+        html.push(`<p>${formatInlineMarkdown(line)}</p>`);
+    });
+
+    closeList();
+    html.push('<p style="margin-top: 15px; font-style: italic; color: #888;">Gracias por confiar en INKA CORP y LP Solutions.</p>');
+    html.push('</div>');
+
+    return normalizeChangelogHtml(html.join(''));
+}
+
+async function getChangelogHtml(version) {
+    clearOldChangelogCache(version);
+
+    const cacheKey = getChangelogCacheKey(version);
+    const cachedHtml = localStorage.getItem(cacheKey);
+    if (cachedHtml) {
+        return normalizeChangelogHtml(cachedHtml);
+    }
+
+    try {
+        const response = await fetch(`../CHANGELOG.md?v=${encodeURIComponent(version)}`, { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error(`No se pudo cargar CHANGELOG.md para v${version}`);
+        }
+
+        const markdown = await response.text();
+        const versionSection = extractVersionChangelog(markdown, version);
+        const html = renderChangelogSection(versionSection, version);
+        const normalizedHtml = normalizeChangelogHtml(html);
+        localStorage.setItem(cacheKey, normalizedHtml);
+        return normalizedHtml;
+    } catch (error) {
+        console.warn('[CHANGELOG] Usando contenido de respaldo móvil:', error);
+        const fallbackHtml = getDefaultChangelogHtml(version);
+        localStorage.setItem(cacheKey, fallbackHtml);
+        return fallbackHtml;
+    }
+}
+
+async function checkAndShowChangelog() {
+    const acceptedVersion = localStorage.getItem(CHANGELOG_ACCEPTED_VERSION_KEY);
+    const currentVersion = window.APP_VERSION || '0.0.0';
+
+    if (acceptedVersion === currentVersion) {
+        return;
+    }
+
+    await showChangelog(currentVersion);
+}
+
+async function showChangelog(version) {
     if (!window.Swal) return;
 
-    Swal.fire({
-        title: `¡Bienvenido a INKA CORP Mobile v${version}!`,
-        html: `
-            <div style="text-align: left; font-size: 14px; line-height: 1.6;">
-                <p>Hemos actualizado el sistema a la versión <b>v${version}</b>. Estos son los cambios principales:</p>
-                
-                <h4 style="color: #10b981; margin-top: 15px;">💰 Control de Caja</h4>
-                <ul style="padding-left: 20px;">
-                    <li><b>Sistema de Auditoría:</b> Se requiere una caja abierta para realizar operaciones financieras.</li>
-                    <li><b>Banners de Alerta:</b> Mantente informado sobre el estado de la caja desde cualquier módulo.</li>
-                </ul>
+    const changelogHtml = await getChangelogHtml(version);
 
-                <h4 style="color: #10b981; margin-top: 15px;">⚙️ Mejoras de Sistema</h4>
-                <ul style="padding-left: 20px;">
-                    <li><b>Versión Mayor:</b> Optimizaciones globales de rendimiento y seguridad.</li>
-                    <li><b>Botón Dashboard:</b> Nuevo acceso rápido para apertura de caja desde el panel principal.</li>
-                </ul>
-                <p style="margin-top: 15px; font-style: italic; color: #888;">Gracias por confiar en INKA CORP y LP Solutions.</p>
-            </div>
-        `,
+    const result = await Swal.fire({
+        title: `¡Bienvenido a INKA CORP Mobile v${version}!`,
+        html: changelogHtml,
         icon: 'success',
-        confirmButtonText: '¡AHORA TODO ESTÁ CLARO!',
+        confirmButtonText: 'HE LEÍDO LOS CAMBIOS',
         confirmButtonColor: '#10b981',
-        width: '90%'
+        width: '90%',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showCloseButton: false
     });
+
+    if (result.isConfirmed) {
+        localStorage.setItem(CHANGELOG_ACCEPTED_VERSION_KEY, version);
+    }
 }
 
 // Llamar al cargar la app para verificar versión

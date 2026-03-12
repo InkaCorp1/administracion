@@ -3,9 +3,10 @@
  * PWA Offline Support
  */
 
-const SW_VERSION = '29.3.1';
+const SW_VERSION = '29.7.0';
 const CACHE_NAME = `inkacorp-v${SW_VERSION}`;
 const STATIC_CACHE = `inkacorp-static-v${SW_VERSION}`;
+const CHANGELOG_URL = `CHANGELOG.md?v=${encodeURIComponent(SW_VERSION)}`;
 
 // Archivos esenciales para cachear (Shell de la app)
 const ESSENTIAL_FILES = [
@@ -14,6 +15,7 @@ const ESSENTIAL_FILES = [
     'login.html',
     'mobile/index.html',
     '404.html',
+    CHANGELOG_URL,
     'css/styles.css',
     'js/config.js',
     'js/auth.js',
@@ -43,7 +45,10 @@ const MODULE_FILES = [
     'js/modules/contratos.js',
     'css/contratos.css',
     'views/contratos.html',
-    'mobile/css/mobile-styles.css'
+    'mobile/css/mobile-styles.css',
+    'mobile/views/precancelaciones.html',
+    'mobile/css/modules/precancelaciones.css',
+    'mobile/js/modules/precancelaciones.js'
 ];
 
 // Instalación del Service Worker
@@ -58,7 +63,7 @@ self.addEventListener('install', (event) => {
                     allFiles.map(url => {
                         return fetch(url, fetchOptions).then(response => {
                             if (!response.ok) throw new Error(`Falló carga de ${url}`);
-                            return cache.put(url, response);
+                            return cache.put(url, response.clone());
                         });
                     })
                 );

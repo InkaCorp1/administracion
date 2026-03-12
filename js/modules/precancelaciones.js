@@ -11,8 +11,12 @@ let filteredCreditosPrecancelables = [];
 let historialPrecancelaciones = [];
 let creditoActual = null;
 let calculoPrecancelacion = null;
+let tablaAmortizacionPrecancelacionActual = null;
+let contextoLegacyPrecancelacionActual = null;
 let currentPaisFilterPrecanc = '';
 let currentTab = 'activos';
+const MENSAJE_CREDITO_EN_MORA_PRECANC = 'Este crédito está en mora primero debe ponerse al día para precancelar';
+const MENSAJE_METODO_LEGACY_PRECANC = 'Crédito legacy: tabla ajustada por ser crédito legacy';
 
 // Configuración de caché para precancelaciones
 const CACHE_DURATION_PRECANC = 5 * 60 * 1000; // 5 minutos
@@ -44,6 +48,7 @@ async function initPrecancelacionesModule() {
     window.filterPrecancelacionesByPais = filterPrecancelacionesByPais;
     window.switchPrecancelacionTab = switchPrecancelacionTab;
     window.refreshPrecancelaciones = refreshPrecancelaciones;
+    window.mostrarAlertaMoraPrecancelacion = mostrarAlertaMoraPrecancelacion;
 
     // Sincronización en segundo plano
     syncPrecancelacionesBackground();
@@ -446,9 +451,21 @@ function renderCreditoRowPrecanc(credito) {
     const pais = credito.socio?.paisresidencia || '';
     const paisConfig = PAIS_CONFIG_PRECANC[pais.toUpperCase()];
     const paisFlag = paisConfig ? paisConfig.flag : '';
+    const isMoroso = credito.estado_credito === 'MOROSO';
+    const rowClass = isMoroso ? 'clickable-alert-row' : '';
+    const rowAction = isMoroso ? ` onclick="mostrarAlertaMoraPrecancelacion('${credito.id_credito}')"` : '';
+    const accionHtml = isMoroso
+        ? `<button type="button" class="btn-precancelar alerta-mora" onclick="event.stopPropagation(); mostrarAlertaMoraPrecancelacion('${credito.id_credito}')">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>EN MORA</span>
+            </button>`
+        : `<button type="button" class="btn-precancelar" onclick="abrirModalCalculo('${credito.id_credito}')">
+                <i class="fas fa-calculator"></i>
+                <span>Precancelar</span>
+            </button>`;
 
     return `
-        <tr data-credito-id="${credito.id_credito}">
+        <tr data-credito-id="${credito.id_credito}" class="${rowClass}"${rowAction}>
             <td>
                 <span class="codigo-credito">${credito.codigo_credito}</span>
             </td>
@@ -472,13 +489,246 @@ function renderCreditoRowPrecanc(credito) {
                 ${paisFlag ? `<img src="${paisFlag}" alt="${pais}" class="pais-flag-img" title="${pais}">` : '-'}
             </td>
             <td class="text-center">
-                <button class="btn-precancelar" onclick="abrirModalCalculo('${credito.id_credito}')">
-                    <i class="fas fa-calculator"></i>
-                    <span>Precancelar</span>
-                </button>
+                ${accionHtml}
             </td>
         </tr>
     `;
+}
+
+function mostrarAlertaMoraPrecancelacion(idCredito) {
+    const credito = allCreditosPrecancelables.find(c => c.id_credito === idCredito);
+    const mensaje = credito?.estado_credito === 'MOROSO'
+        ? MENSAJE_CREDITO_EN_MORA_PRECANC
+        : 'Este crédito no está disponible para precancelación';
+
+    if (window.Swal) {
+        Swal.fire({
+            icon: 'warning',
+            width: '460px',
+            background: '#111827',
+            color: '#f8fafc',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#b91c1c',
+            customClass: {
+                popup: 'precanc-mora-swal'
+            },
+            title: '<span style="color:#fca5a5; font-size:1.35rem; font-weight:800;">Crédito en mora</span>',
+            html: `
+                <div style="text-align:center; padding:0.5rem 0.35rem 0;">
+                    <div style="width:72px; height:72px; margin:0 auto 1rem; border-radius:1.25rem; display:flex; align-items:center; justify-content:center; background:rgba(239,68,68,0.14); border:1px solid rgba(239,68,68,0.28); box-shadow:0 18px 32px rgba(127,29,29,0.22);">
+                        <i class="fas fa-exclamation-triangle" style="font-size:2rem; color:#f87171;"></i>
+                    </div>
+                    <p style="margin:0; font-size:1rem; line-height:1.7; color:#e5e7eb;">
+                        ${mensaje}
+                    </p>
+                </div>
+            `
+        });
+        return;
+    }
+
+    showNotification(mensaje, 'warning');
+}
+
+async function mostrarModalMetodoLegacyPrecancelacion(credito) {
+    if (window.Swal) {
+        await Swal.fire({
+            icon: 'info',
+            width: '520px',
+            background: '#111827',
+            color: '#f8fafc',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#0b4e32',
+            title: '<span style="color:#93c5fd; font-size:1.3rem; font-weight:800;">Crédito legacy</span>',
+            html: `
+                <div style="text-align:center; padding:0.5rem 0.35rem 0;">
+                    <div style="width:72px; height:72px; margin:0 auto 1rem; border-radius:1.25rem; display:flex; align-items:center; justify-content:center; background:rgba(59,130,246,0.14); border:1px solid rgba(96,165,250,0.26); box-shadow:0 18px 32px rgba(30,64,175,0.2);">
+                        <i class="fas fa-layer-group" style="font-size:2rem; color:#60a5fa;"></i>
+                    </div>
+                    <p style="margin:0; font-size:1rem; line-height:1.7; color:#e5e7eb;">
+                        ${MENSAJE_METODO_LEGACY_PRECANC}
+                    </p>
+                    <p style="margin:0.9rem 0 0; font-size:0.9rem; line-height:1.6; color:#94a3b8;">
+                        ${credito?.codigo_credito || 'Este crédito'} mantiene una tabla recalculada solo para referencia, pero todavía no genera ahorro válido para entrar al flujo normal de precancelación.
+                    </p>
+                </div>
+            `
+        });
+        return;
+    }
+
+    showNotification(MENSAJE_METODO_LEGACY_PRECANC, 'info');
+}
+
+function limpiarContextoPrecancelacionActual() {
+    calculoPrecancelacion = null;
+    tablaAmortizacionPrecancelacionActual = null;
+    contextoLegacyPrecancelacionActual = null;
+    renderTablaLegacyAjustada(null);
+}
+
+function renderTablaLegacyAjustada(contexto) {
+    const panel = document.getElementById('legacy-adjusted-panel');
+    const body = document.getElementById('legacy-adjusted-table-body');
+    const title = document.getElementById('legacy-adjusted-title');
+    const subtitle = document.getElementById('legacy-adjusted-subtitle');
+
+    if (!panel || !body || !title || !subtitle) return;
+
+    if (!contexto?.usarTablaAjustadaLegacy || !Array.isArray(contexto.amortizacion)) {
+        panel.classList.add('hidden');
+        body.innerHTML = '';
+        return;
+    }
+
+    title.textContent = 'Tabla ajustada por ser crédito legacy';
+    subtitle.textContent = 'La precancelación usará esta tabla generada en memoria, manteniendo las cuotas ya pagadas como canceladas.';
+
+    body.innerHTML = contexto.amortizacion.map(cuota => `
+        <tr>
+            <td>${cuota.numero_cuota}</td>
+            <td>${formatDate(cuota.fecha_vencimiento)}</td>
+            <td><span class="legacy-status-badge ${cuota.estado_cuota === 'PAGADO' ? 'paid' : 'pending'}">${cuota.estado_cuota === 'PAGADO' ? 'PAGADA' : 'PENDIENTE'}</span></td>
+            <td class="text-right">${formatMoney(cuota.pago_capital || 0)}</td>
+            <td class="text-right">${formatMoney(cuota.pago_interes || 0)}</td>
+            <td class="text-right">${formatMoney(cuota.ahorro_programado || 0)}</td>
+            <td class="text-right">${formatMoney(cuota.cuota_total || 0)}</td>
+        </tr>
+    `).join('');
+
+    panel.classList.remove('hidden');
+}
+
+async function evaluarAperturaModalPrecancelacion(credito) {
+    const fechaHoy = new Date();
+    fechaHoy.setHours(0, 0, 0, 0);
+
+    const amortizacionOriginal = await obtenerAmortizacionPrecancelacion(credito.id_credito);
+    const calculoOriginalHoy = construirCalculoPrecancelacion(credito, amortizacionOriginal, fechaHoy, credito.id_credito);
+
+    if (calculoOriginalHoy.interesPerdonado > 0) {
+        return {
+            usarTablaAjustadaLegacy: false,
+            amortizacion: amortizacionOriginal,
+            calculoHoy: calculoOriginalHoy
+        };
+    }
+
+    const amortizacionAjustada = generarTablaLegacyAjustadaPrecancelacion(credito, amortizacionOriginal);
+    const calculoAjustadoHoy = construirCalculoPrecancelacion(credito, amortizacionAjustada, fechaHoy, credito.id_credito);
+
+    return {
+        usarTablaAjustadaLegacy: true,
+        amortizacion: amortizacionAjustada,
+        calculoHoy: calculoAjustadoHoy,
+        requiereMetodoLegacy: calculoAjustadoHoy.interesPerdonado <= 0
+    };
+}
+
+function generarTablaLegacyAjustadaPrecancelacion(credito, amortizacionOriginal) {
+    const capital = parseFloat(credito.capital || 0);
+    const plazo = parseInt(credito.plazo || 0, 10);
+    const tasaMensual = parseFloat(credito.tasa_interes_mensual || 0) / 100;
+    const diaPago = parseInt(credito.dia_pago || 1, 10);
+    const fechaDesembolso = parseDate(credito.fecha_desembolso);
+    const unDiaEnMs = 1000 * 60 * 60 * 24;
+
+    let fechaPrimerPago = new Date(fechaDesembolso.getTime());
+    fechaPrimerPago.setDate(1);
+    fechaPrimerPago.setMonth(fechaPrimerPago.getMonth(), diaPago);
+
+    if (fechaPrimerPago <= fechaDesembolso) {
+        fechaPrimerPago.setMonth(fechaPrimerPago.getMonth() + 1);
+    }
+
+    const diffMs = fechaPrimerPago.getTime() - fechaDesembolso.getTime();
+    const diffDays = Math.ceil(diffMs / unDiaEnMs);
+    if (diffDays <= 25) {
+        fechaPrimerPago.setMonth(fechaPrimerPago.getMonth() + 1);
+    }
+
+    const fechaBase = new Date(fechaPrimerPago.getTime());
+    fechaBase.setMonth(fechaBase.getMonth() - 1);
+
+    const fechaFinCredito = new Date(fechaBase.getTime());
+    fechaFinCredito.setMonth(fechaFinCredito.getMonth() + plazo);
+
+    const diasTotales = Math.round((fechaFinCredito.getTime() - fechaDesembolso.getTime()) / unDiaEnMs);
+
+    let gastosAdmin = 0;
+    if (capital < 5000) {
+        gastosAdmin = capital * 0.038;
+    } else if (capital < 20000) {
+        gastosAdmin = capital * 0.023;
+    } else {
+        gastosAdmin = capital * 0.018;
+    }
+
+    const tasaAnual = tasaMensual * 12;
+    const tasaDiaria = tasaAnual / 365;
+    const interesTotal = Math.round(capital * tasaDiaria * diasTotales * 100) / 100;
+    const gastosAdminRedondeado = Math.round(gastosAdmin * 100) / 100;
+    const totalPagar = capital + interesTotal + gastosAdminRedondeado;
+    const cuotaBase = Math.ceil(totalPagar / plazo);
+    const ahorroPorCuota = 0;
+
+    const cuotasPagadas = amortizacionOriginal.filter(c => c.estado_cuota === 'PAGADO').length
+        || credito.cuotas_pagadas_count
+        || credito.cuotas_pagadas
+        || 0;
+
+    const amortizacion = [];
+    let saldoCapital = capital;
+    let fechaAnterior = new Date(fechaDesembolso.getTime());
+    const sumOfDigits = plazo * (plazo + 1) / 2;
+    const gastosPorCuota = parseFloat((gastosAdminRedondeado / plazo).toFixed(2));
+    let interesAcumulado = 0;
+    let gastosAcumulados = 0;
+
+    for (let i = 1; i <= plazo; i++) {
+        const fechaVenc = new Date(fechaPrimerPago.getTime());
+        fechaVenc.setMonth(fechaPrimerPago.getMonth() + (i - 1));
+        const diasPeriodo = Math.ceil((fechaVenc - fechaAnterior) / unDiaEnMs);
+
+        let interesDelMes = parseFloat((interesTotal * ((plazo - i + 1) / sumOfDigits)).toFixed(2));
+        let capitalPeriodo = parseFloat((cuotaBase - interesDelMes - gastosPorCuota).toFixed(2));
+        let cuotaBaseReal = cuotaBase;
+
+        if (i === plazo) {
+            capitalPeriodo = parseFloat(saldoCapital.toFixed(2));
+            const interesRestante = parseFloat((interesTotal - interesAcumulado).toFixed(2));
+            const gastosRestante = parseFloat((gastosAdminRedondeado - gastosAcumulados).toFixed(2));
+            cuotaBaseReal = parseFloat((capitalPeriodo + interesRestante + gastosRestante).toFixed(2));
+        }
+
+        const pagoGastos = i === plazo
+            ? parseFloat((gastosAdminRedondeado - gastosAcumulados).toFixed(2))
+            : gastosPorCuota;
+        interesDelMes = parseFloat((cuotaBaseReal - capitalPeriodo - pagoGastos).toFixed(2));
+
+        saldoCapital -= capitalPeriodo;
+        if (saldoCapital < 0.01) saldoCapital = 0;
+
+        amortizacion.push({
+            numero_cuota: i,
+            fecha_vencimiento: toISODate(fechaVenc),
+            dias_periodo: diasPeriodo,
+            pago_capital: parseFloat(capitalPeriodo.toFixed(2)),
+            pago_interes: parseFloat(interesDelMes.toFixed(2)),
+            pago_gastos_admin: parseFloat(pagoGastos.toFixed(2)),
+            ahorro_programado: 0,
+            cuota_base: parseFloat(cuotaBaseReal.toFixed(2)),
+            cuota_total: parseFloat(cuotaBaseReal.toFixed(2)),
+            saldo_capital: parseFloat(Math.max(0, saldoCapital).toFixed(2)),
+            estado_cuota: i <= cuotasPagadas ? 'PAGADO' : 'PENDIENTE'
+        });
+
+        interesAcumulado += interesDelMes;
+        gastosAcumulados += pagoGastos;
+        fechaAnterior = fechaVenc;
+    }
+
+    return amortizacion;
 }
 
 function renderHistorialSections() {
@@ -640,8 +890,24 @@ async function abrirModalCalculo(idCredito) {
     try {
         const credito = allCreditosPrecancelables.find(c => c.id_credito === idCredito);
         if (!credito) throw new Error('Crédito no encontrado');
+        if (credito.estado_credito === 'MOROSO') {
+            mostrarAlertaMoraPrecancelacion(idCredito);
+            return;
+        }
+
+        beginLoading('Evaluando crédito...');
+        const contextoApertura = await evaluarAperturaModalPrecancelacion(credito);
+
+        if (contextoApertura.requiereMetodoLegacy) {
+            await mostrarModalMetodoLegacyPrecancelacion(credito);
+            return;
+        }
 
         creditoActual = credito;
+        tablaAmortizacionPrecancelacionActual = contextoApertura.amortizacion;
+        contextoLegacyPrecancelacionActual = contextoApertura;
+        calculoPrecancelacion = null;
+        renderTablaLegacyAjustada(contextoApertura);
 
         // Llenar info del crédito
         document.getElementById('calc-credito-codigo').textContent = credito.codigo_credito;
@@ -663,6 +929,8 @@ async function abrirModalCalculo(idCredito) {
     } catch (error) {
         console.error('Error al abrir modal:', error);
         showNotification('Error al cargar datos del crédito', 'error');
+    } finally {
+        endLoading();
     }
 }
 
@@ -703,9 +971,22 @@ async function handleCalcularMontos() {
 }
 
 async function calcularPrecancelacion(idCredito, fechaPrecancelacion) {
+    const credito = creditoActual?.id_credito === idCredito
+        ? creditoActual
+        : allCreditosPrecancelables.find(c => c.id_credito === idCredito);
+
+    if (!credito) throw new Error('Crédito no encontrado');
+
+    const amortizacion = tablaAmortizacionPrecancelacionActual && creditoActual?.id_credito === idCredito
+        ? tablaAmortizacionPrecancelacionActual
+        : await obtenerAmortizacionPrecancelacion(idCredito);
+
+    return construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelacion, idCredito);
+}
+
+async function obtenerAmortizacionPrecancelacion(idCredito) {
     const supabase = window.getSupabaseClient();
 
-    // 1. Obtener tabla de amortización
     const { data: amortizacion, error: errorAmort } = await supabase
         .from('ic_creditos_amortizacion')
         .select('*')
@@ -714,6 +995,17 @@ async function calcularPrecancelacion(idCredito, fechaPrecancelacion) {
 
     if (errorAmort) throw errorAmort;
     if (!amortizacion?.length) throw new Error('No se encontró tabla de amortización');
+
+    return amortizacion;
+}
+
+function construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelacion, idCredito) {
+    const fechaEvaluacion = new Date(fechaPrecancelacion);
+    fechaEvaluacion.setHours(0, 0, 0, 0);
+    const usaTablaAjustadaLegacy = Boolean(
+        contextoLegacyPrecancelacionActual?.usarTablaAjustadaLegacy &&
+        tablaAmortizacionPrecancelacionActual === amortizacion
+    );
 
     // 2. Determinar cuotas pagadas
     const cuotasPagadasArr = amortizacion.filter(c => c.estado_cuota === 'PAGADO');
@@ -725,59 +1017,65 @@ async function calcularPrecancelacion(idCredito, fechaPrecancelacion) {
     // 3. Validar mora
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    const fechaCorte = fechaPrecancelacion < hoy ? fechaPrecancelacion : hoy;
+    const fechaCorte = fechaEvaluacion < hoy ? fechaEvaluacion : hoy;
 
     const cuotasVencidasSinPagar = amortizacion.filter(c => {
         const fv = parseDate(c.fecha_vencimiento);
         return fv < fechaCorte && c.estado_cuota !== 'PAGADO';
     });
 
-    // En lugar de bloquear, advertir si hay mora
-    let tieneMorea = cuotasVencidasSinPagar.length > 0;
+    if (cuotasVencidasSinPagar.length > 0) {
+        throw new Error(MENSAJE_CREDITO_EN_MORA_PRECANC);
+    }
 
     // 4. Capital pendiente
     let capitalPendiente;
     let fechaUltimaCuotaPagada;
 
     if (cuotasPagadas === 0) {
-        capitalPendiente = creditoActual.capital_financiado || creditoActual.capital;
-        fechaUltimaCuotaPagada = parseDate(creditoActual.fecha_desembolso);
+        capitalPendiente = credito.capital_financiado || credito.capital;
+        fechaUltimaCuotaPagada = parseDate(credito.fecha_desembolso);
     } else {
         const ultima = cuotasPagadasArr[cuotasPagadasArr.length - 1];
         capitalPendiente = ultima.saldo_capital;
         fechaUltimaCuotaPagada = parseDate(ultima.fecha_vencimiento);
     }
 
-    // 5. Interés restante y ahorro
-    let interesRestante = 0;
-    for (let i = cuotasPagadas; i < amortizacion.length; i++) {
-        interesRestante += amortizacion[i].interes;
-    }
-    const ahorroPagado = cuotasPagadas * (creditoActual.ahorro_programado_cuota || 0);
+    // 5. Total pendiente y ahorro programado acumulado
+    const cuotasPendientes = amortizacion.filter(c => c.estado_cuota !== 'PAGADO');
+    const totalCuotasPendientes = cuotasPendientes.reduce(
+        (sum, cuota) => sum + parseFloat(cuota.cuota_total || 0),
+        0
+    );
+    const ahorroPagado = usaTablaAjustadaLegacy
+        ? 0
+        : cuotasPagadas * (credito.ahorro_programado_cuota || 0);
 
     // 6. Interés proporcional por días
     const unDiaEnMs = 1000 * 60 * 60 * 24;
-    const diasTranscurridos = Math.max(0, Math.round((fechaPrecancelacion - fechaUltimaCuotaPagada) / unDiaEnMs));
+    const diasTranscurridos = Math.max(0, Math.round((fechaEvaluacion - fechaUltimaCuotaPagada) / unDiaEnMs));
 
-    const tasaMensual = (creditoActual.tasa_interes_mensual || 0) / 100;
+    const tasaMensual = (credito.tasa_interes_mensual || 0) / 100;
     const tasaDiaria = (tasaMensual * 12) / 365;
     const interesProporcional = capitalPendiente * tasaDiaria * diasTranscurridos;
 
     const montoPrecancelar = capitalPendiente + interesProporcional;
-    const interesPerdonado = Math.max(0, interesRestante - interesProporcional);
+    const interesPerdonado = Math.max(0, totalCuotasPendientes - montoPrecancelar);
 
     return {
         idCredito,
-        fechaPrecancelacion,
+        fechaPrecancelacion: fechaEvaluacion,
         cuotasPagadas,
         cuotasRestantes,
         capitalPendiente,
+        totalCuotasPendientes,
         diasTranscurridos,
         interesProporcional,
         interesPerdonado,
         ahorroDevolver: ahorroPagado,
         montoPrecancelar,
-        tieneMora: tieneMorea,
+        usaTablaAjustadaLegacy,
+        tieneMora: false,
         cuotasMora: cuotasVencidasSinPagar.length
     };
 }
@@ -790,6 +1088,7 @@ function mostrarResultadosCalculo(calculo) {
         'calc-dias-transcurridos': `${calculo.diasTranscurridos} días`,
         'calc-interes-proporcional': formatMoney(calculo.interesProporcional),
         'calc-interes-perdonado': formatMoney(calculo.interesPerdonado),
+        'calc-total-normal': formatMoney(calculo.totalCuotasPendientes),
         'calc-ahorro-devolver': formatMoney(calculo.ahorroDevolver),
         'calc-monto-total': formatMoney(calculo.montoPrecancelar),
         'calc-detalle-pagar': formatMoney(calculo.montoPrecancelar),
@@ -802,7 +1101,14 @@ function mostrarResultadosCalculo(calculo) {
         if (el) el.textContent = value;
     }
 
-    document.getElementById('resultados-calculo')?.classList.remove('hidden');
+    const resultadosEl = document.getElementById('resultados-calculo');
+    resultadosEl?.classList.remove('hidden');
+
+    if (resultadosEl) {
+        requestAnimationFrame(() => {
+            resultadosEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
 }
 
 // ==========================================

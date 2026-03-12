@@ -27,7 +27,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     
     <!-- Core Config/JS -->
-    <script src="../js/config.js?v=29.3.0"></script>
+    <script src="../js/config.js?v=29.7.0"></script>
     <script src="../js/auth.js"></script>
     <script>
         /**
@@ -44,7 +44,7 @@
                 const view = urlParams.get('view');
                 
                 // Módulos que existen en PC
-                const pcModules = ['creditos', 'desembolsos', 'aportes', 'bancos', 'simulador', 'socios', 'dashboard'];
+                const pcModules = ['creditos', 'desembolsos', 'aportes', 'bancos', 'simulador', 'socios', 'dashboard', 'precancelaciones'];
                 const targetView = (view && pcModules.includes(view)) ? view : '';
 
                 // Volver a la raíz (PC)
@@ -178,6 +178,12 @@
                         <i class="fas fa-users"></i>
                     </div>
                     <span>Socios</span>
+                </div>
+                <div class="quick-item" onclick="loadMobileView('precancelaciones'); toggleQuickMenu()">
+                    <div class="quick-icon bg-green">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <span>Precancelar</span>
                 </div>
             </div>
         </div>
@@ -477,7 +483,7 @@
         // Registro de Service Worker para Móvil
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                const serviceWorkerVersion = window.SW_VERSION || window.APP_VERSION || '29.3.0';
+                const serviceWorkerVersion = window.SW_VERSION || window.APP_VERSION || '29.7.0';
                 navigator.serviceWorker.register(`../sw.js?v=${encodeURIComponent(serviceWorkerVersion)}`, { updateViaCache: 'none' })
                     .then((registration) => {
                         console.log('[PWA] Service Worker registrado (Móvil)');
@@ -507,7 +513,7 @@
                                         worker.postMessage({ type: 'SKIP_WAITING' });
                                     }
                                 });
-                            } else if (confirm('Nueva versión detectada. ¿Actualizar ahora?')) {
+                            } else {
                                 worker.postMessage({ type: 'SKIP_WAITING' });
                             }
                         };

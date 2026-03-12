@@ -1,0 +1,86 @@
+<div class="precanc-lite-shell">
+    <div class="precanc-lite-hero">
+        <div>
+            <div class="precanc-lite-kicker">Version Lite</div>
+            <h2 class="precanc-lite-title">Precancelaciones</h2>
+            <p class="precanc-lite-subtitle">Consulta rápido el valor a precancelar en móvil para créditos nuevos y legacy.</p>
+        </div>
+        <div class="precanc-lite-hero-icon">
+            <i class="fas fa-calendar-check"></i>
+        </div>
+    </div>
+
+    <div class="precanc-lite-alert">
+        <i class="fas fa-desktop"></i>
+        <span>Para más detalles, tabla ajustada y revisión completa, por favor use la versión PC o tablet.</span>
+    </div>
+
+    <div class="precanc-lite-toolbar">
+        <div class="precanc-lite-search">
+            <i class="fas fa-search"></i>
+            <input id="precanc-lite-search" type="search" placeholder="Buscar por código, socio o cédula">
+        </div>
+        <div class="precanc-lite-stats">
+            <div class="precanc-lite-stat-card">
+                <span class="label">Activos</span>
+                <strong id="precanc-lite-count-activos">0</strong>
+            </div>
+            <div class="precanc-lite-stat-card danger">
+                <span class="label">En mora</span>
+                <strong id="precanc-lite-count-mora">0</strong>
+            </div>
+        </div>
+    </div>
+
+    <div id="precanc-lite-list" class="precanc-lite-list">
+        <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Cargando créditos para precancelación...</p>
+        </div>
+    </div>
+</div>
+
+<div id="precanc-lite-modal" class="modal-overlay">
+    <div class="modal-content precanc-lite-modal-card">
+        <div class="modal-header lite-header">
+            <h3><i class="fas fa-calculator"></i> Calcular Precancelación</h3>
+            <button class="modal-close" onclick="closePrecancLiteModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body precanc-lite-modal-body">
+            <div class="precanc-lite-modal-summary">
+                <div>
+                    <div id="precanc-lite-modal-code" class="precanc-lite-modal-code">---</div>
+                    <div id="precanc-lite-modal-socio" class="precanc-lite-modal-socio">---</div>
+                </div>
+                <span id="precanc-lite-context-badge" class="precanc-lite-context-badge">CRÉDITO NUEVO</span>
+            </div>
+
+            <div class="precanc-lite-note">
+                <i class="fas fa-circle-info"></i>
+                <span id="precanc-lite-context-note">El cálculo se realizará con la tabla vigente del crédito.</span>
+            </div>
+
+            <label class="precanc-lite-field">
+                <span>Fecha de precancelación</span>
+                <input id="precanc-lite-date" type="date">
+            </label>
+
+            <button id="precanc-lite-calc-btn" class="precanc-lite-calc-btn">
+                <i class="fas fa-bolt"></i>
+                <span>Calcular valor</span>
+            </button>
+
+            <div id="precanc-lite-result" class="precanc-lite-result hidden">
+                <div class="precanc-lite-result-label">Valor a precancelar</div>
+                <div id="precanc-lite-result-amount" class="precanc-lite-result-amount">$0.00</div>
+                <div id="precanc-lite-result-meta" class="precanc-lite-result-meta">Calculado correctamente.</div>
+            </div>
+
+            <div class="precanc-lite-footer-note">
+                Para desglose detallado, tabla legacy ajustada y validación completa, use PC o tablet.
+            </div>
+        </div>
+    </div>
+</div>

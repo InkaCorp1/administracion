@@ -119,14 +119,14 @@
 <!-- Modal: Calcular Precancelación -->
 <div id="modal-calcular-precancelacion" class="modal hidden" style="display: none;">
     <div class="modal-backdrop" data-close-modal></div>
-    <div class="modal-card modal-lg">
+    <div class="modal-card modal-lg precancelacion-modal-card">
         <div class="modal-header">
             <h3><i class="fas fa-calculator"></i> Calcular Precancelación</h3>
             <button class="modal-close" data-close-modal>
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body precancelacion-modal-body">
             <!-- Info del crédito seleccionado -->
             <div class="credito-info-card">
                 <div class="credito-info-header">
@@ -161,6 +161,32 @@
                 Calcular Montos
             </button>
 
+            <div id="legacy-adjusted-panel" class="legacy-adjusted-panel hidden">
+                <div class="legacy-adjusted-panel-header">
+                    <div>
+                        <h5 id="legacy-adjusted-title">Tabla ajustada por ser crédito legacy</h5>
+                        <p id="legacy-adjusted-subtitle">La precancelación usará esta tabla generada en memoria.</p>
+                    </div>
+                    <span class="legacy-adjusted-chip">LEGACY</span>
+                </div>
+                <div class="legacy-adjusted-table-wrap">
+                    <table class="legacy-adjusted-table">
+                        <thead>
+                            <tr>
+                                <th>Cuota</th>
+                                <th>Vencimiento</th>
+                                <th>Estado</th>
+                                <th class="text-right">Capital</th>
+                                <th class="text-right">Interés</th>
+                                <th class="text-right">Ahorro</th>
+                                <th class="text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="legacy-adjusted-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Resultados del cálculo -->
             <div id="resultados-calculo" class="hidden" style="margin-top: 1.5rem;">
                 <h4 class="section-title"><i class="fas fa-receipt"></i> Detalle de Precancelación</h4>
@@ -187,7 +213,7 @@
                     </div>
                 </div>
 
-                <div class="resumen-grid">
+                <div class="resumen-grid resumen-grid-triple">
                     <div class="resumen-item">
                         <div class="resumen-label">Interés Proporcional</div>
                         <div class="resumen-value" id="calc-interes-proporcional">$0.00</div>
@@ -195,6 +221,10 @@
                     <div class="resumen-item success">
                         <div class="resumen-label">Interés Perdonado</div>
                         <div class="resumen-value" id="calc-interes-perdonado">$0.00</div>
+                    </div>
+                    <div class="resumen-item normal-total">
+                        <div class="resumen-label">Valor Normal de Cancelación</div>
+                        <div class="resumen-value" id="calc-total-normal">$0.00</div>
                     </div>
                 </div>
 
@@ -304,13 +334,15 @@
        ========================================== */
     .precancelaciones-hero {
         position: relative;
-        background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+        background:
+            radial-gradient(circle at top center, rgba(242, 187, 58, 0.12) 0%, transparent 24%),
+            linear-gradient(135deg, #052d1d 0%, #0b4e32 55%, #0a6036 100%);
         border-radius: 1.5rem;
         padding: 2rem;
         margin-bottom: 2rem;
         overflow: hidden;
-        box-shadow: var(--shadow-xl);
-        border: 1px solid var(--border-color);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         text-align: center;
     }
 
@@ -330,13 +362,14 @@
         z-index: 2;
         width: 70px;
         height: 70px;
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.14);
         border-radius: 1.5rem;
         display: flex;
         align-items: center;
         justify-content: center;
         margin: 0 auto 1.25rem;
-        box-shadow: var(--shadow-primary);
+        box-shadow: 0 14px 28px rgba(0, 0, 0, 0.22);
         transform: rotate(-5deg);
     }
 
@@ -350,15 +383,16 @@
         z-index: 2;
         font-size: 2rem;
         font-weight: 700;
-        color: var(--black);
+        color: #f8fbf9;
         margin: 0 0 0.25rem;
+        text-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
     }
 
     .hero-subtitle-precancelaciones {
         position: relative;
         z-index: 2;
         font-size: 1rem;
-        color: rgba(255, 255, 255, 0.75);
+        color: rgba(248, 251, 249, 0.88);
         margin: 0 0 1.25rem;
         text-transform: uppercase;
         letter-spacing: 2px;
@@ -379,12 +413,13 @@
     }
 
     .precancelaciones-hero-stat {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(7, 24, 16, 0.26);
         backdrop-filter: blur(10px);
         padding: 1.25rem;
         border-radius: 1rem;
         text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
         transition: all var(--transition-normal);
         display: flex;
         flex-direction: column;
@@ -394,24 +429,27 @@
 
     .precancelaciones-hero-stat:hover {
         transform: translateY(-5px);
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(8, 32, 22, 0.38);
         border-color: rgba(255, 255, 255, 0.2);
     }
 
     .precancelaciones-hero-stat.highlight {
-        background: rgba(34, 197, 94, 0.2);
+        background: linear-gradient(180deg, rgba(16, 185, 129, 0.24) 0%, rgba(7, 48, 29, 0.4) 100%);
+        border-color: rgba(52, 211, 153, 0.24);
     }
 
     .precancelaciones-hero-stat.precancelados {
-        background: rgba(59, 130, 246, 0.15);
+        background: linear-gradient(180deg, rgba(59, 130, 246, 0.2) 0%, rgba(11, 30, 60, 0.34) 100%);
+        border-color: rgba(96, 165, 250, 0.22);
     }
 
     .precancelaciones-hero-value {
         display: block;
         font-size: 1.6rem;
         font-weight: 700;
-        color: var(--black);
+        color: #f8fbf9;
         margin-bottom: 0.25rem;
+        text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
     .precancelaciones-hero-stat.highlight .precancelaciones-hero-value {
@@ -424,9 +462,10 @@
 
     .precancelaciones-hero-label {
         font-size: 0.75rem;
-        color: rgba(255, 255, 255, 0.7);
+        color: rgba(248, 251, 249, 0.82);
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        font-weight: 600;
     }
 
     /* Toolbar */
@@ -686,6 +725,14 @@
         background: rgba(212, 175, 55, 0.05);
     }
 
+    .precancelaciones-table tbody tr.clickable-alert-row {
+        cursor: pointer;
+    }
+
+    .precancelaciones-table tbody tr.clickable-alert-row:hover {
+        background: rgba(239, 68, 68, 0.08);
+    }
+
     .precancelaciones-table tbody td {
         padding: 0.875rem 1rem;
         border-bottom: 1px solid var(--border-color);
@@ -744,7 +791,17 @@
     }
 
     .ahorro-amount {
-        color: var(--primary-light);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 88px;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        border: 1px solid rgba(52, 211, 153, 0.22);
+        background: rgba(16, 185, 129, 0.12);
+        color: #34D399;
+        font-weight: 700;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
 
     /* Botón Precancelar */
@@ -767,6 +824,18 @@
         background: var(--gold);
         color: var(--primary-dark);
         border-color: var(--gold);
+    }
+
+    .btn-precancelar.alerta-mora {
+        background: rgba(239, 68, 68, 0.14);
+        border-color: rgba(239, 68, 68, 0.35);
+        color: #fca5a5;
+    }
+
+    .btn-precancelar.alerta-mora:hover {
+        background: #ef4444;
+        color: #ffffff;
+        border-color: #ef4444;
     }
 
     /* Botón Ver Detalle */
@@ -792,19 +861,74 @@
     }
 
     /* Modal Styles específicos */
+    .precancelacion-modal-card {
+        background: linear-gradient(180deg, #182231 0%, #111827 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 28px 60px rgba(0, 0, 0, 0.45);
+        overflow: hidden;
+    }
+
+    .precancelacion-modal-card .modal-header {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(24, 34, 49, 0.96) 100%);
+        border-bottom: 1px solid rgba(242, 187, 58, 0.12);
+        padding: 1.15rem 1.5rem;
+    }
+
+    .precancelacion-modal-card .modal-header h3 {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        color: #f8fafc;
+        font-size: 1.55rem;
+        letter-spacing: -0.02em;
+    }
+
+    .precancelacion-modal-card .modal-header h3 i {
+        color: var(--gold);
+        filter: drop-shadow(0 0 12px rgba(242, 187, 58, 0.24));
+    }
+
+    .precancelacion-modal-card .modal-close {
+        width: 2.4rem;
+        height: 2.4rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #cbd5e1;
+        transition: all 0.2s ease;
+    }
+
+    .precancelacion-modal-card .modal-close:hover {
+        background: rgba(239, 68, 68, 0.14);
+        border-color: rgba(239, 68, 68, 0.24);
+        color: #fca5a5;
+        transform: rotate(90deg);
+    }
+
+    .precancelacion-modal-body {
+        background:
+            radial-gradient(circle at top center, rgba(11, 78, 50, 0.12) 0%, transparent 36%),
+            linear-gradient(180deg, rgba(30, 41, 59, 0.82) 0%, rgba(17, 24, 39, 0.96) 100%);
+        padding: 1.5rem;
+    }
+
     .credito-info-card {
-        background: var(--bg-secondary);
-        border-radius: 0.75rem;
-        padding: 1.25rem;
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 0.92) 100%);
+        border-radius: 1rem;
+        padding: 1.35rem;
         margin-bottom: 1.5rem;
-        border: 1px solid var(--border-color);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 18px 30px rgba(0, 0, 0, 0.18);
     }
 
     .credito-info-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.85rem;
     }
 
     .credito-codigo {
@@ -823,15 +947,17 @@
     }
 
     .badge-activo {
-        background: rgba(16, 185, 129, 0.15);
-        color: #10B981;
+        background: rgba(16, 185, 129, 0.16);
+        color: #34D399;
+        border: 1px solid rgba(52, 211, 153, 0.22);
     }
 
     .credito-info-socio {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: var(--white);
-        margin-bottom: 1rem;
+        font-size: 1.7rem;
+        font-weight: 700;
+        color: #f8fafc;
+        margin-bottom: 1.15rem;
+        line-height: 1.2;
     }
 
     .credito-info-details {
@@ -842,20 +968,207 @@
 
     .detail-item {
         text-align: center;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 0.85rem;
+        padding: 0.95rem 0.8rem;
     }
 
     .detail-label {
         display: block;
         font-size: 0.7rem;
-        color: var(--gray-400);
+        color: #cbd5e1;
         text-transform: uppercase;
         margin-bottom: 0.25rem;
+        letter-spacing: 0.08em;
+        font-weight: 700;
     }
 
     .detail-value {
-        font-size: 1rem;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #f8fafc;
+    }
+
+    .precancelacion-modal-card .form-group {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 1rem;
+        padding: 1.1rem 1.15rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .precancelacion-modal-card .form-label {
+        color: #f2bb3a;
+        font-size: 0.85rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 800;
+    }
+
+    .precancelacion-modal-card .form-label.required::after {
+        color: #f87171;
+    }
+
+    .precancelacion-modal-card .form-input {
+        min-height: 58px;
+        margin-top: 0.8rem;
+        background: #111827;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.95rem;
+        color: #f8fafc;
+        font-size: 1.05rem;
         font-weight: 600;
-        color: var(--white);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .precancelacion-modal-card .form-input:focus {
+        border-color: rgba(242, 187, 58, 0.45);
+        box-shadow: 0 0 0 4px rgba(242, 187, 58, 0.12);
+    }
+
+    .precancelacion-modal-card input[type="date"] {
+        color-scheme: dark;
+    }
+
+    .precancelacion-modal-card .form-hint {
+        display: block;
+        margin-top: 0.7rem;
+        color: #94a3b8;
+        font-style: italic;
+    }
+
+    .precancelacion-modal-card #btn-calcular-montos {
+        min-height: 56px;
+        border: none;
+        border-radius: 0.9rem;
+        background: linear-gradient(135deg, #f2bb3a 0%, #d89a12 100%);
+        color: #111827;
+        font-size: 1.05rem;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+        box-shadow: 0 16px 30px rgba(242, 187, 58, 0.22);
+    }
+
+    .precancelacion-modal-card #btn-calcular-montos:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 20px 32px rgba(242, 187, 58, 0.28);
+    }
+
+    .legacy-adjusted-panel {
+        margin-top: 1.1rem;
+        padding: 1rem;
+        border-radius: 1rem;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(96, 165, 250, 0.16);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .legacy-adjusted-panel-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.9rem;
+    }
+
+    .legacy-adjusted-panel-header h5 {
+        margin: 0;
+        color: #dbeafe;
+        font-size: 0.98rem;
+        font-weight: 800;
+    }
+
+    .legacy-adjusted-panel-header p {
+        margin: 0.35rem 0 0;
+        color: #94a3b8;
+        font-size: 0.82rem;
+        line-height: 1.55;
+    }
+
+    .legacy-adjusted-chip {
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(96, 165, 250, 0.22);
+        color: #93c5fd;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+    }
+
+    .legacy-adjusted-table-wrap {
+        overflow: auto;
+        border-radius: 0.9rem;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .legacy-adjusted-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+        background: rgba(2, 6, 23, 0.4);
+    }
+
+    .legacy-adjusted-table th,
+    .legacy-adjusted-table td {
+        padding: 0.75rem 0.85rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        font-size: 0.8rem;
+    }
+
+    .legacy-adjusted-table th {
+        background: rgba(15, 23, 42, 0.96);
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 0.68rem;
+        text-align: left;
+    }
+
+    .legacy-adjusted-table td {
+        color: #e2e8f0;
+    }
+
+    .legacy-adjusted-table tbody tr:hover {
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .legacy-status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 78px;
+        padding: 0.28rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+    }
+
+    .legacy-status-badge.paid {
+        background: rgba(16, 185, 129, 0.14);
+        border: 1px solid rgba(52, 211, 153, 0.2);
+        color: #6ee7b7;
+    }
+
+    .legacy-status-badge.pending {
+        background: rgba(245, 158, 11, 0.14);
+        border: 1px solid rgba(251, 191, 36, 0.18);
+        color: #fcd34d;
+    }
+
+    .precancelacion-modal-card .modal-footer {
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 1) 100%);
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 1.25rem 1.5rem;
+    }
+
+    .precancelacion-modal-card .modal-footer .btn {
+        min-width: 140px;
+        min-height: 46px;
+        border-radius: 0.85rem;
+        font-weight: 700;
     }
 
     .btn-block {
@@ -879,6 +1192,10 @@
         margin-bottom: 0.75rem;
     }
 
+    .resumen-grid-triple {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
     .resumen-item {
         background: var(--bg-secondary);
         padding: 1rem;
@@ -894,6 +1211,15 @@
 
     .resumen-item.success .resumen-value {
         color: #10B981;
+    }
+
+    .resumen-item.normal-total {
+        border-left-color: #F59E0B;
+        background: rgba(245, 158, 11, 0.1);
+    }
+
+    .resumen-item.normal-total .resumen-value {
+        color: #FBBF24;
     }
 
     .resumen-label {
@@ -1113,7 +1439,21 @@
             display: none;
         }
 
-        .resumen-grid {
+        .ahorro-amount {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .legacy-adjusted-panel-header {
+            flex-direction: column;
+        }
+
+        .legacy-adjusted-chip {
+            align-self: flex-start;
+        }
+
+        .resumen-grid,
+        .resumen-grid-triple {
             grid-template-columns: 1fr;
         }
 

@@ -35,6 +35,8 @@ function initCreditosPreferencialesModule() {
     window.cleanupStickyHeadersPref = cleanupStickyHeadersPref;
     window.switchViewPref = switchViewPref;
     window.filterBySocioAndSwitchToTable = filterBySocioAndSwitchToTable;
+    window.openEstadoCuentaSocioModal = openEstadoCuentaSocioModal; // Cambiado por botón global
+    window.activarInteresCredito = activarInteresCredito; // Para configurar reglas
 }
 
 // ==========================================
@@ -755,9 +757,16 @@ function renderCreditoPrefRow(credito) {
             <td class="text-right ${isRechazado ? 'status-rechazado-text' : ''}">${porcentaje}</td>
             <td class="text-center">${fecha}${anio}</td>
             <td class="text-center">
-                <button class="btn-icon btn-ver-credito" onclick="event.stopPropagation(); viewCreditoPref('${credito.idcredito}')" title="Ver detalle">
-                    <i class="fas fa-eye"></i>
-                </button>
+                <div style="display: flex; gap: 5px; justify-content: center;">
+                    <button class="btn-icon btn-ver-credito" onclick="event.stopPropagation(); viewCreditoPref('${credito.idcredito}')" title="Ver detalle">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    ${credito.estado === 'DESEMBOLSADO' ? `
+                    <button class="btn-icon btn-activar-interes" style="color: #F59E0B;" onclick="event.stopPropagation(); activarInteresCredito('${credito.idcredito}')" title="Configurar / Activar Intereses">
+                        <i class="fas fa-bolt"></i>
+                    </button>
+                    ` : ''}
+                </div>
             </td>
         </tr>
     `;
@@ -837,6 +846,317 @@ function viewCreditoPref(idcredito) {
     }
 
     openCreditosPrefModal('ver-credito-pref-modal');
+}
+
+/**
+ * Modal de Estado de Cuenta y Abonos Globales por Socio
+ */
+async function openEstadoCuentaSocioModal() {
+    // 1. Obtener lista única de socios con créditos desembolsados
+    const sociosConCreditos = [];
+    const idsAgregados = new Set();
+    
+    allCreditosPref.forEach(c => {
+        if (c.estado === 'DESEMBOLSADO' && !idsAgregados.has(c.idsocio)) {
+            sociosConCreditos.push({
+                idsocio: c.idsocio,
+                nombre: c.socio?.nombre || c.idsocio
+            });
+            idsAgregados.add(c.idsocio);
+        }
+    });
+
+    if (sociosConCreditos.length === 0) {
+        Swal.fire('Atención', 'No hay socios con créditos desembolsados para gestionar pagos.', 'info');
+        return;
+    }
+
+    // 2. Selección de Socio
+    const { value: idSocio } = await Swal.fire({
+        title: '<i class="fas fa-users-cog"></i> Seleccione Socio',
+        input: 'select',
+        inputOptions: sociosConCreditos.reduce((acc, s) => ({ ...acc, [s.idsocio]: s.nombre }), {}),
+        inputPlaceholder: 'Elija un socio...',
+        showCancelButton: true,
+        confirmButtonColor: '#10B981',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!idSocio) return;
+
+    // 3. Cargar Datos Completo del Socio (Créditos, Configuración de Intereses, Pagos)
+    if (typeof window.showLoader === 'function') window.showLoader('Calculando estado de cuenta...');
+    
+    try {
+        const supabase = window.getSupabaseClient();
+        
+        // Créditos del socio
+        const creditosSocio = allCreditosPref.filter(c => c.idsocio === idSocio && c.estado === 'DESEMBOLSADO');
+        const idsCreditosSocio = creditosSocio.map(c => c.idcredito);
+        
+        // Configuraciones de intereses
+        const { data: configs } = await supabase.from('ic_preferencial_config').select('*').in('id_credito', idsCreditosSocio);
+        
+        // Historial de pagos globales del socio
+        const { data: pagos } = await supabase.from('ic_preferencial_pagos').select('*').eq('id_socio', idSocio).order('fecha_pago', { ascending: false });
+        
+        // 4. Procesar Deuda Viva (Cápital + Intereses Calculados)
+        let totalCapital = 0;
+        let totalInteresProcesado = 0;
+        const hoy = new Date();
+        
+        const detallesDeuda = creditosSocio.map(c => {
+            const capital = parseMontoPref(c.montofinal || c.monto || 0);
+            totalCapital += capital;
+            
+            // Buscar si tiene interés activado
+            const cfg = configs?.find(f => f.id_credito === c.idcredito);
+            let interesHeredado = 0;
+            let diasTranscurridos = 0;
+            let ruleLabel = 'Sin Interés';
+
+            if (cfg) {
+                const fInicio = new Date(cfg.fecha_inicio_interes + 'T12:00:00');
+                const diffTime = Math.max(0, hoy - fInicio);
+                const diasBrutos = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                
+                let periodos = 0;
+                if (cfg.frecuencia === 'diario') periodos = diasBrutos;
+                else if (cfg.frecuencia === 'semanal') periodos = Math.floor(diasBrutos / 7);
+                else if (cfg.frecuencia === 'mensual') periodos = Math.floor(diasBrutos / 30);
+                else if (cfg.frecuencia === 'anual') periodos = Math.floor(diasBrutos / 365);
+                
+                interesHeredado = capital * (parseFloat(cfg.tasa_decimal)) * periodos;
+                diasTranscurridos = diasBrutos;
+                ruleLabel = `${(parseFloat(cfg.tasa_decimal) * 100).toFixed(1)}% ${cfg.frecuencia}`;
+            }
+
+            totalInteresProcesado += interesHeredado;
+            return {
+                id: c.idcredito,
+                label: `${c.tipo || 'Crédito'} (${formatDateShortPref(c.fechaaprobacion)})`,
+                capital,
+                interes: interesHeredado,
+                rule: ruleLabel
+            };
+        });
+
+        const totalAbonado = pagos ? pagos.reduce((sum, p) => sum + parseFloat(p.monto_abonado || 0), 0) : 0;
+        const totalDeudaReal = (totalCapital + totalInteresProcesado) - totalAbonado;
+
+        if (typeof window.hideLoader === 'function') window.hideLoader();
+
+        // 5. Mostrar Modal Resumen y Pago
+        const socioNombre = sociosConCreditos.find(s => s.idsocio === idSocio).nombre;
+        
+        const { value: abonoData } = await Swal.fire({
+            title: `<i class="fas fa-file-invoice-dollar" style="color: #10B981;"></i><br>Estado de Cuenta`,
+            width: '600px',
+            html: `
+                <div style="text-align: left; background: #1a1f2e; padding: 20px; border-radius: 12px; border: 1px solid #30363d;">
+                    <div style="font-size: 1.1rem; font-weight: bold; color: #FFF; margin-bottom: 5px;">${socioNombre}</div>
+                    <div style="font-size: 0.8rem; color: #8b949e; margin-bottom: 15px;">ID: ${idSocio}</div>
+
+                    <div style="margin-bottom: 20px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #c9d1d9;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #30363d;">
+                                    <th style="text-align: left; padding: 5px;">Crédito</th>
+                                    <th style="text-align: right; padding: 5px;">Capital</th>
+                                    <th style="text-align: right; padding: 5px;">Interés</th>
+                                    <th style="text-align: center; padding: 5px;">Regla</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${detallesDeuda.map(d => `
+                                    <tr>
+                                        <td style="padding: 5px;">${d.label}</td>
+                                        <td style="text-align: right; padding: 5px;">${formatMoneyPref(d.capital)}</td>
+                                        <td style="text-align: right; padding: 5px; color: #f0883e;">+${formatMoneyPref(d.interes)}</td>
+                                        <td style="text-align: center; padding: 5px; font-size: 0.75rem; background: rgba(240,136,62,0.1); border-radius: 4px;">${d.rule}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; padding-top: 15px; border-top: 2px solid #30363d;">
+                        <div style="text-align: left;">
+                            <div style="font-size: 0.8rem; color: #8b949e;">Deuda Total (viva):</div>
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #FFF;">${formatMoneyPref(totalCapital + totalInteresProcesado)}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.8rem; color: #8b949e;">Abonado Histórico:</div>
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #10B981;">${formatMoneyPref(totalAbonado)}</div>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(245, 158, 11, 0.1); padding: 15px; border-radius: 10px; border: 1px solid rgba(245, 158, 11, 0.2); text-align: center;">
+                        <div style="font-size: 0.9rem; color: #F59E0B; text-transform: uppercase; letter-spacing: 1px; font-weight: 800;">Saldo Pendiente Real</div>
+                        <div style="font-size: 2rem; font-weight: 900; color: #F59E0B;">${formatMoneyPref(totalDeudaReal)}</div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <label style="display: block; font-size: 0.85rem; color: #FFF; font-weight: bold; margin-bottom: 10px;">REGISTRAR NUEVO ABONO</label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <input id="sw-abono-monto" type="number" step="0.01" class="swal2-input" placeholder="Monto $" style="margin: 0; width: 100%;">
+                            <input id="sw-abono-fecha" type="date" class="swal2-input" value="${hoy.toISOString().split('T')[0]}" style="margin: 0; width: 100%;">
+                        </div>
+                        <input id="sw-abono-file" type="file" accept="image/*" class="swal2-file" style="margin-top: 10px; width: 100%; color: #FFF; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px;">
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Registrar Abono Global',
+            cancelButtonText: 'Cerrar',
+            confirmButtonColor: '#10B981',
+            preConfirm: () => {
+                const monto = document.getElementById('sw-abono-monto').value;
+                const fecha = document.getElementById('sw-abono-fecha').value;
+                const file = document.getElementById('sw-abono-file').files[0];
+                
+                if (monto && parseFloat(monto) > 0) {
+                    return { monto, fecha, file };
+                }
+                return null; // Si no hay monto, solo se cierra el modal
+            }
+        });
+
+        if (abonoData) {
+            saveAbonoGlobalSocio(idSocio, abonoData);
+        }
+
+    } catch (err) {
+        if (typeof window.hideLoader === 'function') window.hideLoader();
+        console.error("Error cargando estado de cuenta:", err);
+        Swal.fire('Error', 'No se pudo generar el estado de cuenta: ' + err.message, 'error');
+    }
+}
+
+/**
+ * Guarda el abono global del socio
+ */
+async function saveAbonoGlobalSocio(idSocio, data) {
+    if (typeof window.showLoader === 'function') window.showLoader('Guardando abono...');
+    
+    try {
+        const supabase = window.getSupabaseClient();
+        let comprovanteUrl = null;
+
+        if (data.file) {
+            const fileName = `abono_global_${idSocio}_${Date.now()}.jpg`;
+            const { data: uploadData, error: uploadErr } = await supabase.storage.from('comprobantes_preferenciales').upload(fileName, data.file);
+            if (!uploadErr) {
+                const { data: { publicUrl } } = supabase.storage.from('comprobantes_preferenciales').getPublicUrl(fileName);
+                comprovanteUrl = publicUrl;
+            }
+        }
+
+        const { error } = await supabase.from('ic_preferencial_pagos').insert([{
+            id_socio: idSocio,
+            monto_abonado: parseFloat(data.monto),
+            fecha_pago: data.fecha,
+            comprobante_url: comprovanteUrl,
+            notas_admin: 'Abono global desde Estado de Cuenta'
+        }]);
+
+        if (error) throw error;
+        
+        if (typeof window.hideLoader === 'function') window.hideLoader();
+        Swal.fire('Abono Exitoso', `Se han registrado ${formatMoneyPref(data.monto)} al perfil del socio.`, 'success');
+        
+        // Refrescar para ver impacto
+        renderCreditosPref();
+
+    } catch (err) {
+        if (typeof window.hideLoader === 'function') window.hideLoader();
+        Swal.fire('Error', err.message, 'error');
+    }
+}
+
+/**
+ * Configurar interés para un crédito específico
+ */
+async function activarInteresCredito(idcredito) {
+    const credito = allCreditosPref.find(c => c.idcredito === idcredito);
+    if (!credito) return;
+
+    const { value: formValues } = await Swal.fire({
+        title: '⚡ Configurar Intereses',
+        html: `
+            <div style="text-align: left; background: rgba(245, 158, 11, 0.05); padding: 15px; border-radius: 8px; border: 1px dashed #F59E0B; margin-bottom: 15px;">
+                <div style="font-size: 0.85rem; color: #9CA3AF;">Crédito: <b>${credito.tipo || 'Preferencial'}</b></div>
+                <div style="font-size: 0.85rem; color: #9CA3AF;">Monto: <b>${formatMoneyPref(credito.montofinal || credito.monto)}</b></div>
+            </div>
+            
+            <div class="swal-custom-field">
+                <label style="display:block; text-align:left; color:#8b949e; font-size:0.8rem; margin-bottom:5px;">Tasa de Interés (%)</label>
+                <input id="sw-int-tasa" type="number" step="0.01" class="swal2-input" placeholder="Ej: 2" style="margin:0; width:100%;">
+            </div>
+
+            <div class="swal-custom-field" style="margin-top:15px;">
+                <label style="display:block; text-align:left; color:#8b949e; font-size:0.8rem; margin-bottom:5px;">Frecuencia</label>
+                <select id="sw-int-frec" class="swal2-select" style="margin:0; width:100%; color: #FFF; background: #21262d;">
+                    <option value="diario">Diario</option>
+                    <option value="semanal">Semanal</option>
+                    <option value="mensual" selected>Mensual</option>
+                    <option value="anual">Anual</option>
+                </select>
+            </div>
+
+            <div class="swal-custom-field" style="margin-top:15px;">
+                <label style="display:block; text-align:left; color:#8b949e; font-size:0.8rem; margin-bottom:5px;">Inicia cobrar desde</label>
+                <input id="sw-int-fecha" type="date" class="swal2-input" value="${new Date().toISOString().split('T')[0]}" style="margin:0; width:100%;">
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Activar / Guardar',
+        confirmButtonColor: '#F59E0B',
+        preConfirm: () => {
+            return {
+                tasa: document.getElementById('sw-int-tasa').value,
+                frecuencia: document.getElementById('sw-int-frec').value,
+                fecha: document.getElementById('sw-int-fecha').value
+            }
+        }
+    });
+
+    if (formValues && formValues.tasa > 0) {
+        if (typeof window.showLoader === 'function') window.showLoader('Guardando configuración...');
+        try {
+            const supabase = window.getSupabaseClient();
+            
+            // Upsert: Si ya existe configuración para este crédito, la sobreescribe
+            const { error } = await supabase.from('ic_preferencial_config').upsert({
+                id_credito: idcredito,
+                tasa_decimal: parseFloat(formValues.tasa) / 100,
+                frecuencia: formValues.frecuencia,
+                fecha_inicio_interes: formValues.fecha,
+                estado_interes: true
+            }, { onConflict: 'id_credito' });
+
+            if (error) throw error;
+            
+            if (typeof window.hideLoader === 'function') window.hideLoader();
+            Swal.fire('Activado', `Regla de interés guardada para este crédito.`, 'success');
+        } catch (err) {
+            if (typeof window.hideLoader === 'function') window.hideLoader();
+            Swal.fire('Error', err.message, 'error');
+        }
+    }
+}
+
+/**
+ * Abre el modal para registrar abonos a un crédito específico (OBSOLETO - SE USA openEstadoCuentaSocioModal)
+ */
+async function openPagarCreditoModal(idcredito) {
+    // Redirigir al flujo global por socio
+    const credito = allCreditosPref.find(c => c.idcredito === idcredito);
+    if (credito) {
+        // Podríamos filtrar el selector de socios si quisiéramos, pero mejor ir directo al global
+        openEstadoCuentaSocioModal(); 
+    }
 }
 
 // ==========================================

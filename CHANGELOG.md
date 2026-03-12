@@ -1,11 +1,35 @@
 # CHANGELOG - INKA CORP
 
-## [29.3.1] - 2026-03-10
-### Corregido
-- **PDF de Aportes:** Se corrigió la lógica de agrupación de comprobantes en el reporte PDF para mostrar múltiples imágenes cuando un socio realiza varios aportes en la misma semana (ej. caso Clara Nishve).
-- **Update PWA:** Se incrementó la versión para forzar la actualización de los cambios en el módulo de aportes.
+## [29.7.0] - 2026-03-12
+### Añadido
+- **Precancelaciones Lite en Móvil:** Nueva versión móvil simplificada con listado de créditos, selector de fecha y cálculo rápido del valor a precancelar para créditos nuevos y legacy.
 
-## [29.3.0] - 2026-03-10
+### Mejorado
+- **Orden por Categorías en Móvil:** Las precancelaciones móviles ahora muestran primero créditos activos y luego créditos en mora.
+- **Autoscroll en PC:** Al calcular una precancelación, el sistema lleva automáticamente al bloque donde se muestra el valor a pagar.
+
+### Corregido
+- **Caché de Changelog:** Se limpia el caché de changelog de versiones anteriores y se impone la nueva versión activa.
+- **Sincronía de Producción:** Se alinearon archivos de raíz y producción con el último trabajo en PC y móvil.
+
+## [29.6.0] - 2026-03-12
+### Añadido
+- **Precancelaciones Legacy en PC:** Soporte para créditos legacy o antiguos con tabla ajustada visual y cálculo de precancelación con valores correctos.
+
+### Mejorado
+- **Aceptación de Cambios por Versión:** El changelog ahora queda cacheado por versión y seguirá mostrándose al cargar hasta que el usuario acepte explícitamente la actualización.
+
+### Corregido
+- **Actualización PWA Obligatoria:** Se alineó la versión de app y service worker, se cachea el changelog versionado y se fuerza la toma del nuevo paquete en escritorio y móvil.
+
+## [29.5.0] - 2026-03-10
+### Añadido
+- **Módulo Créditos Preferenciales:** Implementado sistema de Estado de Cuenta Global por Socio.
+- **Intereses Dinámicos:** Nuevo botón de "Activar Interés" (⚡) que permite configurar tasas (diaria, semanal, mensual, anual) por crédito.
+- **Bolsa de Pagos:** Los abonos ahora se registran a nivel de Socio, permitiendo amortizar la deuda total calculada (Capital + Intereses devengados).
+
+## [29.4.0] - 2026-03-10
+## [29.3.1] - 2026-03-10
 
 ## [29.2.4] - 2026-03-10
 ### Corregido
