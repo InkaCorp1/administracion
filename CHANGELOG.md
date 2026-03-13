@@ -1,5 +1,11 @@
 # CHANGELOG - INKA CORP
 
+## [29.7.1] - 2026-03-13
+### Corregido
+- **Pagos Bancarios PC/Móvil:** El registro de comprobantes en situación bancaria ahora sube el archivo original al bucket `inkacorp`, evitando la ruta antigua que podía fallar con el error de compresión/carga de imagen.
+- **Webhook Bancario Compatible:** Se agregó notificación para pagos bancarios usando el mismo workflow existente, enviando la URL pública del comprobante en el campo `image_base64` para no afectar el flujo actual.
+- **Sincronía de Producción:** Se alinearon los módulos de bancos entre raíz y `produccion`, junto con el patch de versión para forzar actualización del Service Worker.
+
 ## [29.7.0] - 2026-03-12
 ### Añadido
 - **Precancelaciones Lite en Móvil:** Nueva versión móvil simplificada con listado de créditos, selector de fecha y cálculo rápido del valor a precancelar para créditos nuevos y legacy.

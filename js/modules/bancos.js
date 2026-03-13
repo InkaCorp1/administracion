@@ -9,6 +9,61 @@ let bancosDetalleData = [];
 let currentBancoId = null;
 let currentBancoDetalle = null;
 let showingArchived = false; // State for history view
+let currentBancoReceiptFile = null;
+
+function formatBancoMoney(value) {
+    return '$' + Number(value || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatBancoNotificationDate(dateValue) {
+    if (!dateValue) return 'N/A';
+
+    const date = new Date(`${dateValue}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return dateValue;
+
+    return date.toLocaleDateString('es-EC', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
+}
+
+function formatBancoNotificationTimestamp() {
+    return new Date().toLocaleString('es-EC', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
+function buildBancoPaymentOwnerMessage(banco, cuotaDetalle, montoPagado, fechaPago, fechaRegistro, comprobanteUrl) {
+    return `JOSÉ KLEVER NISHVE CORO se ha registrado un pago bancario con los siguientes detalles:\n\n🏦 Banco: ${(banco?.nombre_banco || 'BANCO').toUpperCase()}\n👤 A nombre de: ${(banco?.a_nombre_de || 'N/A').toUpperCase()}\n📑 Transacción: ${banco?.id_transaccion || currentBancoId || 'N/A'}\n🔢 Cuota: ${cuotaDetalle?.cuota || 'N/A'} de ${banco?.plazo || 'N/A'}\n💵 Valor pagado: ${formatBancoMoney(montoPagado)}\n📅 Fecha Pago: ${formatBancoNotificationDate(fechaPago)}\n🕐 Registro: ${fechaRegistro}\n🧾 Comprobante: almacenado correctamente en bucket\n🔗 URL comprobante: ${comprobanteUrl}\n\nLa URL del comprobante fue enviada en el campo image_base64 para mantener compatibilidad con el workflow. ✅`;
+}
+
+async function sendBancoNotificationWebhook(payload) {
+    if (typeof window.sendImageNotificationWebhook === 'function') {
+        return window.sendImageNotificationWebhook(payload);
+    }
+
+    const WEBHOOK_URL_N8N = 'https://lpn8nwebhook.luispintasolutions.com/webhook/notificarimagenes';
+
+    try {
+        const response = await fetch(WEBHOOK_URL_N8N, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return { success: true };
+    } catch (error) {
+        console.error('Error enviando webhook bancario:', error);
+        return { success: false, error: error.message };
+    }
+}
 
 /**
  * Inicializa el módulo de Bancos
@@ -1337,8 +1392,9 @@ async function handleBancoPaymentSubmit(e) {
     const idDetalle = document.getElementById('pago-banco-id-detalle').value;
     const fecha = document.getElementById('pago-banco-fecha').value;
     const previewImg = document.getElementById('pago-banco-preview');
+    const montoPagado = parseFloat(document.getElementById('pago-banco-valor').value) || parseFloat(currentBancoDetalle?.valor || 0) || 0;
 
-    if (!previewImg.src || previewImg.src.includes('data:image/gif')) {
+    if (!currentBancoReceiptFile || !previewImg.src || previewImg.src.includes('data:image/gif')) {
         return window.showAlert('Por favor sube o toma una foto del comprobante', 'Comprobante requerido', 'warning');
     }
 
@@ -1349,8 +1405,7 @@ async function handleBancoPaymentSubmit(e) {
         const supabase = window.getSupabaseClient();
 
         // 1. Subir imagen a Storage usando la utilidad centralizada
-        const blob = await fetch(previewImg.src).then(r => r.blob());
-        const uploadRes = await window.uploadFileToStorage(blob, 'bancos/pagos', idDetalle, 'inkacorp');
+        const uploadRes = await window.uploadFileToStorage(currentBancoReceiptFile, 'bancos/pagos', idDetalle, 'inkacorp');
 
         if (!uploadRes.success) {
             throw new Error(uploadRes.error);
@@ -1370,6 +1425,28 @@ async function handleBancoPaymentSubmit(e) {
 
         if (updateError) throw updateError;
 
+        try {
+            const banco = (bancosData || []).find(b => b.id_transaccion === currentBancoId);
+            const ownerWebhookResult = await sendBancoNotificationWebhook({
+                whatsapp: '19175309618',
+                image_base64: imgUrl,
+                message: buildBancoPaymentOwnerMessage(
+                    banco,
+                    currentBancoDetalle,
+                    montoPagado,
+                    fecha,
+                    formatBancoNotificationTimestamp(),
+                    imgUrl
+                )
+            });
+
+            if (!ownerWebhookResult.success) {
+                console.warn('[BANCOS] No se pudo enviar webhook de notificación:', ownerWebhookResult.error);
+            }
+        } catch (webhookError) {
+            console.warn('[BANCOS] Error enviando webhook bancario:', webhookError);
+        }
+
         // 3. Registrar en Caja (Nuevo: Reflejar en caja como EGRESO)
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -1385,8 +1462,6 @@ async function handleBancoPaymentSubmit(e) {
                 if (activeSessions && activeSessions.length > 0) {
                     const idApertura = activeSessions[0].id_apertura;
                     const banco = (bancosData || []).find(b => b.id_transaccion === currentBancoId);
-                    const montoPagado = parseFloat(document.getElementById('pago-banco-valor').value) || 0;
-
                     await supabase
                         .from('ic_caja_movimientos')
                         .insert({
@@ -1437,15 +1512,34 @@ function handleBancoImageUpload(file) {
         return window.showAlert('La imagen no debe pesar más de 5MB', 'Imagen muy grande', 'warning');
     }
 
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        const container = document.getElementById('pago-banco-preview-container');
-        const placeholder = document.getElementById('pago-banco-upload-placeholder');
-        const img = document.getElementById('pago-banco-preview');
+    currentBancoReceiptFile = file;
 
-        img.src = e.target.result;
+    const container = document.getElementById('pago-banco-preview-container');
+    const placeholder = document.getElementById('pago-banco-upload-placeholder');
+    const img = document.getElementById('pago-banco-preview');
+
+    const showPreview = (src) => {
+        img.src = src;
         container.classList.remove('hidden');
         placeholder.classList.add('hidden');
+    };
+
+    if (typeof window.showImagePreview === 'function') {
+        window.showImagePreview(file, img)
+            .then(() => showPreview(img.src))
+            .catch(() => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    showPreview(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            });
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        showPreview(e.target.result);
     };
     reader.readAsDataURL(file);
 }
@@ -1457,6 +1551,8 @@ function clearBancoPreview() {
     const container = document.getElementById('pago-banco-preview-container');
     const placeholder = document.getElementById('pago-banco-upload-placeholder');
     const img = document.getElementById('pago-banco-preview');
+
+    currentBancoReceiptFile = null;
 
     img.src = '';
     container.classList.add('hidden');

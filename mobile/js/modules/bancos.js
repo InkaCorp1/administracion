@@ -6,6 +6,61 @@ let mobileBancosData = [];
 let mobilePagosMap = {}; // Mapa para contar cuotas pagadas
 let currentBankAmortization = [];
 let currentBankId = null;
+let currentLitePagoFile = null;
+
+function formatBancoLiteMoney(value) {
+    return '$' + Number(value || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatBancoLiteDate(dateValue) {
+    if (!dateValue) return 'N/A';
+
+    const date = new Date(`${dateValue}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return dateValue;
+
+    return date.toLocaleDateString('es-EC', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
+}
+
+function formatBancoLiteTimestamp() {
+    return new Date().toLocaleString('es-EC', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
+function buildBancoLiteOwnerMessage(banco, cuotaDetalle, montoPagado, fechaPago, fechaRegistro, comprobanteUrl) {
+    return `JOSÉ KLEVER NISHVE CORO se ha registrado un pago bancario desde móvil con los siguientes detalles:\n\n🏦 Banco: ${(banco?.nombre_banco || 'BANCO').toUpperCase()}\n👤 A nombre de: ${(banco?.a_nombre_de || 'N/A').toUpperCase()}\n📑 Transacción: ${banco?.id_transaccion || currentBankId || 'N/A'}\n🔢 Cuota: ${cuotaDetalle?.cuota || 'N/A'} de ${banco?.plazo || 'N/A'}\n💵 Valor pagado: ${formatBancoLiteMoney(montoPagado)}\n📅 Fecha Pago: ${formatBancoLiteDate(fechaPago)}\n🕐 Registro: ${fechaRegistro}\n🧾 Comprobante: almacenado correctamente en bucket\n🔗 URL comprobante: ${comprobanteUrl}\n\nLa URL del comprobante fue enviada en el campo image_base64 para mantener compatibilidad con el workflow. ✅`;
+}
+
+async function sendBancoNotificationWebhookLite(payload) {
+    if (typeof window.sendImageNotificationWebhookLite === 'function') {
+        return window.sendImageNotificationWebhookLite(payload);
+    }
+
+    const WEBHOOK_URL_N8N = 'https://lpn8nwebhook.luispintasolutions.com/webhook/notificarimagenes';
+
+    try {
+        const response = await fetch(WEBHOOK_URL_N8N, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return { success: true };
+    } catch (error) {
+        console.error('Error enviando webhook bancario móvil:', error);
+        return { success: false, error: error.message };
+    }
+}
 
 async function initBancosModule() {
     await fetchBancosMobile();
@@ -562,17 +617,36 @@ function handleLiteImageSelect(event) {
         return window.Swal.fire('Error', 'La imagen no debe pesar más de 5MB', 'warning');
     }
 
+    currentLitePagoFile = file;
+
+    const placeholder = document.getElementById('lite-pago-placeholder');
+    const container = document.getElementById('lite-pago-preview-container');
+    const img = document.getElementById('lite-pago-preview');
+
+    const showPreview = (src) => {
+        if (img) {
+            img.src = src;
+            container.classList.remove('hidden');
+            placeholder.style.display = 'none';
+        }
+    };
+
+    if (typeof window.showImagePreview === 'function' && img) {
+        window.showImagePreview(file, img)
+            .then(() => showPreview(img.src))
+            .catch(() => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    showPreview(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            });
+        return;
+    }
+
     const reader = new FileReader();
     reader.onload = function (e) {
-        const placeholder = document.getElementById('lite-pago-placeholder');
-        const container = document.getElementById('lite-pago-preview-container');
-        const img = document.getElementById('lite-pago-preview');
-
-        if (img) {
-            img.src = e.target.result;
-            container.classList.remove('hidden');
-            placeholder.style.display = 'none'; // Desaparece el área punteada
-        }
+        showPreview(e.target.result);
     };
     reader.readAsDataURL(file);
 }
@@ -585,6 +659,8 @@ function clearLitePagoPreview() {
     // Inputs de cámara y galería
     const camInput = document.getElementById('lite-pago-input-camera');
     const galInput = document.getElementById('lite-pago-input-gallery');
+
+    currentLitePagoFile = null;
 
     if (img) img.src = '';
     if (camInput) camInput.value = '';
@@ -600,36 +676,17 @@ function clearLitePagoPreview() {
  * Comprime una imagen a WebP con calidad optimizada
  */
 async function compressImage(dataUrl, quality = 0.8) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            // Mantener proporciones pero limitar tamaño máximo si es necesario
-            let width = img.width;
-            let height = img.height;
-            const maxDimension = 1200;
-
-            if (width > height && width > maxDimension) {
-                height *= maxDimension / width;
-                width = maxDimension;
-            } else if (height > maxDimension) {
-                width *= maxDimension / height;
-                height = maxDimension;
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-
-            canvas.toBlob((blob) => {
-                if (blob) resolve(blob);
-                else reject(new Error('Error al comprimir imagen'));
-            }, 'image/webp', quality);
-        };
-        img.onerror = () => reject(new Error('Error al cargar imagen para compresión'));
-        img.src = dataUrl;
-    });
+    try {
+        const response = await fetch(dataUrl);
+        const sourceBlob = await response.blob();
+        const extension = (sourceBlob.type || 'image/jpeg').split('/')[1] || 'jpg';
+        const file = new File([sourceBlob], `banco-lite-${Date.now()}.${extension}`, { type: sourceBlob.type || 'image/jpeg' });
+        const compressionRes = await window.compressImage(file, { quality });
+        return compressionRes.blob || sourceBlob;
+    } catch (error) {
+        console.warn('[BANCOS MOBILE] Fallback de compresión aplicado:', error);
+        return fetch(dataUrl).then(r => r.blob());
+    }
 }
 
 async function handleMobilePayment(e) {
@@ -640,7 +697,7 @@ async function handleMobilePayment(e) {
     const valorManual = document.getElementById('lite-pago-valor-inputs').value;
     const previewImg = document.getElementById('lite-pago-preview');
 
-    if (!previewImg.src || previewImg.src.includes('data:image/gif') || previewImg.src === '' || previewImg.src.endsWith('bancos.html')) {
+    if (!currentLitePagoFile || !previewImg.src || previewImg.src.includes('data:image/gif') || previewImg.src === '' || previewImg.src.endsWith('bancos.html')) {
         return window.Swal.fire('Espera', 'Por favor sube una foto del comprobante', 'warning');
     }
 
@@ -649,10 +706,12 @@ async function handleMobilePayment(e) {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
         const supabase = window.getSupabaseClient();
+        const montoPagado = parseFloat(valorManual) || 0;
+        const banco = (mobileBancosData || []).find(b => b.id_transaccion === currentBankId);
+        const cuota = (currentBankAmortization || []).find(c => c.id_detalle === idDetalle);
 
         // 1. Subir imagen usando la utilidad centralizada (maneja compresión y bucket unificado 'inkacorp')
-        const blob = await fetch(previewImg.src).then(r => r.blob());
-        const uploadRes = await window.uploadFileToStorage(blob, 'bancos/pagos', idDetalle, 'inkacorp');
+        const uploadRes = await window.uploadFileToStorage(currentLitePagoFile, 'bancos/pagos', idDetalle, 'inkacorp');
 
         if (!uploadRes.success) {
             throw new Error("No se pudo subir la imagen: " + uploadRes.error);
@@ -667,11 +726,32 @@ async function handleMobilePayment(e) {
                 estado: 'PAGADO',
                 fecha_pagado: fecha,
                 fotografia: imgUrl,
-                valor: parseFloat(valorManual)
+                valor: montoPagado
             })
             .eq('id_detalle', idDetalle);
 
         if (updateError) throw updateError;
+
+        try {
+            const ownerWebhookResult = await sendBancoNotificationWebhookLite({
+                whatsapp: '19175309618',
+                image_base64: imgUrl,
+                message: buildBancoLiteOwnerMessage(
+                    banco,
+                    cuota,
+                    montoPagado,
+                    fecha,
+                    formatBancoLiteTimestamp(),
+                    imgUrl
+                )
+            });
+
+            if (!ownerWebhookResult.success) {
+                console.warn('[BANCOS MOBILE] No se pudo enviar webhook:', ownerWebhookResult.error);
+            }
+        } catch (webhookError) {
+            console.warn('[BANCOS MOBILE] Error enviando webhook bancario:', webhookError);
+        }
 
         // 3. Registrar en Caja (Mobile: Reflejar en caja como EGRESO)
         try {
@@ -687,9 +767,6 @@ async function handleMobilePayment(e) {
 
                 if (activeSessions && activeSessions.length > 0) {
                     const idApertura = activeSessions[0].id_apertura;
-                    const banco = (mobileBancosData || []).find(b => b.id_transaccion === currentBankId);
-                    const cuota = (currentBankAmortization || []).find(c => c.id_detalle === idDetalle);
-
                     await supabase
                         .from('ic_caja_movimientos')
                         .insert({
@@ -697,7 +774,7 @@ async function handleMobilePayment(e) {
                             id_usuario: user.id,
                             tipo_movimiento: 'EGRESO',
                             categoria: 'GASTO',
-                            monto: parseFloat(valorManual),
+                            monto: montoPagado,
                             metodo_pago: 'TRANSFERENCIA',
                             descripcion: `Pago Banco (M): ${banco ? banco.nombre_banco : 'Bancario'} (Cuota ${cuota ? cuota.cuota : 'N/A'})`,
                             comprobante_url: imgUrl,

@@ -3,7 +3,7 @@
  * PWA Offline Support
  */
 
-const SW_VERSION = '29.7.0';
+const SW_VERSION = '29.7.1';
 const CACHE_NAME = `inkacorp-v${SW_VERSION}`;
 const STATIC_CACHE = `inkacorp-static-v${SW_VERSION}`;
 const CHANGELOG_URL = `CHANGELOG.md?v=${encodeURIComponent(SW_VERSION)}`;
