@@ -40,21 +40,30 @@ function formatBancoNotificationTimestamp() {
 }
 
 function buildBancoPaymentOwnerMessage(banco, cuotaDetalle, montoPagado, fechaPago, fechaRegistro, comprobanteUrl) {
-    return `JOSÉ KLEVER NISHVE CORO se ha registrado un pago bancario con los siguientes detalles:\n\n🏦 Banco: ${(banco?.nombre_banco || 'BANCO').toUpperCase()}\n👤 A nombre de: ${(banco?.a_nombre_de || 'N/A').toUpperCase()}\n📑 Transacción: ${banco?.id_transaccion || currentBancoId || 'N/A'}\n🔢 Cuota: ${cuotaDetalle?.cuota || 'N/A'} de ${banco?.plazo || 'N/A'}\n💵 Valor pagado: ${formatBancoMoney(montoPagado)}\n📅 Fecha Pago: ${formatBancoNotificationDate(fechaPago)}\n🕐 Registro: ${fechaRegistro}\n🧾 Comprobante: almacenado correctamente en bucket\n🔗 URL comprobante: ${comprobanteUrl}\n\nLa URL del comprobante fue enviada en el campo image_base64 para mantener compatibilidad con el workflow. ✅`;
+    return `JOSÉ KLEVER NISHVE CORO se ha registrado un pago bancario con los siguientes detalles:\n\n🏦 Banco: ${(banco?.nombre_banco || 'BANCO').toUpperCase()}\n👤 A nombre de: ${(banco?.a_nombre_de || 'N/A').toUpperCase()}\n📑 Transacción: ${banco?.id_transaccion || currentBancoId || 'N/A'}\n🔢 Cuota: ${cuotaDetalle?.cuota || 'N/A'} de ${banco?.plazo || 'N/A'}\n💵 Valor pagado: ${formatBancoMoney(montoPagado)}\n📅 Fecha Pago: ${formatBancoNotificationDate(fechaPago)}\n🕐 Registro: ${fechaRegistro}\n🧾 Comprobante: almacenado correctamente en bucket\n🔗 URL comprobante: ${comprobanteUrl}`;
 }
 
 async function sendBancoNotificationWebhook(payload) {
     if (typeof window.sendImageNotificationWebhook === 'function') {
-        return window.sendImageNotificationWebhook(payload);
+        return Promise.race([
+            window.sendImageNotificationWebhook(payload),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout webhook bancario')), 8000))
+        ]).then(() => ({ success: true })).catch((error) => {
+            console.error('Error enviando webhook bancario:', error);
+            return { success: false, error: error.message };
+        });
     }
 
     const WEBHOOK_URL_N8N = 'https://lpn8nwebhook.luispintasolutions.com/webhook/notificarimagenes';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     try {
         const response = await fetch(WEBHOOK_URL_N8N, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            signal: controller.signal
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -62,6 +71,8 @@ async function sendBancoNotificationWebhook(payload) {
     } catch (error) {
         console.error('Error enviando webhook bancario:', error);
         return { success: false, error: error.message };
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 
