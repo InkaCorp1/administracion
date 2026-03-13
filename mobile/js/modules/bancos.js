@@ -683,32 +683,14 @@ function clearLitePagoPreview() {
     }
 }
 
-/**
- * Comprime una imagen a WebP con calidad optimizada
- */
-async function compressImage(dataUrl, quality = 0.8) {
-    try {
-        const response = await fetch(dataUrl);
-        const sourceBlob = await response.blob();
-        const extension = (sourceBlob.type || 'image/jpeg').split('/')[1] || 'jpg';
-        const file = new File([sourceBlob], `banco-lite-${Date.now()}.${extension}`, { type: sourceBlob.type || 'image/jpeg' });
-        const compressionRes = await window.compressImage(file, { quality });
-        return compressionRes.blob || sourceBlob;
-    } catch (error) {
-        console.warn('[BANCOS MOBILE] Fallback de compresión aplicado:', error);
-        return fetch(dataUrl).then(r => r.blob());
-    }
-}
-
 async function handleMobilePayment(e) {
     e.preventDefault();
     const btn = document.getElementById('btn-lite-guardar');
     const idDetalle = document.getElementById('lite-pago-id-detalle').value;
     const fecha = document.getElementById('lite-pago-fecha').value;
     const valorManual = document.getElementById('lite-pago-valor-inputs').value;
-    const previewImg = document.getElementById('lite-pago-preview');
 
-    if (!currentLitePagoFile || !previewImg.src || previewImg.src.includes('data:image/gif') || previewImg.src === '' || previewImg.src.endsWith('bancos.html')) {
+    if (!currentLitePagoFile) {
         return window.Swal.fire('Espera', 'Por favor sube una foto del comprobante', 'warning');
     }
 
@@ -730,8 +712,7 @@ async function handleMobilePayment(e) {
 
         const imgUrl = uploadRes.url;
 
-        // 2. Actualizar en ic_situacion_bancaria_detalle
-        const { error: updateError } = await supabase
+        const updatePagoPromise = supabase
             .from('ic_situacion_bancaria_detalle')
             .update({
                 estado: 'PAGADO',
@@ -741,27 +722,28 @@ async function handleMobilePayment(e) {
             })
             .eq('id_detalle', idDetalle);
 
+        const ownerWebhookPromise = sendBancoNotificationWebhookLite({
+            whatsapp: '19175309618',
+            image_base64: imgUrl,
+            message: buildBancoLiteOwnerMessage(
+                banco,
+                cuota,
+                montoPagado,
+                fecha,
+                formatBancoLiteTimestamp(),
+                imgUrl
+            )
+        });
+
+        const [{ error: updateError }, ownerWebhookResult] = await Promise.all([
+            updatePagoPromise,
+            ownerWebhookPromise
+        ]);
+
         if (updateError) throw updateError;
 
-        try {
-            const ownerWebhookResult = await sendBancoNotificationWebhookLite({
-                whatsapp: '19175309618',
-                image_base64: imgUrl,
-                message: buildBancoLiteOwnerMessage(
-                    banco,
-                    cuota,
-                    montoPagado,
-                    fecha,
-                    formatBancoLiteTimestamp(),
-                    imgUrl
-                )
-            });
-
-            if (!ownerWebhookResult.success) {
-                console.warn('[BANCOS MOBILE] No se pudo enviar webhook:', ownerWebhookResult.error);
-            }
-        } catch (webhookError) {
-            console.warn('[BANCOS MOBILE] Error enviando webhook bancario:', webhookError);
+        if (!ownerWebhookResult.success) {
+            console.warn('[BANCOS MOBILE] No se pudo enviar webhook:', ownerWebhookResult.error);
         }
 
         // 3. Registrar en Caja (Mobile: Reflejar en caja como EGRESO)
