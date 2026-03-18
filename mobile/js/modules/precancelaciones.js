@@ -2,6 +2,7 @@ let litePrecancelacionesCreditos = [];
 let litePrecancelacionesFiltrados = [];
 let litePrecancelacionCreditoActual = null;
 let litePrecancelacionContextoActual = null;
+let litePenalizacionGastosAdminMultiplicador = 1;
 
 const LITE_MENSAJE_CREDITO_EN_MORA_PRECANC = 'Este crédito está en mora primero debe ponerse al día para precancelar';
 const LITE_MENSAJE_METODO_LEGACY_PRECANC = 'Este crédito requiere revisión detallada. Para continuar use la versión PC o tablet.';
@@ -23,6 +24,12 @@ function bindLitePrecancelacionesEvents() {
     if (calcButton && !calcButton.dataset.bound) {
         calcButton.addEventListener('click', handleLitePrecancelacionCalculo);
         calcButton.dataset.bound = 'true';
+    }
+
+    const penaltySelect = document.getElementById('precanc-lite-penalty');
+    if (penaltySelect && !penaltySelect.dataset.bound) {
+        penaltySelect.addEventListener('change', handleLitePrecancPenaltyChange);
+        penaltySelect.dataset.bound = 'true';
     }
 }
 
@@ -233,6 +240,12 @@ async function openLitePrecancelacion(idCredito) {
             dateInput.value = getLiteTodayIso();
         }
 
+        const penaltySelect = document.getElementById('precanc-lite-penalty');
+        if (penaltySelect) {
+            penaltySelect.value = '1';
+        }
+        litePenalizacionGastosAdminMultiplicador = 1;
+
         hideLitePrecancelacionResult();
         openLitePrecancModal();
     } catch (error) {
@@ -283,11 +296,13 @@ async function handleLitePrecancelacionCalculo() {
     const button = document.getElementById('precanc-lite-calc-btn');
     try {
         setLitePrecancButtonState(button, true, 'Calculando...');
+        litePenalizacionGastosAdminMultiplicador = getLitePrecancPenaltyMultiplier();
         const calculo = construirCalculoLitePrecancelacion(
             litePrecancelacionCreditoActual,
             litePrecancelacionContextoActual.amortizacion,
             fechaPrecancelacion,
-            litePrecancelacionContextoActual.usarTablaAjustadaLegacy
+            litePrecancelacionContextoActual.usarTablaAjustadaLegacy,
+            litePenalizacionGastosAdminMultiplicador
         );
 
         showLitePrecancelacionResult(calculo);
@@ -443,7 +458,7 @@ function generarTablaLegacyAjustadaLitePrecancelacion(credito, amortizacionOrigi
     return amortizacion;
 }
 
-function construirCalculoLitePrecancelacion(credito, amortizacion, fechaPrecancelacion, usarTablaAjustadaLegacy = false) {
+function construirCalculoLitePrecancelacion(credito, amortizacion, fechaPrecancelacion, usarTablaAjustadaLegacy = false, penalizacionMultiplicador = 1) {
     const fechaEvaluacion = new Date(fechaPrecancelacion);
     fechaEvaluacion.setHours(0, 0, 0, 0);
 
@@ -481,6 +496,11 @@ function construirCalculoLitePrecancelacion(credito, amortizacion, fechaPrecance
 
     const cuotasPendientes = amortizacion.filter((cuota) => cuota.estado_cuota !== 'PAGADO');
     const totalCuotasPendientes = cuotasPendientes.reduce((sum, cuota) => sum + parseFloat(cuota.cuota_total || 0), 0);
+    const gastosAdministrativosBasePendientes = cuotasPendientes.reduce(
+        (sum, cuota) => sum + parseFloat(cuota.pago_gastos_admin || 0),
+        0
+    );
+    const gastosAdministrativosCobrados = gastosAdministrativosBasePendientes * penalizacionMultiplicador;
     const ahorroPagado = usarTablaAjustadaLegacy ? 0 : cuotasPagadas * (credito.ahorro_programado_cuota || 0);
 
     const unDiaEnMs = 1000 * 60 * 60 * 24;
@@ -488,7 +508,7 @@ function construirCalculoLitePrecancelacion(credito, amortizacion, fechaPrecance
     const tasaMensual = (credito.tasa_interes_mensual || 0) / 100;
     const tasaDiaria = (tasaMensual * 12) / 365;
     const interesProporcional = capitalPendiente * tasaDiaria * diasTranscurridos;
-    const montoPrecancelar = capitalPendiente + interesProporcional;
+    const montoPrecancelar = capitalPendiente + interesProporcional + gastosAdministrativosCobrados;
     const interesPerdonado = Math.max(0, totalCuotasPendientes - montoPrecancelar);
 
     return {
@@ -496,6 +516,9 @@ function construirCalculoLitePrecancelacion(credito, amortizacion, fechaPrecance
         cuotasRestantes,
         capitalPendiente,
         totalCuotasPendientes,
+        gastosAdministrativosBasePendientes,
+        gastosAdministrativosCobrados,
+        penalizacionMultiplicador,
         diasTranscurridos,
         interesProporcional,
         interesPerdonado,
@@ -508,13 +531,17 @@ function construirCalculoLitePrecancelacion(credito, amortizacion, fechaPrecance
 function showLitePrecancelacionResult(calculo) {
     const resultEl = document.getElementById('precanc-lite-result');
     const amountEl = document.getElementById('precanc-lite-result-amount');
+    const adminChargedEl = document.getElementById('precanc-lite-admin-charged');
+    const adminFactorEl = document.getElementById('precanc-lite-admin-factor');
     const metaEl = document.getElementById('precanc-lite-result-meta');
 
     if (amountEl) amountEl.textContent = formatMoneyLitePrec(calculo.montoPrecancelar);
+    if (adminChargedEl) adminChargedEl.textContent = formatMoneyLitePrec(calculo.gastosAdministrativosCobrados);
+    if (adminFactorEl) adminFactorEl.textContent = `${calculo.penalizacionMultiplicador}x`;
     if (metaEl) {
         metaEl.textContent = calculo.usaTablaAjustadaLegacy
-            ? `Valor calculado con tabla legacy ajustada. Restan ${calculo.cuotasRestantes} cuotas por considerar.`
-            : `Valor calculado con tabla vigente. Restan ${calculo.cuotasRestantes} cuotas por considerar.`;
+            ? `Valor calculado con tabla legacy ajustada e incluye ${formatMoneyLitePrec(calculo.gastosAdministrativosCobrados)} de gastos administrativos cobrados sobre una base de ${formatMoneyLitePrec(calculo.gastosAdministrativosBasePendientes)}. Restan ${calculo.cuotasRestantes} cuotas por considerar.`
+            : `Valor calculado con tabla vigente e incluye ${formatMoneyLitePrec(calculo.gastosAdministrativosCobrados)} de gastos administrativos cobrados sobre una base de ${formatMoneyLitePrec(calculo.gastosAdministrativosBasePendientes)}. Restan ${calculo.cuotasRestantes} cuotas por considerar.`;
     }
     if (resultEl) resultEl.classList.remove('hidden');
 }
@@ -583,4 +610,16 @@ function escapeLitePrecHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+function getLitePrecancPenaltyMultiplier() {
+    const penaltySelect = document.getElementById('precanc-lite-penalty');
+    const value = parseInt(penaltySelect?.value || '1', 10);
+    if (Number.isNaN(value)) return 1;
+    return Math.min(3, Math.max(1, value));
+}
+
+function handleLitePrecancPenaltyChange() {
+    litePenalizacionGastosAdminMultiplicador = getLitePrecancPenaltyMultiplier();
+    hideLitePrecancelacionResult();
 }

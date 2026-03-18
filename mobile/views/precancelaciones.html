@@ -67,6 +67,15 @@
                 <input id="precanc-lite-date" type="date">
             </label>
 
+            <label class="precanc-lite-field">
+                <span>Penalización por pago anticipado</span>
+                <select id="precanc-lite-penalty">
+                    <option value="1">1x gastos administrativos</option>
+                    <option value="2">2x gastos administrativos</option>
+                    <option value="3">3x gastos administrativos</option>
+                </select>
+            </label>
+
             <button id="precanc-lite-calc-btn" class="precanc-lite-calc-btn">
                 <i class="fas fa-bolt"></i>
                 <span>Calcular valor</span>
@@ -75,6 +84,16 @@
             <div id="precanc-lite-result" class="precanc-lite-result hidden">
                 <div class="precanc-lite-result-label">Valor a precancelar</div>
                 <div id="precanc-lite-result-amount" class="precanc-lite-result-amount">$0.00</div>
+                <div class="precanc-lite-breakdown">
+                    <div class="precanc-lite-breakdown-item">
+                        <span>Gastos admin. cobrados</span>
+                        <strong id="precanc-lite-admin-charged">$0.00</strong>
+                    </div>
+                    <div class="precanc-lite-breakdown-item">
+                        <span>Factor</span>
+                        <strong id="precanc-lite-admin-factor">1x</strong>
+                    </div>
+                </div>
                 <div id="precanc-lite-result-meta" class="precanc-lite-result-meta">Calculado correctamente.</div>
             </div>
 

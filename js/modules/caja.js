@@ -685,7 +685,6 @@ async function handleMovimientoManual(e) {
     try {
         let comprobanteUrl = null;
         if (file) {
-            statusText.textContent = 'Subiendo comprobante...';
             // Usamos la utilidad centralizada para consistencia y compresión
             const uploadRes = await window.uploadFileToStorage(file, 'caja', session.user.id);
             
@@ -780,7 +779,24 @@ function closeModal(id) {
     if (modal) {
         modal.classList.add('hidden');
         modal.style.display = 'none';
-        
+
+        // Reset forms inside the modal if any
+        const form = modal.querySelector('form');
+        if (form) {
+            form.reset();
+        }
+
+        // Specific resets for caja views
+        if (id === 'modal-movimiento-manual') {
+            const preview = document.getElementById('preview-manual');
+            if (preview) {
+                preview.innerHTML = `
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Toca para subir foto o PDF del comprobante</p>
+                `;
+            }
+        }
+
         // Remove modal-open only if there are no other visible modals
         const visibleModals = document.querySelectorAll('.modal:not(.hidden)');
         if (visibleModals.length === 0) {
@@ -1192,6 +1208,41 @@ async function generateCajaProposalPDF() {
     }
 }
 
+function previewFile(event, previewId) {
+    const file = event.target.files[0];
+    const previewContainer = document.getElementById(previewId);
+
+    if (!file || !previewContainer) return;
+
+    previewContainer.innerHTML = '';
+
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.style.maxWidth = '100%';
+            img.style.maxHeight = '150px';
+            img.style.borderRadius = '8px';
+            img.style.marginTop = '10px';
+            previewContainer.appendChild(img);
+        }
+        reader.readAsDataURL(file);
+    } else if (file.type === 'application/pdf') {
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-file-pdf';
+        icon.style.fontSize = '2rem';
+        icon.style.color = '#ff4444';
+
+        const text = document.createElement('p');
+        text.innerText = file.name;
+        text.style.marginTop = '5px';
+
+        previewContainer.appendChild(icon);
+        previewContainer.appendChild(text);
+    }
+}
+
 // Global Exports
 window.initCajaModule = initCajaModule;
 window.showAperturaModal = showAperturaModal;
@@ -1208,6 +1259,7 @@ window.generateCajaProposalPDF = generateCajaProposalPDF;
 window.switchUserCaja = switchUserCaja;
 window.showReportePdfModal = showReportePdfModal;
 window.handleGenerarReportePdf = handleGenerarReportePdf;
+window.previewFile = previewFile;
 window.updateReportOptionStyle = updateReportOptionStyle;
 
 // Transferencias

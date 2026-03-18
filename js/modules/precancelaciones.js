@@ -15,6 +15,7 @@ let tablaAmortizacionPrecancelacionActual = null;
 let contextoLegacyPrecancelacionActual = null;
 let currentPaisFilterPrecanc = '';
 let currentTab = 'activos';
+let penalizacionGastosAdminMultiplicador = 1;
 const MENSAJE_CREDITO_EN_MORA_PRECANC = 'Este crédito está en mora primero debe ponerse al día para precancelar';
 const MENSAJE_METODO_LEGACY_PRECANC = 'Crédito legacy: tabla ajustada por ser crédito legacy';
 
@@ -67,10 +68,22 @@ function setupPrecancelacionesEventListeners() {
         btnCalcular.addEventListener('click', handleCalcularMontos);
     }
 
+    document.querySelectorAll('.penalizacion-multiplicador-btn').forEach((button) => {
+        if (!button.dataset.bound) {
+            button.addEventListener('click', handlePenalizacionGastosAdminClick);
+            button.dataset.bound = 'true';
+        }
+    });
+
     // Botón procesar precancelación
     const btnProcesar = document.getElementById('btn-procesar-precancelacion');
     if (btnProcesar) {
         btnProcesar.addEventListener('click', abrirModalConfirmacion);
+    }
+
+    const btnGenerarPdf = document.getElementById('btn-generar-pdf-precancelacion');
+    if (btnGenerarPdf) {
+        btnGenerarPdf.addEventListener('click', generarPDFPrecancelacion);
     }
 
     // Botón confirmar final
@@ -918,7 +931,10 @@ async function abrirModalCalculo(idCredito) {
 
         // Resetear resultados
         document.getElementById('resultados-calculo')?.classList.add('hidden');
+        document.getElementById('btn-generar-pdf-precancelacion')?.classList.add('hidden');
         document.getElementById('btn-procesar-precancelacion')?.classList.add('hidden');
+        penalizacionGastosAdminMultiplicador = 1;
+        actualizarBotoneraPenalizacion(1);
 
         // Fecha por defecto
         document.getElementById('fecha-precancelacion').valueAsDate = new Date();
@@ -955,11 +971,14 @@ async function handleCalcularMontos() {
     try {
         beginLoading('Calculando montos...');
 
-        const calculo = await calcularPrecancelacion(creditoActual.id_credito, fechaPrecanc);
+        penalizacionGastosAdminMultiplicador = getPenalizacionGastosAdminMultiplicador();
+
+        const calculo = await calcularPrecancelacion(creditoActual.id_credito, fechaPrecanc, penalizacionGastosAdminMultiplicador);
         calculoPrecancelacion = calculo;
 
         mostrarResultadosCalculo(calculo);
 
+        document.getElementById('btn-generar-pdf-precancelacion')?.classList.remove('hidden');
         document.getElementById('btn-procesar-precancelacion')?.classList.remove('hidden');
 
     } catch (error) {
@@ -970,7 +989,56 @@ async function handleCalcularMontos() {
     }
 }
 
-async function calcularPrecancelacion(idCredito, fechaPrecancelacion) {
+function getPenalizacionGastosAdminMultiplicador() {
+    const activeButton = document.querySelector('.penalizacion-multiplicador-btn.active');
+    const value = parseInt(activeButton?.dataset.multiplicador || '1', 10);
+    if (Number.isNaN(value)) return 1;
+    return Math.min(3, Math.max(1, value));
+}
+
+function actualizarBotoneraPenalizacion(multiplicador) {
+    document.querySelectorAll('.penalizacion-multiplicador-btn').forEach((button) => {
+        const buttonValue = parseInt(button.dataset.multiplicador || '1', 10);
+        button.classList.toggle('active', buttonValue === multiplicador);
+    });
+}
+
+async function handlePenalizacionGastosAdminClick(event) {
+    const button = event.currentTarget;
+    const multiplicador = parseInt(button?.dataset.multiplicador || '1', 10);
+
+    if (Number.isNaN(multiplicador)) return;
+
+    penalizacionGastosAdminMultiplicador = Math.min(3, Math.max(1, multiplicador));
+    actualizarBotoneraPenalizacion(penalizacionGastosAdminMultiplicador);
+
+    if (!creditoActual) return;
+
+    const fechaPrecancelacion = document.getElementById('fecha-precancelacion')?.value;
+    if (!fechaPrecancelacion) return;
+
+    const fechaPrecanc = parseDate(fechaPrecancelacion);
+    const fechaDesembolso = parseDate(creditoActual.fecha_desembolso);
+    if (!fechaPrecanc || fechaPrecanc <= fechaDesembolso) return;
+
+    try {
+        const calculo = await calcularPrecancelacion(
+            creditoActual.id_credito,
+            fechaPrecanc,
+            penalizacionGastosAdminMultiplicador
+        );
+
+        calculoPrecancelacion = calculo;
+        mostrarResultadosCalculo(calculo, { scroll: false });
+        document.getElementById('btn-generar-pdf-precancelacion')?.classList.remove('hidden');
+        document.getElementById('btn-procesar-precancelacion')?.classList.remove('hidden');
+    } catch (error) {
+        console.error('Error al recalcular penalización:', error);
+        showNotification(error.message, 'error');
+    }
+}
+
+async function calcularPrecancelacion(idCredito, fechaPrecancelacion, penalizacionMultiplicador = 1) {
     const credito = creditoActual?.id_credito === idCredito
         ? creditoActual
         : allCreditosPrecancelables.find(c => c.id_credito === idCredito);
@@ -981,7 +1049,7 @@ async function calcularPrecancelacion(idCredito, fechaPrecancelacion) {
         ? tablaAmortizacionPrecancelacionActual
         : await obtenerAmortizacionPrecancelacion(idCredito);
 
-    return construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelacion, idCredito);
+    return construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelacion, idCredito, penalizacionMultiplicador);
 }
 
 async function obtenerAmortizacionPrecancelacion(idCredito) {
@@ -999,7 +1067,7 @@ async function obtenerAmortizacionPrecancelacion(idCredito) {
     return amortizacion;
 }
 
-function construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelacion, idCredito) {
+function construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelacion, idCredito, penalizacionMultiplicador = 1) {
     const fechaEvaluacion = new Date(fechaPrecancelacion);
     fechaEvaluacion.setHours(0, 0, 0, 0);
     const usaTablaAjustadaLegacy = Boolean(
@@ -1047,6 +1115,11 @@ function construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelaci
         (sum, cuota) => sum + parseFloat(cuota.cuota_total || 0),
         0
     );
+    const gastosAdministrativosBasePendientes = cuotasPendientes.reduce(
+        (sum, cuota) => sum + parseFloat(cuota.pago_gastos_admin || 0),
+        0
+    );
+    const gastosAdministrativosCobrados = gastosAdministrativosBasePendientes * penalizacionMultiplicador;
     const ahorroPagado = usaTablaAjustadaLegacy
         ? 0
         : cuotasPagadas * (credito.ahorro_programado_cuota || 0);
@@ -1059,7 +1132,7 @@ function construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelaci
     const tasaDiaria = (tasaMensual * 12) / 365;
     const interesProporcional = capitalPendiente * tasaDiaria * diasTranscurridos;
 
-    const montoPrecancelar = capitalPendiente + interesProporcional;
+    const montoPrecancelar = capitalPendiente + interesProporcional + gastosAdministrativosCobrados;
     const interesPerdonado = Math.max(0, totalCuotasPendientes - montoPrecancelar);
 
     return {
@@ -1069,6 +1142,9 @@ function construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelaci
         cuotasRestantes,
         capitalPendiente,
         totalCuotasPendientes,
+        gastosAdministrativosBasePendientes,
+        gastosAdministrativosCobrados,
+        penalizacionMultiplicador,
         diasTranscurridos,
         interesProporcional,
         interesPerdonado,
@@ -1080,7 +1156,8 @@ function construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelaci
     };
 }
 
-function mostrarResultadosCalculo(calculo) {
+function mostrarResultadosCalculo(calculo, options = {}) {
+    const { scroll = true } = options;
     const ids = {
         'calc-cuotas-pagadas': calculo.cuotasPagadas,
         'calc-cuotas-restantes': calculo.cuotasRestantes,
@@ -1089,9 +1166,13 @@ function mostrarResultadosCalculo(calculo) {
         'calc-interes-proporcional': formatMoney(calculo.interesProporcional),
         'calc-interes-perdonado': formatMoney(calculo.interesPerdonado),
         'calc-total-normal': formatMoney(calculo.totalCuotasPendientes),
+        'calc-gastos-admin-cobrados': formatMoney(calculo.gastosAdministrativosCobrados),
+        'calc-gastos-admin-base': formatMoney(calculo.gastosAdministrativosBasePendientes),
+        'calc-penalizacion-factor': `${calculo.penalizacionMultiplicador}x`,
         'calc-ahorro-devolver': formatMoney(calculo.ahorroDevolver),
         'calc-monto-total': formatMoney(calculo.montoPrecancelar),
         'calc-detalle-pagar': formatMoney(calculo.montoPrecancelar),
+        'calc-detalle-gastos-admin': formatMoney(calculo.gastosAdministrativosCobrados),
         'calc-detalle-devolver': formatMoney(calculo.ahorroDevolver),
         'calc-detalle-ahorro': formatMoney(calculo.interesPerdonado)
     };
@@ -1101,10 +1182,12 @@ function mostrarResultadosCalculo(calculo) {
         if (el) el.textContent = value;
     }
 
+    actualizarBotoneraPenalizacion(calculo.penalizacionMultiplicador || 1);
+
     const resultadosEl = document.getElementById('resultados-calculo');
     resultadosEl?.classList.remove('hidden');
 
-    if (resultadosEl) {
+    if (resultadosEl && scroll) {
         requestAnimationFrame(() => {
             resultadosEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
@@ -1128,6 +1211,8 @@ function abrirModalConfirmacion() {
             <p><strong>Socio:</strong> ${creditoActual.socio?.nombre}</p>
             <p><strong>Fecha:</strong> ${formatDate(calculoPrecancelacion.fechaPrecancelacion)}</p>
             <hr style="border-color: var(--border-color); margin: 1rem 0;">
+            <p><strong>Gastos admin. cobrados:</strong> <span style="color: #f59e0b;">${formatMoney(calculoPrecancelacion.gastosAdministrativosCobrados || 0)}</span></p>
+            <p><strong>Base gastos admin.:</strong> <span style="color: #FCD34D;">${formatMoney(calculoPrecancelacion.gastosAdministrativosBasePendientes || 0)}</span> (${calculoPrecancelacion.penalizacionMultiplicador || 1}x)</p>
             <p><strong>Monto a pagar:</strong> <span style="color: var(--gold); font-size: 1.25rem;">${formatMoney(calculoPrecancelacion.montoPrecancelar)}</span></p>
             <p><strong>Ahorro a devolver:</strong> <span style="color: #60A5FA;">${formatMoney(calculoPrecancelacion.ahorroDevolver)}</span></p>
         </div>
@@ -1138,6 +1223,473 @@ function abrirModalConfirmacion() {
 
     closePrecancModal('modal-calcular-precancelacion');
     openPrecancModal('modal-confirmar-precancelacion');
+}
+
+async function generarPDFPrecancelacion() {
+    if (!creditoActual || !calculoPrecancelacion) {
+        showNotification('Primero calcule los montos de la precancelación', 'warning');
+        return;
+    }
+
+    if (!window.jspdf?.jsPDF) {
+        showNotification('La librería de PDF no está disponible en este momento', 'error');
+        return;
+    }
+
+    const btnPdf = document.getElementById('btn-generar-pdf-precancelacion');
+    const originalHtml = btnPdf?.innerHTML || '';
+
+    try {
+        if (btnPdf) {
+            btnPdf.disabled = true;
+            btnPdf.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        if (typeof doc.autoTable !== 'function') {
+            throw new Error('autoTable no está disponible para generar el detalle');
+        }
+
+        const colors = {
+            primary: [14, 89, 54],
+            secondary: [22, 115, 54],
+            tertiary: [17, 76, 89],
+            contrast1: [191, 75, 33],
+            contrast2: [242, 177, 56],
+            textDark: [51, 51, 51],
+            textSoft: [100, 116, 139],
+            lightGray: [240, 240, 240],
+            successBg: [236, 253, 245],
+            successText: [5, 150, 105]
+        };
+
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 15;
+        const contentWidth = pageWidth - (margin * 2);
+
+        const currentUser = window.getCurrentUser ? window.getCurrentUser() : window.currentUser;
+        const asesorNombre = currentUser?.nombre || currentUser?.full_name || currentUser?.user_metadata?.full_name || 'SISTEMA';
+        const fechaFirma = typeof window.formatDateTime === 'function'
+            ? window.formatDateTime(new Date())
+            : new Date().toLocaleString('es-EC');
+
+        const fechaAcordada = new Date(calculoPrecancelacion.fechaPrecancelacion);
+        fechaAcordada.setHours(0, 0, 0, 0);
+        const escenariosProyeccion = [];
+        for (let offset = 0; offset <= 7; offset++) {
+            const fechaEscenario = new Date(fechaAcordada.getTime());
+            fechaEscenario.setDate(fechaEscenario.getDate() + offset);
+            try {
+                const calculoEscenario = offset === 0
+                    ? calculoPrecancelacion
+                    : await calcularPrecancelacion(
+                        creditoActual.id_credito,
+                        fechaEscenario,
+                        calculoPrecancelacion.penalizacionMultiplicador || 1
+                    );
+
+                escenariosProyeccion.push({
+                    offset,
+                    fecha: fechaEscenario,
+                    calculo: calculoEscenario,
+                    detalle: offset === 0 ? 'Fecha acordada' : `Dia ${offset}`
+                });
+            } catch (error) {
+                escenariosProyeccion.push({
+                    offset,
+                    fecha: fechaEscenario,
+                    calculo: null,
+                    detalle: error.message || 'No disponible'
+                });
+            }
+        }
+
+        const amortizacionPdf = Array.isArray(tablaAmortizacionPrecancelacionActual)
+            ? tablaAmortizacionPrecancelacionActual
+            : await obtenerAmortizacionPrecancelacion(creditoActual.id_credito);
+
+        const cuotaReferencial = parseFloat(
+            creditoActual.cuota_con_ahorro ||
+            amortizacionPdf.find((cuota) => Number(cuota.numero_cuota) === 1)?.cuota_total ||
+            amortizacionPdf[0]?.cuota_total ||
+            0
+        );
+        const plazoCredito = parseInt(creditoActual.plazo || amortizacionPdf.length || 0, 10);
+        const valorFinalCredito = cuotaReferencial > 0
+            ? cuotaReferencial * plazoCredito
+            : amortizacionPdf.reduce((sum, cuota) => sum + parseFloat(cuota.cuota_total || 0), 0);
+
+        const capitalOtorgado = parseFloat(creditoActual.capital || creditoActual.capital_financiado || 0);
+        const ahorroAnticipado = parseFloat(calculoPrecancelacion.interesPerdonado || 0);
+        const ahorroRecolectado = parseFloat(calculoPrecancelacion.ahorroDevolver || 0);
+        const nombreSocio = creditoActual.socio?.nombre || 'Socio no identificado';
+        const codigoCredito = creditoActual.codigo_credito || 'SIN-CODIGO';
+        const modoCalculo = calculoPrecancelacion.usaTablaAjustadaLegacy
+            ? 'Resumen estimado con tabla legacy ajustada.'
+            : 'Resumen estimado con la tabla vigente del crédito.';
+
+        const loadImage = (url) => new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = url;
+        });
+
+        const money = (value) => formatMoney(value || 0);
+        const dateLong = (value) => formatDate(value, { year: 'numeric', month: 'long', day: 'numeric' });
+        const dateShort = (value) => formatDate(value, { year: 'numeric', month: 'short', day: 'numeric' });
+        const dateDisplay = (value) => {
+            const parts = new Intl.DateTimeFormat('es-EC', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            }).formatToParts(value instanceof Date ? value : new Date(value));
+            const day = parts.find((part) => part.type === 'day')?.value || '';
+            const month = parts.find((part) => part.type === 'month')?.value || '';
+            const year = parts.find((part) => part.type === 'year')?.value || '';
+            return `${day} ${month} ${year}`.trim();
+        };
+        const qrPayload = [
+            'INKA CORP',
+            'Documento: Resumen de Precancelacion',
+            `Credito: ${codigoCredito}`,
+            `Socio: ${nombreSocio}`,
+            `Monto estimado: ${money(calculoPrecancelacion.montoPrecancelar)}`,
+            `Ahorro proyectado: ${money(ahorroAnticipado)}`,
+            `Ahorro programado acumulado: ${money(ahorroRecolectado)}`,
+            `Emitido por: ${asesorNombre}`,
+            `Fecha: ${fechaFirma}`
+        ].join('\n');
+        const logoImg = await loadImage('https://lh3.googleusercontent.com/d/15J6Aj6ZwkVrmDfs6uyVk-oG0Mqr-i9Jn=w2048?name=inka%20corp%20normal.png');
+        const qrImg = await loadImage(`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrPayload)}`);
+        const splitSocio = doc.splitTextToSize(`Socio: ${nombreSocio}`, 88);
+        const splitFecha = doc.splitTextToSize(`Emitido: ${fechaFirma}`, 42);
+        const splitModo = doc.splitTextToSize(modoCalculo, 42);
+
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, 0, pageWidth, pageHeight, 'F');
+        doc.setFillColor(...colors.primary);
+        doc.rect(0, 0, pageWidth, 3, 'F');
+        doc.setFillColor(248, 250, 252);
+        doc.rect(0, 3, pageWidth, 44, 'F');
+
+        if (logoImg) {
+            try {
+                doc.addImage(logoImg, 'PNG', margin, 7, 24, 24);
+            } catch (error) {
+                console.error('Error adding logo to precancelacion PDF:', error);
+            }
+        }
+
+        doc.setTextColor(...colors.primary);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(17);
+        doc.text('RESUMEN DE PRECANCELACION', 45, 15);
+        doc.setDrawColor(...colors.lightGray);
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(148, 8, 47, 28, 3, 3, 'FD');
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...colors.textSoft);
+        doc.setFontSize(11);
+        doc.text(`Credito ${codigoCredito}`, 45, 23);
+        doc.text(splitSocio, 45, 29);
+        doc.setFontSize(8.5);
+        doc.text(splitFecha, 151, 15);
+        doc.text(splitModo, 151, 24);
+
+        let y = 54;
+
+        doc.setFillColor(...colors.successBg);
+        doc.roundedRect(margin, y, contentWidth, 24, 4, 4, 'F');
+        doc.setDrawColor(...colors.secondary);
+        doc.setLineWidth(0.8);
+        doc.roundedRect(margin, y, contentWidth, 24, 4, 4, 'S');
+        doc.setTextColor(...colors.successText);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('HACIENDO TU PRECANCELACION AHORRARAS', pageWidth / 2, y + 8, { align: 'center' });
+        doc.setFontSize(22);
+        doc.text(money(ahorroAnticipado), pageWidth / 2, y + 18, { align: 'center' });
+
+        y += 31;
+
+        const drawMetricCard = (x, posY, width, height, label, value, accent = colors.primary) => {
+            doc.setFillColor(255, 255, 255);
+            doc.setDrawColor(...accent);
+            doc.setLineWidth(0.6);
+            doc.roundedRect(x, posY, width, height, 3, 3, 'S');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.setTextColor(...colors.textSoft);
+            doc.text(label.toUpperCase(), x + 4, posY + 7);
+            doc.setFontSize(12);
+            doc.setTextColor(...colors.textDark);
+            doc.text(value, x + 4, posY + 15);
+        };
+
+        const drawAmountDueCard = (x, posY, width, height, label, value, fechaTexto, accent = colors.contrast1) => {
+            doc.setFillColor(255, 255, 255);
+            doc.setDrawColor(...accent);
+            doc.setLineWidth(0.6);
+            doc.roundedRect(x, posY, width, height, 3, 3, 'S');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.5);
+            doc.setTextColor(...colors.textSoft);
+            doc.text(label.toUpperCase(), x + 4, posY + 5.5);
+            doc.setFontSize(12);
+            doc.setTextColor(...colors.textDark);
+            doc.text(value, x + 4, posY + 13.5);
+            doc.setDrawColor(...colors.lightGray);
+            doc.setLineWidth(0.3);
+            doc.line(x + (width / 2), posY + 7, x + (width / 2), posY + height - 3);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(...colors.contrast1);
+            doc.text('FECHA ELEGIDA', x + (width / 2) + 4, posY + 9.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8.8);
+            doc.text(fechaTexto, x + (width / 2) + 4, posY + 15.8);
+        };
+
+        const cardGap = 5;
+        const cardWidth = (contentWidth - cardGap) / 2;
+        drawMetricCard(margin, y, cardWidth, 20, 'Capital otorgado', money(capitalOtorgado), colors.primary);
+        drawMetricCard(margin + cardWidth + cardGap, y, cardWidth, 20, 'Valor final del credito', money(valorFinalCredito), colors.contrast2);
+        y += 24;
+        drawMetricCard(margin, y, cardWidth, 20, 'Descuento por pago anticipado', money(ahorroAnticipado), colors.secondary);
+        drawMetricCard(margin + cardWidth + cardGap, y, cardWidth, 20, 'Ahorro programado acumulado', money(ahorroRecolectado), colors.tertiary);
+        y += 24;
+        drawAmountDueCard(
+            margin,
+            y,
+            contentWidth,
+            21,
+            'Valor a pagar en la fecha elegida',
+            money(calculoPrecancelacion.montoPrecancelar),
+            dateDisplay(fechaAcordada),
+            colors.contrast1
+        );
+        y += 29;
+
+
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10.5);
+        doc.setTextColor(...colors.primary);
+        const proyeccionIntro = doc.splitTextToSize(
+            'Si no puede realizar el pago en la fecha acordada, aqui le compartimos una guia clara con los valores estimados para los siguientes 7 dias. Recuerde que, mientras antes concrete su precancelacion, mayor sera el ahorro que obtiene.',
+            contentWidth
+        );
+        doc.text(proyeccionIntro, margin, y);
+        y += proyeccionIntro.length * 5 + 4;
+
+        const escenariosBody = escenariosProyeccion.map((escenario) => {
+            if (!escenario.calculo) {
+                return [
+                    escenario.detalle,
+                    dateLong(escenario.fecha),
+                    '-',
+                    '-',
+                    '-',
+                    '-',
+                    escenario.detalle
+                ];
+            }
+
+            return [
+                escenario.offset === 0 ? 'Fecha acordada' : `+${escenario.offset} dia${escenario.offset === 1 ? '' : 's'}`,
+                dateLong(escenario.fecha),
+                money(escenario.calculo.interesProporcional),
+                money(escenario.calculo.montoPrecancelar),
+                money(escenario.calculo.interesPerdonado),
+                escenario.offset === 0 ? 'Valor base' : 'Proyeccion diaria'
+            ];
+        });
+
+        doc.autoTable({
+            startY: y,
+            head: [['Escenario', 'Fecha de pago', 'Interes proporcional', 'Monto a pagar', 'Ahorro obtenido', 'Detalle']],
+            body: escenariosBody,
+            theme: 'grid',
+            styles: {
+                font: 'helvetica',
+                fontSize: 7.6,
+                cellPadding: 2.1,
+                textColor: colors.textDark
+            },
+            headStyles: {
+                fillColor: colors.primary,
+                textColor: [255, 255, 255],
+                fontStyle: 'bold'
+            },
+            alternateRowStyles: {
+                fillColor: [248, 250, 252]
+            },
+            columnStyles: {
+                0: { cellWidth: 22 },
+                1: { cellWidth: 40 },
+                2: { cellWidth: 30 },
+                3: { cellWidth: 30 },
+                4: { cellWidth: 30 },
+                5: { cellWidth: 28 }
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index === 3) {
+                    data.cell.styles.fillColor = [255, 244, 229];
+                    data.cell.styles.textColor = colors.contrast1;
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.lineColor = [245, 158, 11];
+                    data.cell.styles.lineWidth = 0.2;
+                }
+            },
+            margin: { left: margin, right: margin }
+        });
+
+        y = doc.lastAutoTable.finalY + 5;
+        doc.addPage();
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, 0, pageWidth, pageHeight, 'F');
+        doc.setFillColor(248, 250, 252);
+        doc.rect(0, 0, pageWidth, 24, 'F');
+        doc.setTextColor(...colors.primary);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text('DETALLE DE PAGOS DEL CREDITO', margin, 15);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...colors.textSoft);
+        doc.setFontSize(9);
+        doc.text('Tabla de cuotas con estado actualizado y ahorro programado por cuota.', margin, 21);
+
+        const amortizacionBody = amortizacionPdf.map((cuota) => [
+            String(cuota.numero_cuota || '-'),
+            dateShort(cuota.fecha_vencimiento),
+            money(cuota.cuota_total || 0),
+            money(cuota.ahorro_programado || 0),
+            cuota.estado_cuota === 'PAGADO' ? 'Pagada' : 'Pendiente'
+        ]);
+
+        doc.autoTable({
+            startY: 30,
+            head: [['No. cuota', 'Fecha de cobro', 'Valor de cuota', 'Ahorro programado', 'Estado']],
+            body: amortizacionBody,
+            theme: 'striped',
+            styles: {
+                font: 'helvetica',
+                fontSize: 8,
+                cellPadding: 2.2,
+                textColor: colors.textDark
+            },
+            headStyles: {
+                fillColor: colors.tertiary,
+                textColor: [255, 255, 255],
+                fontStyle: 'bold'
+            },
+            alternateRowStyles: {
+                fillColor: [247, 250, 252]
+            },
+            columnStyles: {
+                0: { cellWidth: 20 },
+                1: { cellWidth: 36 },
+                2: { cellWidth: 36 },
+                3: { cellWidth: 40 },
+                4: { cellWidth: 26 }
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index === 4) {
+                    const estado = String(data.cell.raw || '').toLowerCase();
+                    if (estado === 'pagada') {
+                        data.cell.styles.fillColor = [236, 253, 245];
+                        data.cell.styles.textColor = [5, 150, 105];
+                    } else {
+                        data.cell.styles.fillColor = [255, 247, 237];
+                        data.cell.styles.textColor = [234, 88, 12];
+                    }
+                    data.cell.styles.fontStyle = 'bold';
+                }
+            },
+            margin: { left: margin, right: margin }
+        });
+
+        y = doc.lastAutoTable.finalY + 8;
+        if (y > pageHeight - 56) {
+            doc.addPage();
+            y = 24;
+        }
+
+        doc.setFillColor(...colors.lightGray);
+        doc.roundedRect(margin, y, contentWidth, 28, 3, 3, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.primary);
+        doc.setFontSize(10.5);
+        doc.text('Mensaje de agradecimiento', margin + 4, y + 7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...colors.textDark);
+        doc.setFontSize(9);
+        const gratitudeText = doc.splitTextToSize(
+            'Agradecemos profundamente su preferencia y la confianza que deposita en INKA CORP. Esta propuesta ha sido preparada para destacar el beneficio economico de su precancelacion y facilitar una decision oportuna, clara y favorable para usted.',
+            contentWidth - 8
+        );
+        doc.text(gratitudeText, margin + 4, y + 13);
+
+        y += 36;
+        if (y > pageHeight - 56) {
+            doc.addPage();
+            y = 24;
+        }
+
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(...colors.primary);
+        doc.roundedRect(margin, y, contentWidth, 36, 3, 3, 'S');
+        if (qrImg) {
+            try {
+                doc.addImage(qrImg, 'PNG', margin + 4, y + 4, 24, 24);
+            } catch (error) {
+                console.error('Error adding QR to precancelacion PDF:', error);
+            }
+        } else {
+            doc.setFillColor(...colors.lightGray);
+            doc.roundedRect(margin + 4, y + 4, 24, 24, 2, 2, 'F');
+            doc.setTextColor(...colors.textSoft);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.text('QR', margin + 16, y + 18, { align: 'center' });
+        }
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.textDark);
+        doc.setFontSize(10);
+        doc.text('FIRMA ELECTRONICA VALIDADA', margin + 34, y + 10);
+        doc.text(String(asesorNombre).toUpperCase(), margin + 34, y + 17);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.text(`Fecha y hora: ${fechaFirma}`, margin + 34, y + 24);
+        doc.text(`Codigo de verificacion: ${codigoCredito}`, margin + 34, y + 30);
+
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            doc.setDrawColor(...colors.lightGray);
+            doc.line(margin, 287, pageWidth - margin, 287);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(...colors.textSoft);
+            doc.text('INKA CORP - Resumen de Precancelacion', margin, 292);
+            doc.text(`Pagina ${i} de ${totalPages}`, pageWidth - margin, 292, { align: 'right' });
+        }
+
+        const safeSocio = String(nombreSocio || 'Socio').replace(/\s+/g, '_').replace(/[^A-Za-z0-9_]/g, '');
+        doc.save(`Precancelacion_${codigoCredito}_${safeSocio}.pdf`);
+    } catch (error) {
+        console.error('Error generando PDF de precancelacion:', error);
+        showNotification(`No se pudo generar el PDF: ${error.message}`, 'error');
+    } finally {
+        if (btnPdf) {
+            btnPdf.disabled = false;
+            btnPdf.innerHTML = originalHtml;
+        }
+    }
 }
 
 async function handleConfirmarPrecancelacion() {
