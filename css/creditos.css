@@ -1475,6 +1475,7 @@
 .credito-row.row-status-pendiente { background-color: rgba(139, 92, 246, 0.03); }
 .credito-row.row-status-precancelado { background-color: rgba(59, 130, 246, 0.03); }
 .credito-row.row-status-cancelado { background-color: rgba(107, 114, 128, 0.02); }
+.credito-row.row-status-anulado { background-color: rgba(0, 0, 0, 0.1); border-left: 3px solid #000; }
 
 /* Arreglo de contraste para nombres en tabla de créditos */
 .socio-info {

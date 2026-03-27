@@ -319,6 +319,30 @@
                 <textarea id="confirm-observaciones" class="form-input" rows="3"
                     placeholder="Observaciones adicionales..."></textarea>
             </div>
+
+            <!-- Comprobante File Upload -->
+            <div class="form-group">
+                <label class="form-label">Comprobante de Pagó <span style="color: #e74c3c;">*</span></label>
+                <div id="precanc-comprobante-upload" class="drag-drop-zone" 
+                    style="border: 2px dashed #3498db; border-radius: 0.5rem; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s; background: #ecf0f1;">
+                    <i class="fas fa-cloud-upload-alt" style="font-size: 2.5rem; color: #3498db; margin-bottom: 1rem;"></i>
+                    <p style="margin: 0.5rem 0; color: #2c3e50; font-weight: 500;">Arrastra una foto o documento aquí</p>
+                    <p style="margin: 0.5rem 0; color: #7f8c8d; font-size: 0.9rem;">o</p>
+                    <button type="button" id="precanc-comprobante-btn" class="btn btn-sm btn-info" onclick="document.getElementById('precanc-comprobante-file').click();" style="margin-top: 0.5rem;">
+                        <i class="fas fa-camera"></i> Seleccionar Archivo
+                    </button>
+                    <input type="file" id="precanc-comprobante-file" accept="image/*,.pdf" style="display: none;">
+                </div>
+                <div id="precanc-comprobante-preview" style="margin-top: 1rem; display: none;">
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e0e0e0;">
+                        <p style="margin: 0; color: #7f8c8d; font-size: 0.85rem;">Archivo seleccionado:</p>
+                        <p id="precanc-comprobante-name" style="margin: 0.5rem 0; color: #2c3e50; font-weight: 500;"></p>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById('precanc-comprobante-file').value=''; document.getElementById('precanc-comprobante-preview').style.display='none';">
+                            <i class="fas fa-trash"></i> Cambiar
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" data-close-modal>Cancelar</button>

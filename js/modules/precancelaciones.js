@@ -113,6 +113,11 @@ function openPrecancModal(modalId) {
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+
+    // Si es el modal de confirmación, inicializar drag-drop para comprobante
+    if (modalId === 'modal-confirmar-precancelacion') {
+        initializeComprobanteUpload();
+    }
 }
 
 function closePrecancModal(modalId) {
@@ -125,6 +130,60 @@ function closePrecancModal(modalId) {
     const anyOpen = document.querySelector('.modal:not(.hidden)');
     if (!anyOpen) {
         document.body.style.overflow = '';
+    }
+}
+
+// Inicializa los event listeners para la zona de drag-drop del comprobante
+function initializeComprobanteUpload() {
+    const uploadZone = document.getElementById('precanc-comprobante-upload');
+    const fileInput = document.getElementById('precanc-comprobante-file');
+    const preview = document.getElementById('precanc-comprobante-preview');
+    const fileName = document.getElementById('precanc-comprobante-name');
+
+    if (!uploadZone || !fileInput) return;
+
+    // Click en zona de upload abre el file input
+    uploadZone.addEventListener('click', () => fileInput.click(), { once: false });
+
+    // Drag over: cambiar estilo
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadZone.style.borderColor = '#10b981';
+        uploadZone.style.backgroundColor = 'rgba(16,185,129,0.1)';
+    });
+
+    // Drag leave: volver al estilo normal
+    uploadZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadZone.style.borderColor = '#3498db';
+        uploadZone.style.backgroundColor = '#ecf0f1';
+    });
+
+    // Drop: procesar archivo
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadZone.style.borderColor = '#3498db';
+        uploadZone.style.backgroundColor = '#ecf0f1';
+
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            updateComprobantePreview();
+        }
+    });
+
+    // Cambio de archivo desde el input
+    fileInput.addEventListener('change', updateComprobantePreview);
+
+    function updateComprobantePreview() {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            fileName.textContent = file.name;
+            uploadZone.style.display = 'none';
+            preview.style.display = 'block';
+        }
     }
 }
 
@@ -791,7 +850,7 @@ function renderHistorialRow(precancelacion) {
     const fecha = formatDate(precancelacion.fecha_precancelacion);
 
     return `
-        <tr data-precancelacion-id="${precancelacion.id}">
+        <tr data-precancelacion-id="${precancelacion.id_precancelacion}">
             <td>
                 <span class="fecha-precancelacion">${fecha}</span>
             </td>
@@ -806,13 +865,13 @@ function renderHistorialRow(precancelacion) {
             </td>
             <td class="text-right">${formatMoney(precancelacion.capital_pendiente)}</td>
             <td class="text-right">
-                <span class="monto-pagado">${formatMoney(precancelacion.monto_total_pagado)}</span>
+                <span class="monto-pagado">${formatMoney(precancelacion.monto_precancelacion)}</span>
             </td>
             <td class="text-right">
                 <span class="ahorro-devuelto">${formatMoney(precancelacion.ahorro_devuelto)}</span>
             </td>
             <td class="text-center">
-                <button class="btn-ver-detalle" onclick="verDetallePrecancelacion('${precancelacion.id}')">
+                <button class="btn-ver-detalle" onclick="verDetallePrecancelacion('${precancelacion.id_precancelacion}')">
                     <i class="fas fa-eye"></i>
                     <span>Ver</span>
                 </button>
@@ -1695,20 +1754,84 @@ async function generarPDFPrecancelacion() {
 async function handleConfirmarPrecancelacion() {
     if (!calculoPrecancelacion || !creditoActual) return;
 
+    // ========================================
+    // PASO 1: VALIDAR QUE TENEMOS COMPROBANTE
+    // ========================================
+    const fileInput = document.getElementById('precanc-comprobante-file');
+    if (!fileInput || fileInput.files.length === 0) {
+        showNotification('Por favor selecciona un comprobante de pago', 'warning');
+        return;
+    }
+
+    const comprobanteFile = fileInput.files[0];
     const referencia = document.getElementById('confirm-referencia')?.value || '';
     const observaciones = document.getElementById('confirm-observaciones')?.value || '';
 
+    // ========================================
+    // PASO 2: CONFIRMAR IRREVERSIBILIDAD
+    // ========================================
+    const confirmResult = await Swal.fire({
+        icon: 'warning',
+        width: '520px',
+        background: '#111827',
+        color: '#f8fafc',
+        title: '<span style="color:#fca5a5; font-size:1.35rem; font-weight:800;">⚠️ ACCIÓN IRREVERSIBLE</span>',
+        html: `
+            <div style="text-align:left; padding:1.5rem 1rem;">
+                <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.28); border-radius:0.5rem; padding:1rem; margin-bottom:1rem;">
+                    <p style="margin:0.5rem 0; color:#fecaca; font-weight:600;">
+                        <i class="fas fa-check-circle" style="margin-right:0.5rem; color:#ef4444;"></i>
+                        Una vez confirmada, esta precancelación NO se podrá deshacer.
+                    </p>
+                    <p style="margin:0.5rem 0; color:#e5e7eb;">
+                        • El crédito cambiará a estado <strong>PRECANCELADO</strong>
+                    </p>
+                    <p style="margin:0.5rem 0; color:#e5e7eb;">
+                        • Se registrará un ingreso de <strong>${formatMoney(calculoPrecancelacion.montoPrecancelar)}</strong> en caja
+                    </p>
+                    <p style="margin:0.5rem 0; color:#e5e7eb;">
+                        • Se devolverá ahorro de <strong>${formatMoney(calculoPrecancelacion.ahorroDevolver)}</strong> al socio
+                    </p>
+                    <p style="margin:0; color:#e5e7eb;">
+                        • Las cuotas pendientes se marcarán como pagadas
+                    </p>
+                </div>
+                <p style="margin:0.5rem 0; color:#94a3b8; font-size:0.9rem;">
+                    <strong>Crédito:</strong> ${creditoActual.codigo_credito} - ${creditoActual.socio?.nombre}
+                </p>
+                <p style="margin:0; color:#94a3b8; font-size:0.9rem;">
+                    <strong>Monto a pagar:</strong> ${formatMoney(calculoPrecancelacion.montoPrecancelar)}
+                </p>
+                <p style="margin:0.5rem 0; color:#10b981; font-size:0.9rem; font-weight:600;">
+                    <i class="fas fa-check"></i> Comprobante: ${comprobanteFile.name}
+                </p>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'SÍ, PROCESAR PRECANCELACIÓN',
+        cancelButtonText: 'CANCELAR',
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#4b5563'
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
+    // ========================================
+    // PASO 3: PROCESAR LA PRECANCELACIÓN
+    // ========================================
     try {
         beginLoading('Procesando precancelación...');
 
-        await ejecutarProcesamiento(calculoPrecancelacion, referencia, observaciones);
+        await ejecutarProcesamiento(calculoPrecancelacion, referencia, observaciones, comprobanteFile);
 
-        showNotification('Precancelación completada con éxito', 'success');
+        showNotification('Precancelación completada con éxito ✓', 'success');
         closePrecancModal('modal-confirmar-precancelacion');
 
-        // Limpiar formulario
+        // Limpiar formulario y file input
         document.getElementById('confirm-referencia').value = '';
         document.getElementById('confirm-observaciones').value = '';
+        document.getElementById('precanc-comprobante-file').value = '';
+        document.getElementById('precanc-comprobante-preview').style.display = 'none';
 
         // Recargar datos
         await refreshPrecancelaciones();
@@ -1721,11 +1844,29 @@ async function handleConfirmarPrecancelacion() {
     }
 }
 
-async function ejecutarProcesamiento(calculo, referencia, observacion) {
+async function ejecutarProcesamiento(calculo, referencia, observacion, comprobanteFile) {
     const supabase = window.getSupabaseClient();
     const user = window.getCurrentUser();
 
-    // 1. Insertar registro de precancelación
+    let comprobanteUrl = null;
+
+    // 0. SUBIR COMPROBANTE A STORAGE (si se proporcionó)
+    if (comprobanteFile) {
+        const uploadRes = await window.uploadFileToStorage(
+            comprobanteFile,
+            'precancelaciones',
+            creditoActual.id_credito,
+            'inkacorp'
+        );
+
+        if (!uploadRes.success) {
+            throw new Error(`No se pudo subir el comprobante: ${uploadRes.error}`);
+        }
+
+        comprobanteUrl = uploadRes.url;
+    }
+
+    // 1. Insertar registro de precancelación con COLUMNAS CORRECTAS
     const { data: precanc, error: errP } = await supabase
         .from('ic_creditos_precancelacion')
         .insert({
@@ -1739,8 +1880,8 @@ async function ejecutarProcesamiento(calculo, referencia, observacion) {
             interes_perdonado: calculo.interesPerdonado,
             ahorro_acumulado: calculo.ahorroDevolver,
             ahorro_devuelto: calculo.ahorroDevolver,
-            monto_total_pagado: calculo.montoPrecancelar,
-            referencia_pago: referencia,
+            monto_precancelacion: calculo.montoPrecancelar,  // ✅ COLUMNA CORRECTA
+            comprobante_url: comprobanteUrl,                   // ✅ COLUMNA CORRECTA
             observacion: observacion,
             procesado_por: user?.id
         })
@@ -1757,10 +1898,10 @@ async function ejecutarProcesamiento(calculo, referencia, observacion) {
 
     if (errC) throw errC;
 
-    // 3. Cancelar cuotas pendientes
+    // 3. Actualizar cuotas pendientes a PAGADO
     const { error: errA } = await supabase
         .from('ic_creditos_amortizacion')
-        .update({ estado_cuota: 'CANCELADO' })
+        .update({ estado_cuota: 'PAGADO' })
         .eq('id_credito', calculo.idCredito)
         .eq('estado_cuota', 'PENDIENTE');
 
@@ -1778,7 +1919,7 @@ async function ejecutarProcesamiento(calculo, referencia, observacion) {
 // VER DETALLE PRECANCELACIÓN
 // ==========================================
 function verDetallePrecancelacion(idPrecancelacion) {
-    const precanc = historialPrecancelaciones.find(p => p.id === idPrecancelacion);
+    const precanc = historialPrecancelaciones.find(p => p.id_precancelacion === idPrecancelacion);
     if (!precanc) {
         showNotification('Precancelación no encontrada', 'error');
         return;
@@ -1854,7 +1995,7 @@ function verDetallePrecancelacion(idPrecancelacion) {
                 </div>
                 <div class="resumen-item highlight pagar">
                     <div class="resumen-label"><i class="fas fa-dollar-sign"></i> Monto Pagado</div>
-                    <div class="resumen-value">${formatMoney(precanc.monto_total_pagado)}</div>
+                    <div class="resumen-value">${formatMoney(precanc.monto_precancelacion)}</div>
                 </div>
             </div>
 

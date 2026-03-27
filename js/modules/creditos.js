@@ -511,7 +511,8 @@ function applySorting() {
         'PAUSADO': 3,
         'PRECANCELADO': 4,
         'CANCELADO': 5,
-        'PENDIENTE': 6
+        'PENDIENTE': 6,
+        'ANULADO': 7
     };
 
     filteredCreditos.sort((a, b) => {
@@ -916,7 +917,8 @@ function getEstadoBadgeCredito(estado) {
         'CANCELADO': '<span class="badge-cancelado">CANCELADO</span>',
         'PRECANCELADO': '<span class="badge-precancelado">PRECANCELADO</span>',
         'PAUSADO': '<span class="badge-pausado">PAUSADO</span>',
-        'PENDIENTE': '<span class="badge-pendiente">PENDIENTE</span>'
+        'PENDIENTE': '<span class="badge-pendiente">PENDIENTE</span>',
+        'ANULADO': '<span class="badge-anulado">ANULADO</span>'
     };
     return badges[estado] || `<span class="badge">${estado}</span>`;
 }
