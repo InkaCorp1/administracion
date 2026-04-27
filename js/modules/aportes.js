@@ -1,20 +1,21 @@
-/**
- * INKA CORP - Módulo de Aportes Semanales
- * Maneja el registro y gestión de aportes de socios
+﻿/**
+ * INKA CORP - MÃ³dulo de Aportes Semanales
+ * Maneja el registro y gestiÃ³n de aportes de socios
  */
 
-// Estado del módulo
+// Estado del mÃ³dulo
 let aportesData = [];
 let sociosAportes = [];
 let selectedAporteFiles = [];
 let filtroSemanaSeleccionada = null; // null significa "Vista Reciente / Todo"
 let forcedTargetWeek = null; // Para bloquear la semana al completar aportes con fecha actual
+let maxSemanaHabilitadaExtra = 0; // Almacena la semana futura mÃ¡s alta creada manualmente
 
-// Configuración de fechas para cálculo de semanas
+// ConfiguraciÃ³n de fechas para cÃ¡lculo de semanas
 const ANCHOR_DATE = new Date(2025, 10, 17, 12, 0, 0); // Lunes 17 Nov
 
 /**
- * Calcula el número de semana para una fecha dada
+ * Calcula el nÃºmero de semana para una fecha dada
  */
 function getWeekNumber(date) {
     const d = new Date(date);
@@ -27,20 +28,20 @@ function getWeekNumber(date) {
 }
 
 /**
- * Obtiene el número de semana actual
+ * Obtiene el nÃºmero de semana actual
  */
 function getCurrentWeekNumber() {
     return getWeekNumber(new Date());
 }
 
-// Función para alternar visibilidad de detalles de aportes agrupados
+// FunciÃ³n para alternar visibilidad de detalles de aportes agrupados
 window.toggleDetalleAportes = function(id) {
     const el = document.getElementById('detalle_' + id);
     if (!el) return;
     
     if (el.classList.contains('hidden')) {
         el.classList.remove('hidden');
-        // Transición suave
+        // TransiciÃ³n suave
         setTimeout(() => {
             el.style.opacity = '1';
         }, 10);
@@ -53,10 +54,10 @@ window.toggleDetalleAportes = function(id) {
 };
 
 /**
- * Inicializa el módulo de Aportes Semanales
+ * Inicializa el mÃ³dulo de Aportes Semanales
  */
 async function initAportesModule() {
-    // Resetear filtro de semana al iniciar el módulo
+    // Resetear filtro de semana al iniciar el mÃ³dulo
     filtroSemanaSeleccionada = null;
 
     // Configurar event listeners
@@ -70,10 +71,10 @@ async function initAportesModule() {
 }
 
 /**
- * Configura los event listeners del módulo
+ * Configura los event listeners del mÃ³dulo
  */
 function setupAportesEventListeners() {
-    // Botón Nuevo Aporte
+    // BotÃ³n Nuevo Aporte
     const btnNuevo = document.getElementById('btn-nuevo-aporte');
     if (btnNuevo) {
         btnNuevo.addEventListener('click', () => {
@@ -91,7 +92,7 @@ function setupAportesEventListeners() {
         });
     }
 
-    // Botón Historial Completo
+    // BotÃ³n Historial Completo
     const btnHistorial = document.getElementById('btn-ver-historial-completo');
     if (btnHistorial) {
         btnHistorial.addEventListener('click', async () => {
@@ -103,7 +104,7 @@ function setupAportesEventListeners() {
         });
     }
 
-    // Botón Pendientes
+    // BotÃ³n Pendientes
     const btnPendientes = document.getElementById('btn-ver-pendientes');
     if (btnPendientes) {
         btnPendientes.addEventListener('click', verAportesPendientes);
@@ -133,8 +134,8 @@ function setupAportesEventListeners() {
     if (multiCheck && fileInput) {
         multiCheck.addEventListener('change', () => {
             fileInput.multiple = multiCheck.checked;
-            // No reseteamos automáticamente para permitir que el usuario 
-            // cambie de opinión antes de subir, pero informamos si ya hay algo
+            // No reseteamos automÃ¡ticamente para permitir que el usuario 
+            // cambie de opiniÃ³n antes de subir, pero informamos si ya hay algo
             if (selectedAporteFiles.length > 0) {
                 resetAporteImage();
             }
@@ -156,6 +157,7 @@ function setupAportesEventListeners() {
     if (inputFecha) inputFecha.addEventListener('change', updateStatusSemana);
     if (selectWeekOverride) selectWeekOverride.addEventListener('change', () => {
         const val = selectWeekOverride.value;
+        if (val === 'NEW_FUTURE') return; // Se maneja en llenarSelectorSemanasManual
         forcedTargetWeek = val ? parseInt(val) : null;
         updateStatusSemana();
     });
@@ -289,7 +291,7 @@ function setupAportesEventListeners() {
         btnFilter.addEventListener('click', cargarHistorialCompleto);
     }
 
-    // Botón Reporte General PDF
+    // BotÃ³n Reporte General PDF
     const btnReportePDF = document.getElementById('btn-reporte-general-aportes');
     if (btnReportePDF) {
         btnReportePDF.addEventListener('click', generateAportesReport);
@@ -297,7 +299,7 @@ function setupAportesEventListeners() {
 }
 
 /**
- * Cierra todos los modales del módulo
+ * Cierra todos los modales del mÃ³dulo
  */
 function closeAllModals() {
     const modals = document.querySelectorAll('.modal');
@@ -308,7 +310,7 @@ function closeAllModals() {
 }
 
 /**
- * Maneja la selección de archivo de comprobante
+ * Maneja la selecciÃ³n de archivo de comprobante
  */
 function handleAporteFileSelect(files) {
     const isMulti = document.getElementById('aporte-multi-comprobante')?.checked;
@@ -316,7 +318,7 @@ function handleAporteFileSelect(files) {
     // Validar tipos
     const validFiles = files.filter(f => f.type.startsWith('image/'));
     if (validFiles.length < files.length) {
-        showAlert('Algunos archivos no son imágenes válidas y fueron ignorados', 'Aviso', 'warning');
+        showAlert('Algunos archivos no son imÃ¡genes vÃ¡lidas y fueron ignorados', 'Aviso', 'warning');
     }
 
     if (!isMulti) {
@@ -399,8 +401,8 @@ async function cargarDatosAportes() {
         const supabase = window.getSupabaseClient();
         if (!supabase) return;
 
-        // Intentar cargar aportes (limitado a los últimos de la semana para el dashboard)
-        // Usamos una tabla hipotética ic_aportes_semanales
+        // Intentar cargar aportes (limitado a los Ãºltimos de la semana para el dashboard)
+        // Usamos una tabla hipotÃ©tica ic_aportes_semanales
         const { data, error } = await supabase
             .from('ic_aportes_semanales')
             .select('*, socio:ic_socios!id_socio(nombre)')
@@ -408,7 +410,7 @@ async function cargarDatosAportes() {
 
         if (error) {
             console.warn('Error cargando aportes (posible tabla inexistente):', error.message);
-            // Si la tabla no existe, mostramos mensaje vacío
+            // Si la tabla no existe, mostramos mensaje vacÃ­o
             renderAportesRecientes([]);
             return;
         }
@@ -423,7 +425,7 @@ async function cargarDatosAportes() {
 
 /**
  * Renderiza la tabla de aportes recientes (mini-historial)
- * Mostramos el último aporte de cada persona en la semana actual
+ * Mostramos el Ãºltimo aporte de cada persona en la semana actual
  */
 function renderAportesRecientes(data) {
     const listContainer = document.getElementById('lista-aportes-recientes');
@@ -432,10 +434,10 @@ function renderAportesRecientes(data) {
     // Obtener semana actual
     const currentWeekNum = getCurrentWeekNumber();
 
-    // Determinar qué semana estamos auditando para las estadísticas
+    // Determinar quÃ© semana estamos auditando para las estadÃ­sticas
     const targetWeek = filtroSemanaSeleccionada || currentWeekNum;
     
-    // Calcular estadísticas basadas SIEMPRE en la semana (actual o seleccionada)
+    // Calcular estadÃ­sticas basadas SIEMPRE en la semana (actual o seleccionada)
     const aportesDeLaSemana = data.filter(a => {
         // Priorizar semana forzada
         if (a.sub_semana && !isNaN(a.sub_semana)) {
@@ -448,13 +450,13 @@ function renderAportesRecientes(data) {
     const sociosUnicos = new Set(aportesDeLaSemana.map(a => a.id_socio));
     const totalCajaSemana = aportesDeLaSemana.reduce((sum, a) => sum + parseFloat(a.monto || 0), 0);
 
-    // Actualizar estadísticas del dashboard
+    // Actualizar estadÃ­sticas del dashboard
     updateAportesStats(sociosUnicos, totalCajaSemana, aportesDeLaSemana.length);
 
-    // Determinar qué mostrar en la TABLA (la vista de "Movimientos Recientes")
+    // Determinar quÃ© mostrar en la TABLA (la vista de "Movimientos Recientes")
     const aportesAMostrar = filtroSemanaSeleccionada 
         ? aportesDeLaSemana // Si hay filtro, mostramos solo lo filtrado
-        : data.slice(0, 10); // Vista por defecto: últimos 10 movimientos globales
+        : data.slice(0, 10); // Vista por defecto: Ãºltimos 10 movimientos globales
 
     // Actualizar Label de Semana en el Dashboard
     const weekLabel = document.getElementById('current-week-label');
@@ -467,9 +469,9 @@ function renderAportesRecientes(data) {
         const satLabel = sat.toLocaleDateString('es-EC', {day:'numeric', month:'short'});
         
         if (filtroSemanaSeleccionada) {
-            weekLabel.innerHTML = `Semana ${filtroSemanaSeleccionada} (SÁB ${satLabel}) <i class="fas fa-chevron-down" style="font-size: 0.7rem; margin-left: 5px;"></i>`;
+            weekLabel.innerHTML = `Semana ${filtroSemanaSeleccionada} (SÃB ${satLabel}) <i class="fas fa-chevron-down" style="font-size: 0.7rem; margin-left: 5px;"></i>`;
         } else {
-            weekLabel.innerHTML = `Semana ${currentWeekNum} (SÁB ${satLabel}) <i class="fas fa-chevron-down" style="font-size: 0.7rem; margin-left: 5px;"></i>`;
+            weekLabel.innerHTML = `Semana ${currentWeekNum} (SÃB ${satLabel}) <i class="fas fa-chevron-down" style="font-size: 0.7rem; margin-left: 5px;"></i>`;
         }
         weekLabel.style.cursor = 'pointer';
         weekLabel.onclick = () => abrirSelectorSemanas(currentWeekNum);
@@ -487,7 +489,7 @@ function renderAportesRecientes(data) {
     let html = '';
     let pendingHTML = '';
 
-    // Mostrar socios pendientes (los 3 socios principales) para la semana que se está auditando
+    // Mostrar socios pendientes (los 3 socios principales) para la semana que se estÃ¡ auditando
     const sociosObjetivo = sociosAportes.filter(s => ['69c69e99', 'be3ff55b', '20b691de'].includes(s.idsocio));
     
     sociosObjetivo.forEach(socio => {
@@ -523,7 +525,7 @@ function renderAportesRecientes(data) {
         }
     });
 
-    // Procesar aportes a mostrar en la tabla (ya sea filtrados o los últimos 10)
+    // Procesar aportes a mostrar en la tabla (ya sea filtrados o los Ãºltimos 10)
     aportesAMostrar.forEach(aporte => {
         const initial = (aporte.socio?.nombre || 'S').charAt(0);
         html += `
@@ -573,7 +575,7 @@ function renderAportesRecientes(data) {
 }
 
 /**
- * Actualiza los contadores del panel de estadísticas
+ * Actualiza los contadores del panel de estadÃ­sticas
  */
 function updateAportesStats(sociosSet, totalMonto, countSemana) {
     const elSocios = document.getElementById('stat-socios-count');
@@ -592,7 +594,7 @@ async function llenarSelectsSocios() {
         const supabase = window.getSupabaseClient();
         if (!supabase) return;
 
-        // Cargar socios del caché o DB
+        // Cargar socios del cachÃ© o DB
         let socios = [];
         if (window.hasCacheData && window.hasCacheData('socios')) {
             socios = window.getCacheData('socios');
@@ -607,7 +609,7 @@ async function llenarSelectsSocios() {
         const selectFilter = document.getElementById('filter-aporte-socio');
 
         if (selectAporte) {
-            // selectAporte fue eliminado del DOM — mantener compatibilidad: escribir el primer match en el hidden si existe
+            // selectAporte fue eliminado del DOM â€” mantener compatibilidad: escribir el primer match en el hidden si existe
             if (socios.length === 1) {
                 selectAporte.value = socios[0].idsocio;
             }
@@ -637,7 +639,7 @@ function escapeHtml(str){ return String(str || '').replace(/&/g,'&amp;').replace
 async function filterAporteSocios(query) {
     const q = String(query || '').trim().toLowerCase();
 
-    // Si aún no tenemos socios cargados, cargarlos (fallback silencioso)
+    // Si aÃºn no tenemos socios cargados, cargarlos (fallback silencioso)
     if (!Array.isArray(sociosAportes) || sociosAportes.length === 0) {
         try {
             await llenarSelectsSocios();
@@ -664,7 +666,7 @@ async function filterAporteSocios(query) {
 }
 
 /**
- * Setea la selección actual del socio: actualiza el hidden, muestra la 'pill' y limpia el input
+ * Setea la selecciÃ³n actual del socio: actualiza el hidden, muestra la 'pill' y limpia el input
  */
 function selectAporteById(id) {
     const found = sociosAportes.find(s => String(s.idsocio) === String(id));
@@ -707,7 +709,7 @@ function clearSelectedAporte(focusInput = false) {
 }
 
 /**
- * Actualiza la información visual de cuánto ha aportado el socio en la semana seleccionada
+ * Actualiza la informaciÃ³n visual de cuÃ¡nto ha aportado el socio en la semana seleccionada
  */
 async function updateStatusSemana() {
     const socioId = document.getElementById('aporte-socio')?.value;
@@ -731,13 +733,13 @@ async function updateStatusSemana() {
         const diffMs = monday.getTime() - anchor.getTime();
         const calcWeekNum = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
 
-        // Lógica de Semana:
-        // 1. Si forcedTargetWeek existe (viniendo desde el historial/lápiz), se respeta SIEMPRE esa semana
+        // LÃ³gica de Semana:
+        // 1. Si forcedTargetWeek existe (viniendo desde el historial/lÃ¡piz), se respeta SIEMPRE esa semana
         // sin importar la fecha que se ponga en el calendario.
-        // 2. Si no hay forcedTargetWeek, se calcula dinámicamente según la fecha.
+        // 2. Si no hay forcedTargetWeek, se calcula dinÃ¡micamente segÃºn la fecha.
         const weekNum = forcedTargetWeek || calcWeekNum;
 
-        // Determinar monto objetivo (450 desde semana 10, de lo contrario asumimos el estándar previo si existe, o 300)
+        // Determinar monto objetivo (450 desde semana 10, de lo contrario asumimos el estÃ¡ndar previo si existe, o 300)
         const montoObjetivo = weekNum >= 10 ? 450.00 : 300.00;
 
         // Buscar aportes existentes para este socio en este rango de semana o que tengan el override de semana
@@ -761,7 +763,7 @@ async function updateStatusSemana() {
         const supabase = window.getSupabaseClient();
         
         // Filtro robusto para obtener los aportes de la semana objetivo (weekNum):
-        // 1. Coincidir por override explícito (sub_semana == weekNum)
+        // 1. Coincidir por override explÃ­cito (sub_semana == weekNum)
         // 2. O por rango de fecha, siempre que NO tenga un override a otra semana (sub_semana es NULL)
         const { data: aportesExistentes, error } = await supabase
             .from('ic_aportes_semanales')
@@ -814,7 +816,7 @@ async function updateStatusSemana() {
             }
         }
 
-        // Sugerir el monto pendiente en el input si es > 0 y el input está vacío
+        // Sugerir el monto pendiente en el input si es > 0 y el input estÃ¡ vacÃ­o
         const inputMonto = document.getElementById('aporte-monto');
         if (pendiente > 0 && (!inputMonto.value || inputMonto.value == 0)) {
             inputMonto.value = pendiente.toFixed(2);
@@ -828,7 +830,7 @@ async function updateStatusSemana() {
 
 /**
  * Intenta abrir el dropdown nativo de un <select> de forma no destructiva.
- * Prueba varios métodos (keydown ArrowDown, mousedown/click) y atrapa errores.
+ * Prueba varios mÃ©todos (keydown ArrowDown, mousedown/click) y atrapa errores.
  */
 function openSelectDropdown(select) {
     if (!select) return;
@@ -854,13 +856,13 @@ function openSelectDropdown(select) {
         /* noop */
     }
 
-    // 3) Fallback para móviles: temporariamente mostrar el select como lista (no persistente)
+    // 3) Fallback para mÃ³viles: temporariamente mostrar el select como lista (no persistente)
     try {
         if ('ontouchstart' in window && !select.hasAttribute('data-size-temp')) {
             const size = Math.min(8, Math.max(3, select.options.length));
             select.setAttribute('data-size-temp', String(size));
             select.setAttribute('size', String(size));
-            // Restaurar después de 2s para no romper el layout permanentemente
+            // Restaurar despuÃ©s de 2s para no romper el layout permanentemente
             setTimeout(() => {
                 select.removeAttribute('size');
                 select.removeAttribute('data-size-temp');
@@ -872,12 +874,12 @@ function openSelectDropdown(select) {
 }
 
 /**
- * Maneja el envío del formulario de registro
+ * Maneja el envÃ­o del formulario de registro
  */
 async function handleAporteSubmit(e) {
     e.preventDefault();
 
-    // resolver socioId desde el hidden; si está vacío, intentar resolver por texto escrito
+    // resolver socioId desde el hidden; si estÃ¡ vacÃ­o, intentar resolver por texto escrito
     let socioId = (document.getElementById('aporte-socio') || {}).value || '';
     const monto = document.getElementById('aporte-monto').value;
     const fecha = document.getElementById('aporte-fecha').value;
@@ -889,12 +891,12 @@ async function handleAporteSubmit(e) {
     }
 
     if (!socioId || !monto || !fecha) {
-        showAlert('Por favor complete todos los campos obligatorios', 'Atención', 'warning');
+        showAlert('Por favor complete todos los campos obligatorios', 'AtenciÃ³n', 'warning');
         return;
     }
 
     if (selectedAporteFiles.length === 0) {
-        showAlert('Debe subir al menos una imagen del comprobante', 'Atención', 'warning');
+        showAlert('Debe subir al menos una imagen del comprobante', 'AtenciÃ³n', 'warning');
         return;
     }
 
@@ -903,7 +905,7 @@ async function handleAporteSubmit(e) {
         const supabase = window.getSupabaseClient();
         const currentUser = window.getCurrentUser ? window.getCurrentUser() : null;
 
-        // 1. Subir imágenes usando la utilidad centralizada
+        // 1. Subir imÃ¡genes usando la utilidad centralizada
         let urls = [];
         for (const file of selectedAporteFiles) {
             const uploadRes = await window.uploadFileToStorage(file, 'aportes', socioId);
@@ -913,7 +915,7 @@ async function handleAporteSubmit(e) {
             urls.push(uploadRes.url);
         }
 
-        const imageUrl = urls.join('|'); // Guardar múltiples URLs separadas por pipe
+        const imageUrl = urls.join('|'); // Guardar mÃºltiples URLs separadas por pipe
 
         // 2. Guardar en DB
         const { data, error } = await supabase
@@ -930,7 +932,7 @@ async function handleAporteSubmit(e) {
 
         if (error) throw error;
 
-        // mostrar confirmación visible en el botón de guardar (breve)
+        // mostrar confirmaciÃ³n visible en el botÃ³n de guardar (breve)
         try {
             const _saveBtn = document.getElementById('btn-save-aporte');
             await flashSaveButtonState(_saveBtn, 'success', 900);
@@ -941,11 +943,11 @@ async function handleAporteSubmit(e) {
         try { closeAllModals(); } catch (e) { /* noop */ }
         await new Promise(res => setTimeout(res, 90));
 
-        // mostrar el toast DESPUÉS de cerrar el modal para que sea visible inmediatamente
+        // mostrar el toast DESPUÃ‰S de cerrar el modal para que sea visible inmediatamente
         try { showToast('Aporte registrado exitosamente', 'success'); } catch (e) { /* noop */ }
 
-        // limpiar la selección del socio para que el modal abra vacío la próxima vez
-        try { clearSelectedAporte(); } catch (e) { /* noop - protección defensiva */ }
+        // limpiar la selecciÃ³n del socio para que el modal abra vacÃ­o la prÃ³xima vez
+        try { clearSelectedAporte(); } catch (e) { /* noop - protecciÃ³n defensiva */ }
         resetFormAporte();
 
         // Recargar datos
@@ -954,7 +956,7 @@ async function handleAporteSubmit(e) {
     } catch (error) {
         console.error('Error al guardar aporte:', error);
         showAlert('No se pudo guardar el aporte: ' + error.message, 'Error', 'error');
-        // indicar error en el botón de guardar (visible en el modal)
+        // indicar error en el botÃ³n de guardar (visible en el modal)
         try {
             const _saveBtn = document.getElementById('btn-save-aporte');
             await flashSaveButtonState(_saveBtn, 'error', 1400);
@@ -979,9 +981,9 @@ function resetFormAporte() {
 }
 
 /**
- * Muestra un estado breve y visual en el botón de guardar ("success" | "error").
- * No altera la lógica de guardado; es puramente visual y tolerante a errores.
- * Devuelve una Promise que se resuelve cuando la animación termina.
+ * Muestra un estado breve y visual en el botÃ³n de guardar ("success" | "error").
+ * No altera la lÃ³gica de guardado; es puramente visual y tolerante a errores.
+ * Devuelve una Promise que se resuelve cuando la animaciÃ³n termina.
  */
 function flashSaveButtonState(btn, state = 'success', duration = 900) {
     if (!btn) return Promise.resolve();
@@ -1071,7 +1073,7 @@ function renderHistorialAportes(data) {
         return;
     }
 
-    // Calcular estadísticas
+    // Calcular estadÃ­sticas
     let totalMonto = 0;
     data.forEach(item => {
         totalMonto += parseFloat(item.monto || 0);
@@ -1084,7 +1086,7 @@ function renderHistorialAportes(data) {
         if (labelTotalConteo) labelTotalConteo.textContent = data.length;
     }
 
-    // Agrupar por semanas (Lunes a Sábado/Domingo) y Sub-semanas
+    // Agrupar por semanas (Lunes a SÃ¡bado/Domingo) y Sub-semanas
     // Usamos Lunes 17 Nov 2025 como Semana 1 para que los primeros registros sean positivos
     const anchor = new Date(2025, 10, 17, 12, 0, 0);
     const groups = {};
@@ -1093,7 +1095,7 @@ function renderHistorialAportes(data) {
         let weekNum;
         let monday;
 
-        // Si sub_semana tiene un número (Semana forzada), usamos ese para el grupo
+        // Si sub_semana tiene un nÃºmero (Semana forzada), usamos ese para el grupo
         if (item.sub_semana && !isNaN(item.sub_semana)) {
             weekNum = parseInt(item.sub_semana);
             monday = new Date(anchor);
@@ -1116,7 +1118,7 @@ function renderHistorialAportes(data) {
         saturday.setDate(monday.getDate() + 5);
 
         const saturdayStr = saturday.toLocaleDateString('es-EC', { day: 'numeric', month: 'short' });
-        const weekLabel = `Semana ${weekNum} (SÁB ${saturdayStr})`;
+        const weekLabel = `Semana ${weekNum} (SÃB ${saturdayStr})`;
 
         if (!groups[groupKey]) {
             groups[groupKey] = { label: weekLabel, items: [], sortVal: weekNum };
@@ -1146,7 +1148,7 @@ function renderHistorialAportes(data) {
             </tr>
         `;
 
-        // Agrupar aportes por socio dentro de la semana para visualización compacta
+        // Agrupar aportes por socio dentro de la semana para visualizaciÃ³n compacta
         const aportesAgrupados = {};
         group.items.forEach(item => {
             const id = item.id_socio;
@@ -1203,7 +1205,7 @@ function renderHistorialAportes(data) {
                             <div class="avatar-initial" style="width: 36px; height: 36px; font-size: 0.9rem; background: var(--primary-light); color: white; margin-right: 12px;">${initial}</div>
                             <div class="d-flex flex-column">
                                 <span class="font-weight-600" style="font-size: 1rem; color: #fff; letter-spacing: 0.3px;">${agrupado.socio?.nombre || 'Socio'}</span>
-                                ${agrupado.es_igualacion ? '<span class="badge badge-warning" style="font-size: 0.6rem; background: #f2bb3a; color: #000; font-weight: 800; padding: 1px 5px; width: fit-content;"><i class="fas fa-clock"></i> IGUALACIÓN</span>' : ''}
+                                ${agrupado.es_igualacion ? '<span class="badge badge-warning" style="font-size: 0.6rem; background: #f2bb3a; color: #000; font-weight: 800; padding: 1px 5px; width: fit-content;"><i class="fas fa-clock"></i> IGUALACIÃ“N</span>' : ''}
                             </div>
                         </div>
                     </td>
@@ -1288,7 +1290,7 @@ function renderHistorialAportes(data) {
 }
 
 /**
- * Abre visualización de comprobante
+ * Abre visualizaciÃ³n de comprobante
  */
 function verComprobanteAporte(url) {
     if (!url) return;
@@ -1298,7 +1300,7 @@ function verComprobanteAporte(url) {
         const urls = url.split('|');
         urls.forEach((u, index) => {
             if (u.trim()) {
-                // Abrir cada uno en una pestaña después de un pequeño delay para evitar bloqueos del navegador
+                // Abrir cada uno en una pestaÃ±a despuÃ©s de un pequeÃ±o delay para evitar bloqueos del navegador
                 setTimeout(() => {
                     window.open(u.trim(), '_blank');
                 }, index * 250);
@@ -1310,11 +1312,11 @@ function verComprobanteAporte(url) {
 }
 
 /**
- * Función para gestionar la semana y sub-división de un aporte, con opción de reemplazar comprobante
+ * FunciÃ³n para gestionar la semana y sub-divisiÃ³n de un aporte, con opciÃ³n de reemplazar comprobante
  */
 async function gestionarSemana(idAporte, fechaActual, subActual, idSocio = null, nombreSocio = '') {
     try {
-        // Al gestionar, si el aporte ya tenía una semana objetivo (subActual es número), la bloqueamos
+        // Al gestionar, si el aporte ya tenÃ­a una semana objetivo (subActual es nÃºmero), la bloqueamos
         if (subActual && !isNaN(subActual)) {
             forcedTargetWeek = parseInt(subActual);
         } else {
@@ -1340,12 +1342,12 @@ async function gestionarSemana(idAporte, fechaActual, subActual, idSocio = null,
                     
                     <div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
                         <input type="checkbox" id="swal-es-igualacion" style="width: 20px; height: 20px;">
-                        <label for="swal-es-igualacion" style="color: #f2bb3a; font-weight: bold; margin: 0;">Marcar como IGUALACIÓN</label>
+                        <label for="swal-es-igualacion" style="color: #f2bb3a; font-weight: bold; margin: 0;">Marcar como IGUALACIÃ“N</label>
                     </div>
 
                     ${idSocio ? `
                     <div style="margin-top: 25px; padding: 15px; background: rgba(242, 187, 58, 0.1); border: 1px dashed rgba(242, 187, 58, 0.3); border-radius: 12px; text-align: center;">
-                        <p style="font-size: 0.85rem; margin-bottom: 12px; color: #fff;">Añadir más abonos para <strong>${nombreSocio}</strong> en esta semana:</p>
+                        <p style="font-size: 0.85rem; margin-bottom: 12px; color: #fff;">AÃ±adir mÃ¡s abonos para <strong>${nombreSocio}</strong> en esta semana:</p>
                         <button type="button" class="btn btn-primary btn-glow" style="width: 100%; padding: 8px; font-size: 0.85rem;" onclick="prepararAporteAdicional('${idSocio}', '${fechaActual}')">
                             <i class="fas fa-plus-circle"></i> Nuevo Abono
                         </button>
@@ -1380,13 +1382,13 @@ async function gestionarSemana(idAporte, fechaActual, subActual, idSocio = null,
         });
 
         if (Swal.isVisible() && Swal.getDenyButton() === document.activeElement) {
-            // Manejar eliminación
+            // Manejar eliminaciÃ³n
             const result = await Swal.fire({
-                title: '¿Eliminar este aporte?',
-                text: 'Esta acción no se puede deshacer y el dinero se restará de la caja.',
+                title: 'Â¿Eliminar este aporte?',
+                text: 'Esta acciÃ³n no se puede deshacer y el dinero se restarÃ¡ de la caja.',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'Sí, eliminar',
+                confirmButtonText: 'SÃ­, eliminar',
                 cancelButtonText: 'Cancelar',
                 background: '#1a1d21',
                 color: '#fff'
@@ -1419,7 +1421,7 @@ async function gestionarSemana(idAporte, fechaActual, subActual, idSocio = null,
 
             if (error) throw error;
 
-            showToast('Información actualizada correctamente', 'success');
+            showToast('InformaciÃ³n actualizada correctamente', 'success');
             await cargarHistorialCompleto();
             await cargarDatosAportes();
         }
@@ -1437,11 +1439,11 @@ async function gestionarSemana(idAporte, fechaActual, subActual, idSocio = null,
 async function eliminarAporte(idAporte) {
     try {
         const result = await Swal.fire({
-            title: '¿Eliminar este aporte?',
-            text: 'Esta acción no se puede deshacer y el dinero se restará de la caja.',
+            title: 'Â¿Eliminar este aporte?',
+            text: 'Esta acciÃ³n no se puede deshacer y el dinero se restarÃ¡ de la caja.',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Sí, eliminar',
+            confirmButtonText: 'SÃ­, eliminar',
             cancelButtonText: 'Cancelar',
             background: '#1a1d21',
             color: '#fff'
@@ -1533,7 +1535,7 @@ async function verAportesPendientes() {
         endLoading();
 
         if (pendientes.length === 0) {
-            Swal.fire({ title: '¡Todo al día!', text: 'Sin pendientes.', icon: 'success', background: '#1a1d21', color: '#fff' });
+            Swal.fire({ title: 'Â¡Todo al dÃ­a!', text: 'Sin pendientes.', icon: 'success', background: '#1a1d21', color: '#fff' });
             return;
         }
 
@@ -1546,7 +1548,7 @@ async function verAportesPendientes() {
                 <div style="max-height: 400px; overflow-y: auto; text-align: left; padding: 10px;">
                     <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
                         <thead style="border-bottom: 2px solid #334155;">
-                            <tr><th style="padding: 10px;">Socio</th><th style="padding: 10px;">Semana</th><th style="padding: 10px; text-align: center;">Acción</th></tr>
+                            <tr><th style="padding: 10px;">Socio</th><th style="padding: 10px;">Semana</th><th style="padding: 10px; text-align: center;">AcciÃ³n</th></tr>
                         </thead>
                         <tbody>
                             ${pendientes.reverse().map(p => `
@@ -1611,7 +1613,7 @@ window.igualarAportePendiente = (idSocio, nombre, fecha, sub) => {
     const selectManual = document.getElementById('aporte-week-override');
     if (selectManual) selectManual.value = forcedTargetWeek;
     
-    // Actualizar el banner (que ahora respetará forcedTargetWeek aunque la fecha sea hoy)
+    // Actualizar el banner (que ahora respetarÃ¡ forcedTargetWeek aunque la fecha sea hoy)
     updateStatusSemana();
 };
 
@@ -1646,7 +1648,7 @@ async function generateAportesReport() {
                         Seleccione el mes para el reporte consolidado.
                     </p>
                     
-                    <!-- Sección MENSUAL -->
+                    <!-- SecciÃ³n MENSUAL -->
                     <div id="container-month" class="mode-container">
                         <div class="filter-group-corporate">
                             <label class="export-label-corporate">
@@ -1656,7 +1658,7 @@ async function generateAportesReport() {
                         </div>
                     </div>
 
-                    <!-- Sección RANGO (Oculta) -->
+                    <!-- SecciÃ³n RANGO (Oculta) -->
                     <div id="container-range" class="mode-container hidden">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                             <div class="filter-group-corporate">
@@ -1670,11 +1672,11 @@ async function generateAportesReport() {
                         </div>
                     </div>
 
-                    <!-- Sección GENERAL (Oculta) -->
+                    <!-- SecciÃ³n GENERAL (Oculta) -->
                     <div id="container-all" class="mode-container hidden">
                         <div class="filter-group-corporate" style="text-align: center; padding: 20px;">
                             <i class="fas fa-info-circle" style="font-size: 2rem; color: #0E5936; margin-bottom: 10px; display: block;"></i>
-                            <p style="margin: 0; color: #1E293B; font-weight: 600;">Se incluirán todos los registros históricos.</p>
+                            <p style="margin: 0; color: #1E293B; font-weight: 600;">Se incluirÃ¡n todos los registros histÃ³ricos.</p>
                         </div>
                     </div>
 
@@ -1690,7 +1692,7 @@ async function generateAportesReport() {
                             <div id="swal-socio-suggestions" class="hidden" style="position: absolute; top: 100%; left: 0; right: 0; background: #1a1d21; border: 1px solid #3f444a; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.8); z-index: 99999; max-height: none; overflow: visible; margin-top: 5px;"></div>
                         </div>
                         <div id="swal-socio-selected-container" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">
-                            <!-- Aquí se insertarán los tags -->
+                            <!-- AquÃ­ se insertarÃ¡n los tags -->
                             <div id="tag-all-socios" class="swal-socio-tag" style="background: #3f444a; color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
                                 <span>TODOS LOS APORTANTES</span>
                             </div>
@@ -1738,7 +1740,7 @@ async function generateAportesReport() {
                     }
 
                     .swal2-actions {
-                        z-index: 1 !important; /* Los botones se quedan atrás de la lista */
+                        z-index: 1 !important; /* Los botones se quedan atrÃ¡s de la lista */
                     }
 
                     .report-mode-selector {
@@ -1862,7 +1864,7 @@ async function generateAportesReport() {
                     desc.textContent = 'Generar reporte de todos los aportes existentes.';
                 });
 
-                // Lógica de búsqueda de aportante en el modal
+                // LÃ³gica de bÃºsqueda de aportante en el modal
                 let selectedSocioIds = [];
                 const socioSearch = Swal.getHtmlContainer().querySelector('#swal-socio-search');
                 const socioIdHidden = Swal.getHtmlContainer().querySelector('#swal-socio-id');
@@ -1999,7 +2001,7 @@ async function generatePDFReporteAportes(params) {
         endDate = new Date().toISOString().split('T')[0];
     }
 
-    // Ajustar título si es para un socio específico
+    // Ajustar tÃ­tulo si es para un socio especÃ­fico
     if (params.socioId !== 'ALL') {
         const ids = params.socioId.split(',');
         const names = ids.map(id => {
@@ -2036,7 +2038,7 @@ async function generatePDFReporteAportes(params) {
 
         if (errorAportes) throw errorAportes;
 
-        // --- Lógica de Agrupación por Semanas y Detección de Faltantes ---
+        // --- LÃ³gica de AgrupaciÃ³n por Semanas y DetecciÃ³n de Faltantes ---
         const anchor = new Date(2025, 10, 17, 12, 0, 0);
         
         let socioListForReport = [];
@@ -2075,7 +2077,7 @@ async function generatePDFReporteAportes(params) {
         if (startDate && endDate) {
             let curr = new Date(startDate + 'T12:00:00');
             const endLimit = new Date(endDate + 'T12:00:00');
-            // Si la fecha final es mayor a hoy, limitamos a hoy para no mostrar semanas futuras vacías
+            // Si la fecha final es mayor a hoy, limitamos a hoy para no mostrar semanas futuras vacÃ­as
             const limitRef = new Date() > endLimit ? endLimit : new Date();
             limitRef.setHours(12, 0, 0, 0);
 
@@ -2098,7 +2100,7 @@ async function generatePDFReporteAportes(params) {
                         weekNum,
                         sub: '',
                         monday: new Date(monday),
-                        label: `SEMANA ${weekNum} (SÁB ${saturday.toLocaleDateString('es-EC', {day:'numeric', month:'short'})})`,
+                        label: `SEMANA ${weekNum} (SÃB ${saturday.toLocaleDateString('es-EC', {day:'numeric', month:'short'})})`,
                         items: [],
                         sortVal: weekNum
                     };
@@ -2128,7 +2130,7 @@ async function generatePDFReporteAportes(params) {
                         weekNum,
                         sub: '',
                         monday: new Date(monday),
-                        label: `SEMANA ${weekNum} (SÁB ${saturday.toLocaleDateString('es-EC', {day:'numeric', month:'short'})})`,
+                        label: `SEMANA ${weekNum} (SÃB ${saturday.toLocaleDateString('es-EC', {day:'numeric', month:'short'})})`,
                         items: [],
                         sortVal: weekNum
                     };
@@ -2141,7 +2143,7 @@ async function generatePDFReporteAportes(params) {
             let weekNum;
             let monday;
             
-            // Si tiene una semana objetivo grabada (sub_semana es número), manda esa
+            // Si tiene una semana objetivo grabada (sub_semana es nÃºmero), manda esa
             if (a.sub_semana && !isNaN(a.sub_semana)) {
                 weekNum = parseInt(a.sub_semana);
                 monday = new Date(anchor);
@@ -2166,7 +2168,7 @@ async function generatePDFReporteAportes(params) {
                 groups[key] = {
                     weekNum,
                     monday,
-                    label: `SEMANA ${weekNum} (SÁB ${saturday.toLocaleDateString('es-EC', {day:'numeric', month:'short'})})`,
+                    label: `SEMANA ${weekNum} (SÃB ${saturday.toLocaleDateString('es-EC', {day:'numeric', month:'short'})})`,
                     items: [],
                     sortVal: weekNum
                 };
@@ -2206,10 +2208,10 @@ async function generatePDFReporteAportes(params) {
                 }
             });
 
-            // Añadir socios agrupados
+            // AÃ±adir socios agrupados
             Object.values(aportesPorSocio).forEach(item => finalProcessedAportes.push(item));
 
-            // Detección de faltantes
+            // DetecciÃ³n de faltantes
             const sociosQueAportaron = Object.keys(aportesPorSocio);
             socioListForReport.forEach(s => {
                 if (!sociosQueAportaron.includes(String(s.idsocio))) {
@@ -2223,7 +2225,7 @@ async function generatePDFReporteAportes(params) {
         });
 
         const aportes = finalProcessedAportes;
-        // --- Fin Lógica de Agrupación ---
+        // --- Fin LÃ³gica de AgrupaciÃ³n ---
 
         // 3. Generar PDF
         let yPos = 20;
@@ -2281,7 +2283,7 @@ async function generatePDFReporteAportes(params) {
                 doc.rect(15, yPos, 180, 8, 'F');
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(10);
-                doc.setTextColor(255, 255, 255); // Texto Blanco para máxima legibilidad
+                doc.setTextColor(255, 255, 255); // Texto Blanco para mÃ¡xima legibilidad
                 doc.text(aporte.label, 20, yPos + 6);
                 yPos += 12;
                 continue;
@@ -2374,7 +2376,7 @@ async function generatePDFReporteAportes(params) {
                 doc.setFontSize(8);
                 doc.setTextColor(242, 187, 58);
                 doc.setFont('helvetica', 'bold');
-                doc.text(`[ PAGO DE IGUALACIÓN ]`, leftMargin, textY);
+                doc.text(`[ PAGO DE IGUALACIÃ“N ]`, leftMargin, textY);
                 textY += 4;
             }
 
@@ -2383,7 +2385,7 @@ async function generatePDFReporteAportes(params) {
                 const imgWidth = imgSize;
                 const imgHeight = imgSize;
                 
-                // Empezar imágenes inmediatamente después del texto
+                // Empezar imÃ¡genes inmediatamente despuÃ©s del texto
                 const imagesStartY = Math.max(yPos + 38, textY + 2);
 
                 for (let i = 0; i < comps.length; i++) {
@@ -2439,7 +2441,7 @@ async function generatePDFReporteAportes(params) {
             const periodSum = rawAportes.filter(a => String(a.id_socio) === String(id)).reduce((sum, a) => sum + parseFloat(a.monto), 0);
             const totalSum = acumuladoMap[id] || 0;
             
-            // Si solo hay un socio seleccionado, omitimos la columna de acumulado (según diseño original)
+            // Si solo hay un socio seleccionado, omitimos la columna de acumulado (segÃºn diseÃ±o original)
             if (params.socioId !== 'ALL' && params.socioId.split(',').length === 1) {
                 return [socioNombre, `$${periodSum.toFixed(2)}` ];
             }
@@ -2472,12 +2474,12 @@ async function generatePDFReporteAportes(params) {
         doc.setTextColor(11, 78, 50);
         doc.text(`$${totalAportadoPeriodo.toFixed(2)}`, 110, yPos);
 
-        // Solo mostrar acumulado histórico si se seleccionaron TODOS los socios
+        // Solo mostrar acumulado histÃ³rico si se seleccionaron TODOS los socios
         if (params.socioId === 'ALL') {
             const totalAcumuladoGeneral = Object.values(acumuladoMap).reduce((s, v) => s + v, 0);
             yPos += 8;
             doc.setTextColor(0);
-            doc.text(`TOTAL ACUMULADO HISTÓRICO:`, 15, yPos);
+            doc.text(`TOTAL ACUMULADO HISTÃ“RICO:`, 15, yPos);
             doc.setTextColor(11, 78, 50);
             doc.text(`$${totalAcumuladoGeneral.toFixed(2)}`, 110, yPos);
         }
@@ -2499,7 +2501,7 @@ async function generatePDFReporteAportes(params) {
 }
 
 /**
- * Utilidad para cargar imágenes como Base64
+ * Utilidad para cargar imÃ¡genes como Base64
  */
 async function fetchImageAsBase64Aportes(url) {
     try {
@@ -2518,7 +2520,7 @@ async function fetchImageAsBase64Aportes(url) {
 }
 
 /**
- * Prepara el modal de registro para añadir un aporte adicional a un socio y fecha específicos
+ * Prepara el modal de registro para aÃ±adir un aporte adicional a un socio y fecha especÃ­ficos
  */
 window.prepararAporteAdicional = async function(idSocio, fecha) {
     Swal.close();
@@ -2526,10 +2528,10 @@ window.prepararAporteAdicional = async function(idSocio, fecha) {
     
     // Al venir del historial, ya tenemos la semana objetivo bloqueada por gestionarSemana
     
-    // Pequeño retardo para dejar que los modales se limpien
+    // PequeÃ±o retardo para dejar que los modales se limpien
     await new Promise(res => setTimeout(res, 100));
     
-    // No reseteamos el forcedTargetWeek aquí porque lo queremos heredar
+    // No reseteamos el forcedTargetWeek aquÃ­ porque lo queremos heredar
     const _prevForced = forcedTargetWeek;
     resetFormAporte();
     forcedTargetWeek = _prevForced;
@@ -2553,13 +2555,13 @@ window.prepararAporteAdicional = async function(idSocio, fecha) {
     const selectManual = document.getElementById('aporte-week-override');
     if (selectManual) selectManual.value = forcedTargetWeek || "";
     
-    // La función selectAporteById ya dispara updateStatusSemana()
+    // La funciÃ³n selectAporteById ya dispara updateStatusSemana()
 }
 
 // Exponer funciones necesarias globalmente
 window.initAportesModule = initAportesModule;
 window.verComprobanteAporte = verComprobanteAporte;
-window.gestionarSemana = gestionarSemana; // Asegurar exposición global
+window.gestionarSemana = gestionarSemana; // Asegurar exposiciÃ³n global
 window.eliminarAporte = eliminarAporte; // Exponer para borrado directo
 
 /**
@@ -2575,18 +2577,48 @@ function llenarSelectorSemanasManual(defaultWeek = null) {
     const inicioSemanaHoy = new Date(hoy);
     inicioSemanaHoy.setDate(hoy.getDate() - (dayHoy === 0 ? 6 : dayHoy - 1));
     inicioSemanaHoy.setHours(12, 0, 0, 0);
-    const maxWeek = Math.floor((inicioSemanaHoy.getTime() - anchor.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
+    const currentMaxWeek = Math.floor((inicioSemanaHoy.getTime() - anchor.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
+    
+    // La semana mÃ¡xima mostrada serÃ¡ la mayor entre la actual y la habilitada extra
+    const maxWeek = Math.max(currentMaxWeek, maxSemanaHabilitadaExtra);
 
     let html = '<option value="">-- Autodetectar por Fecha --</option>';
+    
+    // OpciÃ³n para habilitar semana futura
+    const nextWeekToEnable = maxWeek + 1;
+    html += `<option value="NEW_FUTURE" style="color: #f2bb3a; font-weight: bold;">+ Habilitar Semana ${nextWeekToEnable} (Futura)</option>`;
+
     for (let i = maxWeek; i >= 1; i--) {
         const mon = new Date(anchor);
         mon.setDate(anchor.getDate() + (i - 1) * 7);
         const sat = new Date(mon);
         sat.setDate(mon.getDate() + 5);
         const satLabel = sat.toLocaleDateString('es-EC', {day:'numeric', month:'short'});
-        html += `<option value="${i}">Semana ${i}${i === maxWeek ? ' (Actual)' : ''} [SÁB ${satLabel}]</option>`;
+        const isSelected = (defaultWeek && parseInt(defaultWeek) === i) ? 'selected' : '';
+        html += `<option value="${i}" ${isSelected}>Semana ${i}${i === currentMaxWeek ? ' (Actual)' : (i > currentMaxWeek ? ' (Futura)' : '')} [SÃB ${satLabel}]</option>`;
     }
     select.innerHTML = html;
+
+    // Manejar la creaciÃ³n de semana futura
+    select.onchange = () => {
+        if (select.value === 'NEW_FUTURE') {
+            const nextWeek = maxWeek + 1;
+            maxSemanaHabilitadaExtra = nextWeek;
+            
+            // Re-poblar el selector actualizando la semana mÃ¡xima
+            llenarSelectorSemanasManual(nextWeek);
+            
+            // Forzar la selecciÃ³n de la nueva semana
+            forcedTargetWeek = nextWeek;
+            updateStatusSemana();
+            
+            showToast(`Semana ${nextWeek} habilitada para aportes`, 'success');
+        } else {
+            const val = select.value;
+            forcedTargetWeek = val ? parseInt(val) : null;
+            updateStatusSemana();
+        }
+    };
 }
 
 /**
@@ -2594,6 +2626,7 @@ function llenarSelectorSemanasManual(defaultWeek = null) {
  */
 async function abrirSelectorSemanas(maxWeek) {
     const anchor = new Date(2025, 10, 17, 12, 0, 0); // Lunes 17 Nov
+    maxWeek = Math.max(maxWeek, maxSemanaHabilitadaExtra);
     const semanas = [];
     
     // Crear la lista de semanas desde la actual hasta la 1
@@ -2606,7 +2639,7 @@ async function abrirSelectorSemanas(maxWeek) {
         semanas.push({
             num: i,
             label: `Semana ${i}`,
-            range: `SÁB ${saturday.toLocaleDateString('es-EC', {day:'numeric', month:'short'})}`
+            range: `SÃB ${saturday.toLocaleDateString('es-EC', {day:'numeric', month:'short'})}`
         });
     }
 
@@ -2623,8 +2656,8 @@ async function abrirSelectorSemanas(maxWeek) {
                      onclick="window.setDashboardWeekFilter(null)"
                      style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin-bottom: 10px; background: #2d3238; border-radius: 12px; cursor: pointer; border: 1px solid #3f444a; transition: all 0.2s;">
                     <div>
-                        <span style="font-weight: 800; font-size: 1rem; color: #F2BB3A;">Semana Actual (Dinámica)</span>
-                        <p style="margin: 3px 0 0 0; font-size: 0.8rem; color: #94a3b8;">Muestra siempre los últimos aportes</p>
+                        <span style="font-weight: 800; font-size: 1rem; color: #F2BB3A;">Semana Actual (DinÃ¡mica)</span>
+                        <p style="margin: 3px 0 0 0; font-size: 0.8rem; color: #94a3b8;">Muestra siempre los Ãºltimos aportes</p>
                     </div>
                     ${!filtroSemanaSeleccionada ? '<i class="fas fa-check-circle" style="color: #F2BB3A;"></i>' : ''}
                 </div>
