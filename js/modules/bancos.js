@@ -215,6 +215,23 @@ function setupBancosEventListeners() {
             }
         });
     }
+
+    // Edición de Logo y Nombre de Banco (Petición del usuario)
+    const btnEditLogo = document.getElementById('btn-edit-bank-logo');
+    const inputNewLogo = document.getElementById('input-new-bank-logo');
+    if (btnEditLogo && inputNewLogo) {
+        btnEditLogo.addEventListener('click', () => inputNewLogo.click());
+        inputNewLogo.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                handleBankLogoUpdate(e.target.files[0]);
+            }
+        });
+    }
+
+    const btnEditName = document.getElementById('btn-edit-bank-name');
+    if (btnEditName) {
+        btnEditName.addEventListener('click', handleBankNameUpdate);
+    }
 }
 
 /**
@@ -723,6 +740,10 @@ async function openBancoDetail(banco) {
 
     document.getElementById('modal-bank-name').textContent = banco.nombre_banco;
     document.getElementById('modal-credit-id').textContent = `ID: ${banco.id_transaccion}`;
+
+    // Mostrar botón de edición de logo solo si no es un logo hardcoded (opcional) o siempre
+    const btnEditLogo = document.getElementById('btn-edit-bank-logo');
+    if (btnEditLogo) btnEditLogo.classList.remove('hidden');
 
     document.getElementById('det-banco-monto').textContent = '$' + parseFloat(banco.valor || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 });
     document.getElementById('det-banco-plazo').textContent = `${banco.plazo} cuotas`;
@@ -1749,6 +1770,155 @@ async function handlePrecancelarSubmit(e) {
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-check-circle"></i> Registrar Precancelación';
+    }
+}
+
+/**
+ * Actualiza el logo de un banco
+ */
+async function handleBankLogoUpdate(file) {
+    if (!file) return;
+    if (!currentBancoId) return;
+
+    try {
+        // 1. Mostrar loading
+        if (window.Swal) {
+            Swal.fire({
+                title: 'Subiendo logo...',
+                text: 'Espere un momento mientras procesamos la imagen',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+        }
+
+        // 2. Subir a carpeta 'nuevos bancos' en el bucket 'inkacorp'
+        // uploadFileToStorage comprime automáticamente a webp si es imagen (image-utils.js)
+        const uploadRes = await window.uploadFileToStorage(file, 'nuevos bancos', currentBancoId, 'inkacorp');
+        
+        if (!uploadRes.success) throw new Error(uploadRes.error);
+
+        const newLogoUrl = uploadRes.url;
+
+        // 3. Actualizar base de datos
+        const supabase = window.getSupabaseClient();
+        const { error: updateError } = await supabase
+            .from('ic_situacion_bancaria')
+            .update({ logo_banco: newLogoUrl })
+            .eq('id_transaccion', currentBancoId);
+
+        if (updateError) throw updateError;
+
+        // 4. Actualizar UI en el modal
+        const modalLogo = document.getElementById('modal-bank-logo');
+        const modalIcon = document.getElementById('modal-bank-logo-icon');
+        
+        if (modalLogo) {
+            modalLogo.src = newLogoUrl;
+            modalLogo.classList.remove('hidden');
+            if (modalIcon) modalIcon.classList.add('hidden');
+            
+            // Quitar zooms anteriores para el nuevo logo (mejor centrallizar)
+            modalLogo.classList.remove('logo-zoom-max', 'logo-zoom-high', 'logo-zoom-low');
+        }
+
+        // Refrescar datos locales
+        const bancoIdx = bancosData.findIndex(b => b.id_transaccion === currentBancoId);
+        if (bancoIdx !== -1) {
+            bancosData[bancoIdx].logo_banco = newLogoUrl;
+            // Actualizar caché persistente si existe
+            if (window.setCacheData) window.setCacheData('bancos', bancosData);
+        }
+
+        if (window.Swal) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Logo actualizado',
+                text: 'El logo del banco ha sido actualizado correctamente.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
+
+        // Renderizar de nuevo la grilla para refrescar las tarjetas
+        if (window.currentPagosMap) {
+            renderBancosCards(bancosData, window.currentPagosMap);
+        }
+
+    } catch (error) {
+        console.error('Error al actualizar logo:', error);
+        if (window.showAlert) {
+            window.showAlert(error.message, 'Error al actualizar', 'error');
+        }
+    }
+}
+
+/**
+ * Actualiza el nombre de un banco a través de un prompt
+ */
+async function handleBankNameUpdate() {
+    if (!currentBancoId) return;
+    const banco = bancosData.find(b => b.id_transaccion === currentBancoId);
+    if (!banco) return;
+
+    if (!window.Swal) {
+        const newName = prompt('Editar Nombre de Banco:', banco.nombre_banco);
+        if (newName && newName !== banco.nombre_banco) {
+            processNameUpdate(newName);
+        }
+        return;
+    }
+
+    const { value: newName } = await Swal.fire({
+        title: 'Editar Nombre de Banco',
+        input: 'text',
+        inputValue: banco.nombre_banco,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar cambios',
+        cancelButtonText: 'Cancelar',
+        inputValidator: (value) => {
+            if (!value) return 'El nombre no puede estar vacío';
+        }
+    });
+
+    if (newName && newName !== banco.nombre_banco) {
+        processNameUpdate(newName);
+    }
+
+    async function processNameUpdate(name) {
+        try {
+            if (window.Swal) Swal.showLoading();
+            
+            const supabase = window.getSupabaseClient();
+            const { error: updateError } = await supabase
+                .from('ic_situacion_bancaria')
+                .update({ nombre_banco: name })
+                .eq('id_transaccion', currentBancoId);
+
+            if (updateError) throw updateError;
+
+            // Actualizar UI
+            document.getElementById('modal-bank-name').textContent = name;
+            
+            // Actualizar local
+            banco.nombre_banco = name;
+            if (window.setCacheData) window.setCacheData('bancos', bancosData);
+
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Nombre actualizado',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+
+            if (window.currentPagosMap) {
+                renderBancosCards(bancosData, window.currentPagosMap);
+            }
+        } catch (error) {
+            console.error('Error al actualizar nombre:', error);
+            if (window.showAlert) window.showAlert(error.message, 'Error', 'error');
+        }
     }
 }
 

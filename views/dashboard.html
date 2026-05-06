@@ -78,10 +78,10 @@
                 <span>Verificando alertas prioritarias...</span>
             </div>
 
-            <!-- Pólizas por Vencer (solo visible cuando hay) -->
+            <!-- Pólizas en ventana de renovación (solo visible cuando hay) -->
             <div id="polizas-vencimiento-section" class="desembolsos-section hidden">
                 <div class="section-header" style="background: linear-gradient(135deg, rgba(242, 187, 58, 0.1) 0%, rgba(211, 144, 13, 0.05) 100%);">
-                    <h3 class="section-title" style="color: var(--gold-dark);"><i class="fas fa-clock"></i> Pólizas por Vencer</h3>
+                    <h3 class="section-title" style="color: var(--gold-dark);"><i class="fas fa-clock"></i> Pólizas en Renovación</h3>
                     <span id="polizas-vencimiento-count" class="section-badge warning" style="background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);">0</span>
                 </div>
                 <div id="polizas-vencimiento-list" class="desembolsos-list">
@@ -868,6 +868,72 @@
         gap: 1rem;
     }
 
+    .polizas-urgent-summary {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(127, 29, 29, 0.25) 100%);
+        border: 1px solid rgba(239, 68, 68, 0.45);
+        border-radius: 0.875rem;
+        padding: 1rem;
+        box-shadow: 0 10px 24px rgba(239, 68, 68, 0.16);
+    }
+
+    .urgent-summary-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.75rem;
+        background: #ef4444;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        box-shadow: 0 8px 18px rgba(239, 68, 68, 0.3);
+    }
+
+    .urgent-summary-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .urgent-summary-copy strong {
+        color: white;
+        font-size: 0.98rem;
+        line-height: 1.35;
+    }
+
+    .urgent-summary-copy span {
+        color: #fecaca;
+        font-weight: 900;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+    }
+
+    .urgent-summary-btn {
+        border: none;
+        border-radius: 0.65rem;
+        background: white;
+        color: #991b1b;
+        font-weight: 800;
+        padding: 0.7rem 1rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        white-space: nowrap;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+    }
+
+    .urgent-summary-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 22px rgba(0, 0, 0, 0.22);
+    }
+
     .desembolso-card {
         background: var(--card-bg);
         border: 1px solid var(--border-color);
@@ -1155,6 +1221,16 @@
         .desembolsos-list {
             grid-template-columns: repeat(2, 1fr);
             gap: 0.875rem;
+        }
+
+        .polizas-urgent-summary {
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .urgent-summary-btn {
+            width: 100%;
+            justify-content: center;
         }
 
         .modules-grid {

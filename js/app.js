@@ -9,6 +9,8 @@
 let currentUser = null;
 let currentViewName = null;
 const viewCache = new Map();
+const DASHBOARD_POLIZA_RENOVACION_DIAS_ANTES = 3;
+const DASHBOARD_POLIZA_RENOVACION_DIAS_DESPUES = 21;
 
 // Referencias a elementos del DOM globales
 let mainContent = null;
@@ -1706,6 +1708,11 @@ function updatePriorityAlertsLayout() {
         // Limpiar clases previas
         section.classList.remove('width-50', 'width-100');
 
+        if (section.classList.contains('critical-alert')) {
+            section.classList.add('width-100');
+            return;
+        }
+
         // Aplicar ancho según cantidad de elementos de SU categoría
         if (count === 1) {
             section.classList.add('width-50');
@@ -1726,14 +1733,14 @@ async function loadPolizasVencimientoDashboard() {
     try {
         const supabase = window.getSupabaseClient();
 
-        // Obtener la fecha de hoy, y el rango de +-3 días solicitado por el usuario
+        // Obtener pólizas dentro de la ventana de renovación: 3 días antes a 21 días después.
         const today = new Date();
 
         const startDate = new Date();
-        startDate.setDate(today.getDate() - 3);
+        startDate.setDate(today.getDate() - DASHBOARD_POLIZA_RENOVACION_DIAS_DESPUES);
 
         const endDate = new Date();
-        endDate.setDate(today.getDate() + 3);
+        endDate.setDate(today.getDate() + DASHBOARD_POLIZA_RENOVACION_DIAS_ANTES);
 
         const startStr = startDate.toISOString().split('T')[0];
         const endStr = endDate.toISOString().split('T')[0];
@@ -1779,34 +1786,55 @@ async function loadPolizasVencimientoDashboard() {
             poliza.socio = socios?.find(s => s.idsocio === poliza.id_socio) || {};
         });
 
+        const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const polizasConDias = polizas.map(poliza => {
+            const vencParts = poliza.fecha_vencimiento.split('-');
+            const fechaVenc = new Date(parseInt(vencParts[0], 10), parseInt(vencParts[1], 10) - 1, parseInt(vencParts[2], 10));
+            const diffTime = fechaVenc - todayMidnight;
+            return {
+                ...poliza,
+                diasParaVencer: Math.round(diffTime / (1000 * 60 * 60 * 24))
+            };
+        });
+        const polizasVencidasPendientes = polizasConDias.filter(p => p.diasParaVencer < 0);
+
         section.classList.remove('hidden');
+        section.classList.toggle('critical-alert', polizasVencidasPendientes.length > 0);
         if (countBadge) countBadge.textContent = polizas.length;
 
         // Renderizar
-        container.innerHTML = polizas.map(poliza => {
+        const urgentAlertHtml = polizasVencidasPendientes.length > 0 ? `
+            <div class="polizas-urgent-summary">
+                <div class="urgent-summary-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="urgent-summary-copy">
+                    <strong>Tienes ${polizasVencidasPendientes.length} póliza${polizasVencidasPendientes.length === 1 ? '' : 's'} vencida${polizasVencidasPendientes.length === 1 ? '' : 's'} pendiente${polizasVencidasPendientes.length === 1 ? '' : 's'} de renovación.</strong>
+                    <span>POR FAVOR REVISA URGENTE</span>
+                </div>
+                <button type="button" class="urgent-summary-btn" onclick="loadView('polizas')">
+                    <i class="fas fa-arrow-right"></i> Ir a Pólizas
+                </button>
+            </div>
+        ` : '';
+
+        container.innerHTML = urgentAlertHtml + polizasConDias.map(poliza => {
             const socio = poliza.socio || {};
             const montoFormatted = parseFloat(poliza.valor).toLocaleString('es-EC', { minimumFractionDigits: 2 });
             const interesCalculado = parseFloat(poliza.valor_final || 0) - parseFloat(poliza.valor || 0);
             const interesFormatted = (interesCalculado > 0 ? interesCalculado : 0).toLocaleString('es-EC', { minimumFractionDigits: 2 });
 
-            // Calcular días restantes (normalizado a medianoche para evitar problemas de horas)
-            const hoyMedianoche = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            const vencParts = poliza.fecha_vencimiento.split('-');
-            const fechaVenc = new Date(parseInt(vencParts[0]), parseInt(vencParts[1]) - 1, parseInt(vencParts[2]));
-            const diffTime = fechaVenc - hoyMedianoche;
-            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
             let colorStyle = 'color: #ef4444; background: rgba(239, 68, 68, 0.1); font-weight: bold;'; // Danger por defecto
             let labelVence = 'Vence en';
             let textoDias = '';
 
-            if (diffDays === 0) {
+            if (poliza.diasParaVencer === 0) {
                 textoDias = 'HOY';
-            } else if (diffDays > 0) {
-                textoDias = `${diffDays} ${diffDays === 1 ? 'día' : 'días'}`;
+            } else if (poliza.diasParaVencer > 0) {
+                textoDias = `${poliza.diasParaVencer} ${poliza.diasParaVencer === 1 ? 'día' : 'días'}`;
             } else {
                 labelVence = 'Vencida hace';
-                textoDias = `${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'día' : 'días'}`;
+                textoDias = `${Math.abs(poliza.diasParaVencer)} ${Math.abs(poliza.diasParaVencer) === 1 ? 'día' : 'días'}`;
                 colorStyle = 'color: white; background: #ef4444; font-weight: bold;'; // Fondo sólido para vencidas
             }
 

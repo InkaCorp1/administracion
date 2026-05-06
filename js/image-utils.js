@@ -321,9 +321,45 @@ function showImagePreview(file, imgElement) {
     });
 }
 
+/**
+ * Muestra una notificación global (toast o alert)
+ * Usa SweetAlert2 si está disponible, sino usa alert() básico
+ * 
+ * @param {string} mensaje - Texto del mensaje
+ * @param {string} tipo - 'success', 'error', 'warning', 'info' (default: 'info')
+ * @param {number} duracion - Milisegundos de duración (default: 3000)
+ */
+function showNotification(mensaje, tipo = 'info', duracion = 3000) {
+    // Si SweetAlert2 está disponible, usarlo
+    if (typeof Swal !== 'undefined') {
+        const posiciónYModo = {
+            success: { icon: 'success', toast: true, position: 'top-end' },
+            error: { icon: 'error', toast: true, position: 'top-end' },
+            warning: { icon: 'warning', toast: true, position: 'top-end' },
+            info: { icon: 'info', toast: true, position: 'top-end' }
+        };
+        
+        const config = posiciónYModo[tipo] || posiciónYModo.info;
+        Swal.fire({
+            ...config,
+            title: mensaje,
+            timer: duracion,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
+            }
+        });
+    } else {
+        // Fallback a alert() básico
+        alert(`[${tipo.toUpperCase()}] ${mensaje}`);
+    }
+}
+
 // Exportar funciones para uso global
 window.compressImage = compressImage;
 window.uploadFileToStorage = uploadFileToStorage;
 window.uploadImageToStorage = uploadImageToStorage;
 window.uploadReceiptToStorage = uploadReceiptToStorage;
 window.showImagePreview = showImagePreview;
+window.showNotification = showNotification;

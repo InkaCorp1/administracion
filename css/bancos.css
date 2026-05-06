@@ -646,6 +646,51 @@
     justify-content: center;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    position: relative; /* Added for edit button */
+}
+
+.btn-edit-logo {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 24px;
+    height: 24px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 50% 0 0 0;
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 2;
+}
+
+.bank-logo-container:hover .btn-edit-logo {
+    opacity: 1;
+}
+
+.bank-name-edit-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.btn-edit-inline {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+    padding: 0;
+}
+
+.btn-edit-inline:hover {
+    color: #ffffff;
 }
 
 .bank-logo-container img {

@@ -611,7 +611,17 @@ function previewMobileImage(event, targetId) {
             const previewBox = document.getElementById(targetId);
             const previewImg = document.getElementById('preview-img');
             if (previewImg) previewImg.src = e.target.result;
-            if (previewBox) previewBox.classList.remove('hidden');
+            if (previewBox) {
+                previewBox.classList.remove('hidden');
+                
+                // Asegurar que el botn de registro sea visible tras cargar la imagen
+                setTimeout(() => {
+                    const btnSave = document.getElementById('btn-save-manual');
+                    if (btnSave) {
+                        btnSave.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }, 100);
+            }
         }
         reader.readAsDataURL(file);
     }

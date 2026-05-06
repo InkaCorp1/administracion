@@ -1,13 +1,13 @@
 /**
  * INKA CORP - Service Worker
  * PWA Offline Support
- * Version 29.8.0 - Minor update with precancelaciones module fixes
+ * Version 30.0.0 - Renovacion de polizas y descuentos en contrato
  */
 
-const SW_VERSION = '29.8.0';
+const SW_VERSION = '30.0.0';
 const CACHE_NAME = `inkacorp-v${SW_VERSION}`;
 const STATIC_CACHE = `inkacorp-static-v${SW_VERSION}`;
-const CHANGELOG_URL = `CHANGELOG.md?v=${encodeURIComponent(SW_VERSION)}`;
+const CHANGELOG_URL = 'CHANGELOG.md?v=';
 
 // Archivos esenciales para cachear (Shell de la app)
 const ESSENTIAL_FILES = [
@@ -42,6 +42,8 @@ const MODULE_FILES = [
     'js/modules/simulador.js',
     'js/modules/aportes.js',
     'js/modules/bancos.js',
+    'views/bancos.html',
+    'css/bancos.css',
     'js/modules/administrativos.js',
     'js/modules/contratos.js',
     'css/contratos.css',
@@ -59,13 +61,18 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(STATIC_CACHE)
             .then((cache) => {
-                const fetchOptions = { cache: 'no-store' }; // Forzar fetch desde red al cachear
+                const fetchOptions = { cache: 'no-store' };
                 return Promise.all(
                     allFiles.map(url => {
-                        return fetch(url, fetchOptions).then(response => {
-                            if (!response.ok) throw new Error(`Falló carga de ${url}`);
-                            return cache.put(url, response.clone());
-                        });
+                        return fetch(url, fetchOptions)
+                            .then(response => {
+                                if (!response.ok) throw new Error('Falló carga de ' + url);
+                                return cache.put(url, response);
+                            })
+                            .catch(err => {
+                                console.warn('[SW] No se pudo cachear recurso durante install: ', err);
+                                return Promise.resolve();
+                            });
                     })
                 );
             })
@@ -95,60 +102,49 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Estrategia: Network First con Fallback SPA Robustecido
-
-// Estrategia: Network First con Fallback SPA Robustecido
+// Estrategia: Intercepción Limpia
 self.addEventListener('fetch', (event) => {
+    // Solo manejar peticiones GET
     if (event.request.method !== 'GET') return;
 
     const url = new URL(event.request.url);
+    const isSameOrigin = url.origin === self.location.origin;
 
-    // Ignorar peticiones a APIs externas (Supabase, Google Drive, etc)
-    if (url.hostname.includes('supabase') ||
-        url.hostname.includes('flagcdn') ||
-        url.hostname.includes('googleusercontent.com') ||
-        url.hostname.includes('drive.google.com')) return;
+    // REGLA DE ORO: Si no es del mismo origen o es una extensión, NO TOCAR.
+    if (!isSameOrigin || url.protocol.startsWith('chrome-extension')) {
+        return;
+    }
 
     const isNavigation = event.request.mode === 'navigate' ||
-        (event.request.method === 'GET' && event.request.headers.get('accept')?.includes('text/html'));
-
-    const isSameOrigin = url.origin === self.location.origin;
-    const networkRequest = isSameOrigin ? new Request(event.request, { cache: 'reload' }) : event.request;
+        (event.request.headers.get('accept')?.includes('text/html'));
 
     event.respondWith(
-        fetch(networkRequest)
+        fetch(event.request)
             .then((response) => {
-                // Manejo de 404 para soporte SPA (Virtual URLs como /bancos.html)
+                // Manejo de errores de navegación (SPA)
                 if (response.status === 404 && isNavigation) {
-                    console.log('[SW] SPA Navigation Fallback for:', url.pathname);
                     const isMobileRoute = url.pathname.includes('/mobile/') || url.pathname.includes('/m-');
                     const fallbackFile = isMobileRoute ? 'mobile/index.html' : 'index.html';
-
-                    return caches.match(fallbackFile).then(cachedResponse => {
-                        return cachedResponse || caches.match('index.html') || response;
-                    });
+                    return caches.match(fallbackFile).then(cached => cached || response);
                 }
 
-                // Cachear recursos estáticos exitosos del mismo origen
-                // Solo para esquemas http/https (previene errores con chrome-extension)
-                if (response.status === 200 && response.type === 'basic' && 
-                    (event.request.url.startsWith('http') || event.request.url.startsWith('https'))) {
+                // Cachear solo recursos estáticos exitosos de la propia app
+                if (response.status === 200 && response.type === 'basic') {
                     const responseClone = response.clone();
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
                 }
+                
                 return response;
             })
-            .catch((err) => {
-                // Fallback Offline
+            .catch(() => {
+                // Fallback offline
                 return caches.match(event.request).then(cached => {
                     if (cached) return cached;
-
+                    
                     if (isNavigation) {
                         const isMobileRoute = url.pathname.includes('/mobile/') || url.pathname.includes('/m-');
                         const fallbackFile = isMobileRoute ? 'mobile/index.html' : 'index.html';
-                        return fetch(fallbackFile, { cache: 'no-store' })
-                            .then((fallbackResponse) => fallbackResponse)
-                            .catch(() => caches.match(fallbackFile));
+                        return caches.match(fallbackFile);
                     }
                 });
             })

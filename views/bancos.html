@@ -70,9 +70,18 @@
                 <div class="bank-logo-container">
                     <img id="modal-bank-logo" src="" alt="Banco" class="hidden">
                     <div id="modal-bank-logo-icon" class="hidden"><i class="fas fa-university"></i></div>
+                    <button class="btn-edit-logo hidden" id="btn-edit-bank-logo" title="Cambiar Logo">
+                        <i class="fas fa-camera"></i>
+                    </button>
+                    <input type="file" id="input-new-bank-logo" class="hidden" accept="image/*">
                 </div>
                 <div class="bank-title-group">
-                    <h2 id="modal-bank-name" class="modal-title-premium">Nombre del Banco</h2>
+                    <div class="bank-name-edit-wrapper">
+                        <h2 id="modal-bank-name" class="modal-title-premium">Nombre del Banco</h2>
+                        <button class="btn-edit-inline" id="btn-edit-bank-name" title="Editar Nombre">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
                     <span id="modal-credit-id" class="credit-badge">ID: -------</span>
                 </div>
             </div>

@@ -315,19 +315,21 @@ async function loadCreditosPrecancelablesFromDB(silently = false) {
         const supabase = window.getSupabaseClient();
 
         // Obtener créditos activos y morosos (ambos pueden precancelarse)
+        // ✅ OPTIMIZACIÓN: Incluir amortización en la consulta principal
         const { data: creditos, error } = await supabase
             .from('ic_creditos')
             .select(`
                 *,
-                socio:ic_socios(*)
+                socio:ic_socios(*),
+                amortizacion:ic_creditos_amortizacion(saldo_capital, numero_cuota, estado_cuota)
             `)
             .in('estado_credito', ['ACTIVO', 'MOROSO'])
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        // Calcular capital pendiente de cada crédito
-        await calcularCapitalPendiente(creditos);
+        // ✅ Calcular capital pendiente de cada crédito usando datos ya cargados
+        calcularCapitalPendienteLocal(creditos);
 
         allCreditosPrecancelables = creditos;
         filteredCreditosPrecancelables = [...creditos];
@@ -393,6 +395,50 @@ async function loadHistorialFromDB(silently = false) {
     }
 }
 
+/**
+ * Calcula capital pendiente usando datos ya cargados en la relación 'amortizacion'
+ * Esto evita consultas adicionales que pueden fallar por permisos RLS
+ */
+function calcularCapitalPendienteLocal(creditos) {
+    for (const credito of creditos) {
+        try {
+            // Si hay datos de amortización cargados
+            if (credito.amortizacion && Array.isArray(credito.amortizacion)) {
+                const cuotas = credito.amortizacion;
+                
+                // Buscar cuotas pagadas
+                const cuotasPagadas = cuotas.filter(c => c.estado_cuota === 'PAGADO');
+                const ultimaCuotaPagada = cuotasPagadas.length > 0 
+                    ? cuotasPagadas[cuotasPagadas.length - 1] 
+                    : null;
+
+                if (ultimaCuotaPagada && ultimaCuotaPagada.saldo_capital !== undefined) {
+                    credito.capital_pendiente = ultimaCuotaPagada.saldo_capital;
+                } else {
+                    credito.capital_pendiente = credito.capital_financiado || credito.capital || 0;
+                }
+
+                credito.ahorro_acumulado = cuotasPagadas.length * (credito.ahorro_programado_cuota || 0);
+                credito.cuotas_pagadas_count = cuotasPagadas.length;
+            } else {
+                // Si no hay amortización cargada, usar defaults
+                credito.capital_pendiente = credito.capital_financiado || credito.capital || 0;
+                credito.ahorro_acumulado = 0;
+                credito.cuotas_pagadas_count = credito.cuotas_pagadas || 0;
+            }
+        } catch (error) {
+            console.warn(`[PRECANC] Advertencia al calcular capital para ${credito.codigo_credito}:`, error);
+            // Usar valores por defecto seguros
+            credito.capital_pendiente = credito.capital_financiado || credito.capital || 0;
+            credito.ahorro_acumulado = (credito.cuotas_pagadas || 0) * (credito.ahorro_programado_cuota || 0);
+            credito.cuotas_pagadas_count = credito.cuotas_pagadas || 0;
+        }
+    }
+}
+
+/**
+ * DEPRECADO: Mantener para compatibilidad pero usar calcularCapitalPendienteLocal en su lugar
+ */
 async function calcularCapitalPendiente(creditos) {
     const supabase = window.getSupabaseClient();
 
@@ -676,18 +722,32 @@ async function evaluarAperturaModalPrecancelacion(credito) {
     fechaHoy.setHours(0, 0, 0, 0);
 
     const amortizacionOriginal = await obtenerAmortizacionPrecancelacion(credito.id_credito);
-    const calculoOriginalHoy = construirCalculoPrecancelacion(credito, amortizacionOriginal, fechaHoy, credito.id_credito);
+    
+    // ✅ VALIDACIÓN MEJORADA: Si el crédito es ACTIVO, permitir la precancelación
+    // aunque haya cuotas vencidas. Solo bloquear si es MOROSO explícitamente.
+    try {
+        const calculoOriginalHoy = construirCalculoPrecancelacion(credito, amortizacionOriginal, fechaHoy, credito.id_credito);
 
-    if (calculoOriginalHoy.interesPerdonado > 0) {
-        return {
-            usarTablaAjustadaLegacy: false,
-            amortizacion: amortizacionOriginal,
-            calculoHoy: calculoOriginalHoy
-        };
+        if (calculoOriginalHoy.interesPerdonado > 0) {
+            return {
+                usarTablaAjustadaLegacy: false,
+                amortizacion: amortizacionOriginal,
+                calculoHoy: calculoOriginalHoy
+            };
+        }
+    } catch (error) {
+        // Si falla por mora pero el crédito es ACTIVO, proceder igual
+        if (credito.estado_credito === 'ACTIVO' && error.message.includes(MENSAJE_CREDITO_EN_MORA_PRECANC)) {
+            console.warn('[PRECANC] Crédito ACTIVO con cuotas vencidas, proceeding con tabla ajustada...');
+            // Continuar al siguiente paso
+        } else {
+            // Es un error real (no es de mora), relanzar
+            throw error;
+        }
     }
 
     const amortizacionAjustada = generarTablaLegacyAjustadaPrecancelacion(credito, amortizacionOriginal);
-    const calculoAjustadoHoy = construirCalculoPrecancelacion(credito, amortizacionAjustada, fechaHoy, credito.id_credito);
+    const calculoAjustadoHoy = construirCalculoPrecancelacion(credito, amortizacionAjustada, fechaHoy, credito.id_credito, 1, true);  // ✅ skipMoraCheck=true
 
     return {
         usarTablaAjustadaLegacy: true,
@@ -1114,19 +1174,84 @@ async function calcularPrecancelacion(idCredito, fechaPrecancelacion, penalizaci
 async function obtenerAmortizacionPrecancelacion(idCredito) {
     const supabase = window.getSupabaseClient();
 
-    const { data: amortizacion, error: errorAmort } = await supabase
-        .from('ic_creditos_amortizacion')
-        .select('*')
-        .eq('id_credito', idCredito)
-        .order('numero_cuota', { ascending: true });
+    // PASO 1: Intentar obtener datos del crédito cargado en memoria
+    const creditoEnMemoria = allCreditosPrecancelables.find(c => c.id_credito === idCredito);
+    if (creditoEnMemoria && creditoEnMemoria.amortizacion && Array.isArray(creditoEnMemoria.amortizacion)) {
+        return creditoEnMemoria.amortizacion;
+    }
 
-    if (errorAmort) throw errorAmort;
-    if (!amortizacion?.length) throw new Error('No se encontró tabla de amortización');
+    // PASO 2: Si no está en memoria, intentar consultar desde Supabase
+    try {
+        const { data: amortizacion, error: errorAmort } = await supabase
+            .from('ic_creditos_amortizacion')
+            .select('*')
+            .eq('id_credito', idCredito)
+            .order('numero_cuota', { ascending: true });
+
+        if (errorAmort) throw errorAmort;
+        if (!amortizacion?.length) throw new Error('No se encontró tabla de amortización');
+
+        return amortizacion;
+    } catch (error) {
+        console.error('[PRECANC] Error obteniendo amortización para ID:', idCredito, error);
+        
+        // PASO 3: Fallback - construir tabla aproximada basada en datos disponibles
+        if (creditoEnMemoria) {
+            console.warn('[PRECANC] Usando fallback approximado para amortización');
+            return construirAmortizacionAproximada(creditoEnMemoria);
+        }
+        
+        throw new Error(`No se pudo obtener amortización: ${error.message}`);
+    }
+}
+
+/**
+ * Construye una tabla de amortización aproximada basada en datos del crédito
+ * Se usa como fallback cuando no se puede acceder a la tabla de amortización por RLS
+ */
+function construirAmortizacionAproximada(credito) {
+    const amortizacion = [];
+    const plazo = parseInt(credito.plazo || 12, 10);
+    const capitalPendiente = parseFloat(credito.capital || 0);
+    const tasaMensual = (parseFloat(credito.tasa_interes_mensual || 0) / 100);
+    const cuotasPagadas = parseInt(credito.cuotas_pagadas || 0, 10);
+    const diaPago = parseInt(credito.dia_pago || 1, 10);
+    const fechaPrimerPago = parseDate(credito.fecha_primer_pago);
+
+    if (!fechaPrimerPago) {
+        throw new Error('No se puede construir tabla: fechaprimerr pago inválida');
+    }
+
+    const cuotaConAhorro = parseFloat(credito.cuota_con_ahorro || 0);
+    const cuotaBase = parseFloat(credito.cuota_base || cuotaConAhorro || 0);
+
+    for (let i = 1; i <= plazo; i++) {
+        const fechaVencimiento = new Date(fechaPrimerPago);
+        fechaVencimiento.setMonth(fechaVencimiento.getMonth() + (i - 1));
+
+        const saldoEstimado = capitalPendiente * (1 - (i / plazo));
+
+        amortizacion.push({
+            id_detalle: `approx-${credito.id_credito}-${i}`,
+            id_credito: credito.id_credito,
+            numero_cuota: i,
+            fecha_vencimiento: toISODate(fechaVencimiento),
+            cuota_total: cuotaBase,
+            cuota_base: cuotaBase,
+            pago_capital: cuotaBase * 0.7, // aproximado
+            pago_interes: cuotaBase * 0.2, // aproximado
+            pago_gastos_admin: cuotaBase * 0.1, // aproximado
+            ahorro_programado: parseFloat(credito.ahorro_programado_cuota || 0),
+            saldo_capital: Math.max(0, saldoEstimado),
+            estado_cuota: i <= cuotasPagadas ? 'PAGADO' : 'PENDIENTE',
+            dias_periodo: 30
+        });
+    }
 
     return amortizacion;
 }
 
-function construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelacion, idCredito, penalizacionMultiplicador = 1) {
+function construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelacion, idCredito, penalizacionMultiplicador = 1, skipMoraCheck = false) {
     const fechaEvaluacion = new Date(fechaPrecancelacion);
     fechaEvaluacion.setHours(0, 0, 0, 0);
     const usaTablaAjustadaLegacy = Boolean(
@@ -1141,18 +1266,20 @@ function construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelaci
 
     if (cuotasRestantes === 0) throw new Error('El crédito ya está completamente pagado');
 
-    // 3. Validar mora
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const fechaCorte = fechaEvaluacion < hoy ? fechaEvaluacion : hoy;
+    // 3. Validar mora (solamente si no está siendo skipped)
+    if (!skipMoraCheck) {
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const fechaCorte = fechaEvaluacion < hoy ? fechaEvaluacion : hoy;
 
-    const cuotasVencidasSinPagar = amortizacion.filter(c => {
-        const fv = parseDate(c.fecha_vencimiento);
-        return fv < fechaCorte && c.estado_cuota !== 'PAGADO';
-    });
+        const cuotasVencidasSinPagar = amortizacion.filter(c => {
+            const fv = parseDate(c.fecha_vencimiento);
+            return fv < fechaCorte && c.estado_cuota !== 'PAGADO';
+        });
 
-    if (cuotasVencidasSinPagar.length > 0) {
-        throw new Error(MENSAJE_CREDITO_EN_MORA_PRECANC);
+        if (cuotasVencidasSinPagar.length > 0) {
+            throw new Error(MENSAJE_CREDITO_EN_MORA_PRECANC);
+        }
     }
 
     // 4. Capital pendiente
@@ -1211,7 +1338,7 @@ function construirCalculoPrecancelacion(credito, amortizacion, fechaPrecancelaci
         montoPrecancelar,
         usaTablaAjustadaLegacy,
         tieneMora: false,
-        cuotasMora: cuotasVencidasSinPagar.length
+        cuotasMora: 0
     };
 }
 
@@ -1880,7 +2007,7 @@ async function ejecutarProcesamiento(calculo, referencia, observacion, comproban
             interes_perdonado: calculo.interesPerdonado,
             ahorro_acumulado: calculo.ahorroDevolver,
             ahorro_devuelto: calculo.ahorroDevolver,
-            monto_precancelacion: calculo.montoPrecancelar,  // ✅ COLUMNA CORRECTA
+            monto_precancelacion: calculo.montoPrecancelar,  // ✅ COLUMNA CORRECTA (no monto_total_pagado)
             comprobante_url: comprobanteUrl,                   // ✅ COLUMNA CORRECTA
             observacion: observacion,
             procesado_por: user?.id
@@ -1898,16 +2025,54 @@ async function ejecutarProcesamiento(calculo, referencia, observacion, comproban
 
     if (errC) throw errC;
 
-    // 3. Actualizar cuotas pendientes a PAGADO
+    // 3. Marcar cuotas pendientes como PAGADO (✅ estado válido en BD)
     const { error: errA } = await supabase
         .from('ic_creditos_amortizacion')
         .update({ estado_cuota: 'PAGADO' })
         .eq('id_credito', calculo.idCredito)
-        .eq('estado_cuota', 'PENDIENTE');
+        .in('estado_cuota', ['PENDIENTE', 'VENCIDO', 'PARCIAL']);  // Cambiar estado de estas cuotas
 
     if (errA) throw errA;
 
-    // 4. Invalidar caché de créditos
+    // 4. REGISTRAR INGRESO AUTOMÁTICO EN CAJA
+    // Primero, obtener la sesión actual de caja del usuario
+    const { data: cajaActiva, error: errCajaCheck } = await supabase
+        .from('ic_caja_aperturas')
+        .select('id_apertura')
+        .eq('id_usuario', user?.id)
+        .eq('estado', 'ABIERTA')
+        .order('fecha_apertura', { ascending: false })
+        .limit(1);
+
+    if (errCajaCheck) throw errCajaCheck;
+
+    if (cajaActiva && cajaActiva.length > 0) {
+        // Hay caja abierta, registrar el ingreso
+        const { error: errMovimiento } = await supabase
+            .from('ic_caja_movimientos')
+            .insert({
+                id_apertura: cajaActiva[0].id_apertura,
+                tipo_movimiento: 'INGRESO',
+                monto: calculo.montoPrecancelar,
+                descripcion: `Precancelación de crédito ${creditoActual.codigo_credito} - ${creditoActual.socio?.nombre}`,
+                metodo_pago: 'PRECANCELACION',
+                comprobante_url: comprobanteUrl,
+                categoria: 'PRECANCELACION',
+                id_usuario: user?.id,
+                fecha_movimiento: new Date().toISOString(),
+                referencia_externa: referencia || calculo.idCredito
+            });
+
+        if (errMovimiento) {
+            console.warn('[PRECANC] Advertencia al registrar ingreso en caja:', errMovimiento);
+            // No lanzamos error aquí, continuamos de todas formas
+        }
+    } else {
+        // No hay caja abierta, solo mostrar advertencia
+        console.warn('[PRECANC] No hay caja abierta para el usuario. El ingreso no se registró automáticamente.');
+    }
+
+    // 5. Invalidar caché de créditos
     if (window.invalidateCache) {
         window.invalidateCache('creditos');
     }

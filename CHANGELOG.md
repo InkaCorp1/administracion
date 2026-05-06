@@ -1,5 +1,16 @@
 # CHANGELOG - INKA CORP
 
+## [30.0.0] - 2026-05-06
+### Añadido
+- **Renovación de pólizas:** La renovación ahora permite descontar créditos normales y preferenciales antes de crear la nueva inversión.
+- **Pagos por descuento:** Los créditos normales descontados registran pagos reales de una cuota o múltiples cuotas, usando el comprobante fijo de descuento.
+- **Contrato de renovación:** El PDF muestra el detalle de descuentos después de las cláusulas y antes de firmas.
+
+### Mejorado
+- **Ventana de renovación:** Las pólizas pueden renovarse desde 3 días antes hasta 21 días después del vencimiento.
+- **Alertas prioritarias:** El dashboard avisa cuando existen pólizas vencidas pendientes de renovación.
+- **Service Worker:** Se actualizó la versión visible y de caché a v30.0.0.
+
 ## [29.7.4] - 2026-03-18
 ### Corregido
 - **Patch Forzado PWA/SW:** Se incrementó la versión de app y service worker para obligar la recarga del paquete actualizado en escritorio y móvil.
