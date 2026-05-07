@@ -1,10 +1,10 @@
 /**
  * INKA CORP - Service Worker
  * PWA Offline Support
- * Version 30.0.0 - Renovacion de polizas y descuentos en contrato
+ * Version 30.5.0 - Pagos preferenciales y auditoria de renovacion
  */
 
-const SW_VERSION = '30.0.0';
+const SW_VERSION = '30.5.0';
 const CACHE_NAME = `inkacorp-v${SW_VERSION}`;
 const STATIC_CACHE = `inkacorp-static-v${SW_VERSION}`;
 const CHANGELOG_URL = 'CHANGELOG.md?v=';

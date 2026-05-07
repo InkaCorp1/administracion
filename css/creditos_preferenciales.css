@@ -530,6 +530,45 @@
     background: var(--card-bg);
 }
 
+.archived-pref-section {
+    opacity: 0.86;
+}
+
+.archived-pref-toggle {
+    width: 100%;
+    border: 0;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.archived-pref-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--gray-400);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.creditos-pref-section-table tbody tr.row-archivado {
+    opacity: 0.62;
+}
+
+.creditos-pref-section-table tbody tr.row-archivado:hover {
+    opacity: 0.9;
+    background: rgba(148, 163, 184, 0.08);
+}
+
+.creditos-pref-section-table .status-pagado-text {
+    color: #22c55e;
+    font-weight: 800;
+}
+
 .creditos-pref-section-table {
     width: 100%;
     border-collapse: collapse;

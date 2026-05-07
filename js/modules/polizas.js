@@ -882,6 +882,9 @@ async function handleRenovarPoliza(poliza) {
             <p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 1rem; line-height: 1.4;">
                 <i class="fas fa-info-circle"></i> La renovación usa siempre el valor pactado al vencimiento de la póliza.
             </p>
+            <button type="button" id="btn-poliza-descuentos-pdf" style="width: 100%; margin-top: 0.25rem; padding: 0.85rem 1rem; border: 1px solid #93c5fd; border-radius: 0.8rem; background: #1e3a8a; color: #eff6ff; font-weight: 900; cursor: pointer;">
+                <i class="fas fa-file-pdf"></i> Descargar detalle de descuentos PDF
+            </button>
         `,
         showCancelButton: true,
         showDenyButton: true,
@@ -892,7 +895,21 @@ async function handleRenovarPoliza(poliza) {
         denyButtonText: 'Solo Capital',
         cancelButtonText: 'Cancelar',
         background: '#1f2937',
-        color: '#f8fafc'
+        color: '#f8fafc',
+        didOpen: () => {
+            const btnPdf = document.getElementById('btn-poliza-descuentos-pdf');
+            btnPdf?.addEventListener('click', async () => {
+                await generatePolizaRenewalDiscountsPDF(poliza, resumenDescuentos, {
+                    capitalOriginal,
+                    interesAlVencimiento,
+                    valorVencimientoTotal,
+                    saldoCapitalMasInteresPreview,
+                    saldoSoloCapitalPreview,
+                    totalDescuentosPreview,
+                    diasPoliza
+                });
+            });
+        }
     });
 
     if (isDismissed) return;
@@ -1167,6 +1184,44 @@ async function loadNormalCreditDeductionsForRenewal(supabase, idSocio) {
         }, new Map());
     }
 
+    const paidDetalleMap = new Map();
+    creditos.forEach(credito => {
+        (credito.amortizacion || []).forEach(cuota => {
+            if (cuota.estado_cuota === 'PAGADO') {
+                paidDetalleMap.set(cuota.id_detalle, {
+                    idCredito: credito.id_credito,
+                    numero: cuota.numero_cuota,
+                    fechaVencimiento: cuota.fecha_vencimiento
+                });
+            }
+        });
+    });
+
+    let pagosHistorialPorCredito = new Map();
+    const paidDetalleIds = Array.from(paidDetalleMap.keys());
+    if (paidDetalleIds.length > 0) {
+        const { data: pagosHistorial, error: pagosHistorialError } = await supabase
+            .from('ic_creditos_pagos')
+            .select('id_credito, id_detalle, fecha_pago, monto_pagado, metodo_pago, referencia_pago, comprobante_url, observaciones')
+            .in('id_detalle', paidDetalleIds)
+            .order('fecha_pago', { ascending: true });
+
+        if (pagosHistorialError) throw pagosHistorialError;
+
+        pagosHistorialPorCredito = (pagosHistorial || []).reduce((map, pago) => {
+            const detalle = paidDetalleMap.get(pago.id_detalle) || {};
+            const key = pago.id_credito || detalle.idCredito;
+            if (!key) return map;
+            if (!map.has(key)) map.set(key, []);
+            map.get(key).push({
+                ...pago,
+                numero_cuota: detalle.numero,
+                fecha_vencimiento: detalle.fechaVencimiento
+            });
+            return map;
+        }, new Map());
+    }
+
     return creditos.map(credito => {
         const cuotasPendientes = (credito.amortizacion || [])
             .filter(cuota => ['PENDIENTE', 'VENCIDO', 'PARCIAL'].includes(cuota.estado_cuota))
@@ -1204,6 +1259,7 @@ async function loadNormalCreditDeductionsForRenewal(supabase, idSocio) {
             total: parseFloat(total.toFixed(2)),
             totalMora: parseFloat(totalMora.toFixed(2)),
             cuotas: cuotasPendientes,
+            pagosHistorial: pagosHistorialPorCredito.get(credito.id_credito) || [],
             detalle: `${cuotasPendientes.length} cuota${cuotasPendientes.length === 1 ? '' : 's'} pendiente${cuotasPendientes.length === 1 ? '' : 's'}${totalMora > 0 ? `, incluye mora ${formatMoney(totalMora)}` : ''}`
         };
     }).filter(item => item.total > 0);
@@ -1212,7 +1268,7 @@ async function loadNormalCreditDeductionsForRenewal(supabase, idSocio) {
 async function loadPreferentialCreditDeductionsForRenewal(supabase, idSocio) {
     const { data: creditos, error } = await supabase
         .from('ic_preferencial')
-        .select('idcredito, tipo, fechaaprobacion, monto, montofinal, estado, valor_abonado')
+        .select('idcredito, idsocio, tipo, fechaaprobacion, fechasolicitud, porcentaje, motivo, fotografia, monto, montofinal, estado')
         .eq('idsocio', idSocio)
         .in('estado', ['DESEMBOLSADO', 'ABONADO']);
 
@@ -1221,61 +1277,123 @@ async function loadPreferentialCreditDeductionsForRenewal(supabase, idSocio) {
 
     const idsCreditos = creditos.map(c => c.idcredito);
 
-    const [configsRes, pagosRes] = await Promise.all([
-        supabase.from('ic_preferencial_config').select('*').in('id_credito', idsCreditos),
-        supabase.from('ic_preferencial_pagos').select('monto_abonado').eq('id_socio', idSocio)
-    ]);
+    const { data: pagos, error: pagosError } = await supabase
+        .from('ic_preferencial_pagos')
+        .select('*')
+        .in('id_credito', idsCreditos)
+        .order('fecha_pago', { ascending: true });
 
-    if (configsRes.error) throw configsRes.error;
-    if (pagosRes.error) throw pagosRes.error;
+    if (pagosError) throw pagosError;
 
-    const hoy = new Date();
-    let abonosDisponibles = (pagosRes.data || []).reduce((sum, pago) => sum + parsePolizaMoney(pago.monto_abonado), 0);
+    const pagosPorCredito = (pagos || []).reduce((map, pago) => {
+        const key = pago.id_credito;
+        if (!key) return map;
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(pago);
+        return map;
+    }, new Map());
 
     return creditos.map(credito => {
-        const capital = parsePolizaMoney(credito.montofinal || credito.monto || 0);
-        const cfg = configsRes.data?.find(f => f.id_credito === credito.idcredito && f.estado_interes !== false);
-        const interes = calculatePreferentialInterestForRenewal(capital, cfg, hoy);
-        const valorAbonadoLocal = parsePolizaMoney(credito.valor_abonado);
-        const bruto = capital + interes.valor;
-        const abonoGlobalAplicado = Math.min(Math.max(0, bruto - valorAbonadoLocal), abonosDisponibles);
-        abonosDisponibles -= abonoGlobalAplicado;
-        const abonado = valorAbonadoLocal + abonoGlobalAplicado;
-        const total = parseFloat(Math.max(0, bruto - abonado).toFixed(2));
+        const pagosCredito = pagosPorCredito.get(credito.idcredito) || [];
+        const balance = calculatePolizaPreferentialCreditBalance(credito, pagosCredito);
+        const total = parseFloat(Math.max(0, balance.saldo).toFixed(2));
 
         return {
             id: credito.idcredito,
             label: `${credito.tipo || 'Preferencial'} ${credito.fechaaprobacion ? `(${credito.fechaaprobacion})` : ''}`,
             total,
-            capital,
-            interes: interes.valor,
-            detalle: interes.label
+            capital: balance.capitalPendiente,
+            interes: balance.interesPendiente,
+            motivo: credito.motivo || '',
+            comprobanteDesembolso: credito.fotografia || '',
+            pagos: pagosCredito,
+            detalle: `Saldo a hoy con ${formatPolizaPreferentialRate(credito)} mensual`
         };
     }).filter(item => item.total > 0);
 }
 
-function calculatePreferentialInterestForRenewal(capital, cfg, hoy) {
-    if (!cfg || !cfg.fecha_inicio_interes || !cfg.tasa_decimal) {
-        return { valor: 0, label: 'Sin interés configurado' };
-    }
+function calculatePolizaPreferentialCreditBalance(credito, pagos = [], untilDate = new Date()) {
+    const principalOriginal = parsePolizaMoney(credito.montofinal || credito.monto || 0);
+    const monthlyRate = parsePolizaPreferentialMonthlyRate(credito);
+    const startDate = parsePolizaPreferentialDate(credito.fechaaprobacion || credito.fechasolicitud) || parsePolizaPreferentialDate(credito.created_at) || new Date();
+    const endDate = untilDate instanceof Date ? untilDate : parsePolizaPreferentialDate(untilDate) || new Date();
+    const sortedPayments = [...(pagos || [])]
+        .filter(p => parsePolizaMoney(p.monto_abonado) > 0)
+        .sort((a, b) => (parsePolizaPreferentialDate(a.fecha_pago)?.getTime() || 0) - (parsePolizaPreferentialDate(b.fecha_pago)?.getTime() || 0));
 
-    const fechaInicio = new Date(`${cfg.fecha_inicio_interes}T12:00:00`);
-    if (Number.isNaN(fechaInicio.getTime())) {
-        return { valor: 0, label: 'Interés sin fecha válida' };
-    }
+    let capitalPendiente = principalOriginal;
+    let interesPendiente = 0;
+    let totalInteresGenerado = 0;
+    let totalPagado = 0;
+    let cursor = startDate;
 
-    const diasBrutos = Math.max(0, Math.floor((hoy - fechaInicio) / (1000 * 60 * 60 * 24)));
-    let periodos = 0;
-    if (cfg.frecuencia === 'diario') periodos = diasBrutos;
-    else if (cfg.frecuencia === 'semanal') periodos = Math.floor(diasBrutos / 7);
-    else if (cfg.frecuencia === 'mensual') periodos = Math.floor(diasBrutos / 30);
-    else if (cfg.frecuencia === 'anual') periodos = Math.floor(diasBrutos / 365);
+    const accrueUntil = (targetDate) => {
+        if (!targetDate || targetDate <= cursor || capitalPendiente <= 0 || monthlyRate <= 0) {
+            if (targetDate && targetDate > cursor) cursor = targetDate;
+            return;
+        }
 
-    const tasa = parsePolizaMoney(cfg.tasa_decimal);
-    return {
-        valor: parseFloat((capital * tasa * periodos).toFixed(2)),
-        label: `${(tasa * 100).toFixed(2)}% ${cfg.frecuencia || ''} (${diasBrutos} días)`
+        const dias = Math.max(0, Math.floor((targetDate - cursor) / (1000 * 60 * 60 * 24)));
+        const interes = capitalPendiente * monthlyRate * (dias / 30);
+        interesPendiente += interes;
+        totalInteresGenerado += interes;
+        cursor = targetDate;
     };
+
+    sortedPayments.forEach(pago => {
+        const paymentDate = parsePolizaPreferentialDate(pago.fecha_pago) || cursor;
+        accrueUntil(paymentDate);
+
+        let montoPago = parsePolizaMoney(pago.monto_abonado);
+        totalPagado += montoPago;
+
+        const aplicadoInteres = Math.min(interesPendiente, montoPago);
+        interesPendiente -= aplicadoInteres;
+        montoPago -= aplicadoInteres;
+
+        const aplicadoCapital = Math.min(capitalPendiente, montoPago);
+        capitalPendiente -= aplicadoCapital;
+    });
+
+    accrueUntil(endDate);
+
+    return {
+        principalOriginal: parseFloat(principalOriginal.toFixed(2)),
+        capitalPendiente: parseFloat(Math.max(0, capitalPendiente).toFixed(2)),
+        interesPendiente: parseFloat(Math.max(0, interesPendiente).toFixed(2)),
+        totalInteresGenerado: parseFloat(totalInteresGenerado.toFixed(2)),
+        totalPagado: parseFloat(totalPagado.toFixed(2)),
+        saldo: parseFloat(Math.max(0, capitalPendiente + interesPendiente).toFixed(2))
+    };
+}
+
+function parsePolizaPreferentialMonthlyRate(credito) {
+    const raw = credito?.porcentaje ? credito.porcentaje.toString().replace('%', '').replace(',', '.').trim() : '0';
+    const rate = parseFloat(raw);
+    return Number.isFinite(rate) ? rate / 100 : 0;
+}
+
+function formatPolizaPreferentialRate(credito) {
+    const rate = parsePolizaPreferentialMonthlyRate(credito) * 100;
+    return `${rate.toFixed(2)}%`;
+}
+
+function parsePolizaPreferentialDate(value) {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+
+    if (typeof value === 'string' && value.includes('/')) {
+        const parts = value.split('/');
+        if (parts.length === 3) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const year = parseInt(parts[2], 10);
+            return new Date(year, month, day);
+        }
+    }
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
 }
 
 async function registerPolizaRenewalCreditPayments(supabase, poliza, resumenDescuentos) {
@@ -1396,22 +1514,33 @@ async function registerNormalCreditRenewalPayment(supabase, credito, poliza, soc
 }
 
 async function registerPreferentialCreditRenewalPayment(supabase, poliza, creditosPreferenciales, options) {
-    const montoTotal = parseFloat(creditosPreferenciales.reduce((sum, item) => sum + parsePolizaMoney(item.total), 0).toFixed(2));
-    if (montoTotal <= 0) return;
+    for (const credito of creditosPreferenciales) {
+        const monto = parseFloat(parsePolizaMoney(credito.total).toFixed(2));
+        if (monto <= 0) continue;
 
-    const detalle = creditosPreferenciales
-        .map(item => `${item.label}: ${formatMoney(item.total)}`)
-        .join(' | ');
+        const { error } = await supabase.from('ic_preferencial_pagos').insert([{
+            id_credito: credito.id,
+            id_socio: poliza.id_socio,
+            monto_abonado: monto,
+            fecha_pago: options.fechaPago,
+            comprobante_url: POLIZA_RENOVACION_COMPROBANTE_URL,
+            tipo_pago: 'PAGO_TOTAL',
+            notas: `Descuento automático por renovación de póliza ${String(poliza.id_poliza || '').slice(0, 8)}.`,
+            notas_admin: `[DESCUENTO POR RENOVACION DE POLIZA] ${options.referencia}. ${credito.label}: ${formatMoney(monto)}`,
+            capital_pendiente_despues: 0,
+            interes_pendiente_despues: 0,
+            saldo_pendiente_despues: 0
+        }]);
 
-    const { error } = await supabase.from('ic_preferencial_pagos').insert([{
-        id_socio: poliza.id_socio,
-        monto_abonado: montoTotal,
-        fecha_pago: options.fechaPago,
-        comprobante_url: POLIZA_RENOVACION_COMPROBANTE_URL,
-        notas_admin: `[DESCUENTO POR RENOVACION DE POLIZA] ${options.referencia}. ${detalle}`
-    }]);
+        if (error) throw error;
 
-    if (error) throw error;
+        const { error: estadoError } = await supabase
+            .from('ic_preferencial')
+            .update({ estado: 'PAGADO' })
+            .eq('idcredito', credito.id);
+
+        if (estadoError) throw estadoError;
+    }
 }
 
 async function notifyPolizaRenewalCreditPayment(data) {
@@ -1590,6 +1719,219 @@ function escapePolizaHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+async function generatePolizaRenewalDiscountsPDF(poliza, resumen, polizaDetalle = {}) {
+    const { jsPDF } = window.jspdf;
+    const doc = jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const margin = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const contentWidth = pageWidth - (margin * 2);
+    let y = 16;
+
+    const ensureSpace = (needed = 20) => {
+        if (y + needed > 280) {
+            doc.addPage();
+            y = 16;
+        }
+    };
+
+    const text = (value, x, opts = {}) => {
+        const lines = doc.splitTextToSize(String(value || ''), opts.width || contentWidth);
+        doc.text(lines, x, y, opts.options || {});
+        y += (lines.length * (opts.lineHeight || 5));
+    };
+
+    const sectionTitle = (title) => {
+        ensureSpace(16);
+        doc.setFillColor(32, 70, 82);
+        doc.rect(margin, y, contentWidth, 7, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(255);
+        doc.text(title, margin + 3, y + 4.8);
+        y += 12;
+        doc.setTextColor(0);
+    };
+
+    const drawPaymentTable = (rows, columns) => {
+        if (!rows?.length) return;
+        ensureSpace(14);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setFillColor(245, 247, 250);
+        doc.rect(margin, y - 4, contentWidth, 7, 'F');
+        let x = margin + 2;
+        columns.forEach(col => {
+            doc.text(col.label, x, y);
+            x += col.width;
+        });
+        y += 5;
+        doc.setFont('helvetica', 'normal');
+        rows.forEach(row => {
+            ensureSpace(8);
+            x = margin + 2;
+            columns.forEach(col => {
+                const value = typeof col.value === 'function' ? col.value(row) : row[col.value];
+                const lines = doc.splitTextToSize(String(value || '-'), col.width - 2);
+                doc.text(lines.slice(0, 2), x, y);
+                x += col.width;
+            });
+            y += 7;
+        });
+        y += 2;
+    };
+
+    const socio = poliza.socio || {};
+    const normales = resumen?.creditosNormales || [];
+    const preferenciales = resumen?.creditosPreferenciales || [];
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(11, 78, 50);
+    doc.text('DETALLE DE DESCUENTOS PARA RENOVACION', margin, y);
+    y += 8;
+    doc.setFontSize(9);
+    doc.setTextColor(70);
+    doc.text(`Socio: ${socio.nombre || poliza.id_socio || '-'}`, margin, y);
+    y += 5;
+    doc.text(`Poliza: ${String(poliza.id_poliza || '-').slice(0, 12)} | Fecha: ${formatDate(todayISODate())}`, margin, y);
+    y += 8;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(0);
+    doc.text('Detalle de la póliza', margin, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text(`Capital inicial: ${formatMoney(polizaDetalle.capitalOriginal ?? poliza.valor ?? 0)}`, margin, y);
+    doc.text(`Interés al vencimiento (${polizaDetalle.diasPoliza ?? '-'} días): ${formatMoney(polizaDetalle.interesAlVencimiento || 0)}`, margin + 78, y);
+    y += 5;
+    doc.text(`Valor al vencimiento: ${formatMoney(polizaDetalle.valorVencimientoTotal ?? poliza.valor_final ?? 0)}`, margin, y);
+    doc.text(`Total descuentos: ${formatMoney(polizaDetalle.totalDescuentosPreview ?? resumen?.total ?? 0)}`, margin + 78, y);
+    y += 5;
+    doc.text(`Valor a renovar con capital + intereses: ${formatMoney(polizaDetalle.saldoCapitalMasInteresPreview || 0)}`, margin, y);
+    doc.text(`Valor a renovar solo capital: ${formatMoney(polizaDetalle.saldoSoloCapitalPreview || 0)}`, margin + 78, y);
+    y += 8;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(153, 27, 27);
+    doc.text(`Total a descontar: ${formatMoney(resumen?.total || 0)}`, margin, y);
+    y += 8;
+
+    sectionTitle('CREDITOS NORMALES');
+    if (!normales.length) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        text('No registra créditos normales con saldo pendiente para descontar.', margin);
+    }
+    normales.forEach(item => {
+        ensureSpace(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(0);
+        text(`${item.label} | Descuento: ${formatMoney(item.total)} | ${item.detalle}`, margin);
+        const pagos = item.pagosHistorial || [];
+        if (pagos.length) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.text('Pagos registrados de cuotas pagadas', margin, y);
+            y += 5;
+            drawPaymentTable(pagos, [
+                { label: 'Cuota', width: 18, value: r => r.numero_cuota || '-' },
+                { label: 'Fecha Pago', width: 28, value: r => formatDate(r.fecha_pago) },
+                { label: 'Monto', width: 24, value: r => formatMoney(r.monto_pagado) },
+                { label: 'Metodo', width: 26, value: r => r.metodo_pago || '-' },
+                { label: 'Referencia', width: 45, value: r => r.referencia_pago || '-' },
+                { label: 'Comprobante', width: 38, value: r => r.comprobante_url ? 'Registrado' : '-' }
+            ]);
+        }
+    });
+
+    sectionTitle('CREDITOS PREFERENCIALES');
+    if (!preferenciales.length) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        text('No registra créditos preferenciales con saldo pendiente para descontar.', margin);
+    }
+    for (const item of preferenciales) {
+        ensureSpace(24);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(0);
+        text(`${item.label} | Descuento: ${formatMoney(item.total)} | ${item.detalle}`, margin);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        text(`Motivo: ${item.motivo || '-'}`, margin, { width: contentWidth, lineHeight: 4 });
+        if (item.comprobanteDesembolso) {
+            ensureSpace(54);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Comprobante de desembolso:', margin, y);
+            y += 4;
+            const imageData = await loadPolizaImageAsDataUrl(item.comprobanteDesembolso);
+            if (imageData) {
+                try {
+                    doc.addImage(imageData, getPolizaImageFormat(imageData), margin, y, 55, 42, undefined, 'FAST');
+                    y += 46;
+                } catch (error) {
+                    try {
+                        doc.addImage(imageData, undefined, margin, y, 55, 42, undefined, 'FAST');
+                        y += 46;
+                    } catch (fallbackError) {
+                        doc.setFont('helvetica', 'normal');
+                        text('No se pudo incrustar la imagen del comprobante.', margin, { width: contentWidth, lineHeight: 4 });
+                    }
+                }
+            } else {
+                doc.setFont('helvetica', 'normal');
+                text('No se pudo cargar la imagen del comprobante.', margin, { width: contentWidth, lineHeight: 4 });
+            }
+        } else {
+            text('Comprobante desembolso: Sin comprobante registrado', margin, { width: contentWidth, lineHeight: 4 });
+        }
+        const pagos = item.pagos || [];
+        if (pagos.length) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.text('Pagos registrados', margin, y);
+            y += 5;
+            drawPaymentTable(pagos, [
+                { label: 'Fecha', width: 30, value: r => formatDate(r.fecha_pago) },
+                { label: 'Monto', width: 28, value: r => formatMoney(r.monto_abonado) },
+                { label: 'Tipo', width: 28, value: r => r.tipo_pago || 'ABONO' },
+                { label: 'Saldo Desp.', width: 32, value: r => r.saldo_pendiente_despues !== null && r.saldo_pendiente_despues !== undefined ? formatMoney(r.saldo_pendiente_despues) : '-' },
+                { label: 'Notas', width: 60, value: r => r.notas || r.notas_admin || '-' }
+            ]);
+        }
+    }
+
+    doc.save(`Detalle_Descuentos_Renovacion_${String(poliza.id_poliza || Date.now()).slice(0, 8)}.pdf`);
+}
+
+async function loadPolizaImageAsDataUrl(url) {
+    try {
+        const response = await fetch(url, { mode: 'cors', cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.warn('No se pudo cargar imagen para PDF de descuentos:', error);
+        return null;
+    }
+}
+
+function getPolizaImageFormat(dataUrl) {
+    const match = String(dataUrl || '').match(/^data:image\/([^;]+)/i);
+    const type = (match?.[1] || 'JPEG').toUpperCase();
+    if (type === 'JPG') return 'JPEG';
+    return type;
 }
 
 function populateSocioSelect() {
@@ -2307,7 +2649,7 @@ async function generatePolizaPDF(data, options = {}) {
     const socioNombre = (s.nombre || data.nombre_socio || 'SOCIO').toUpperCase();
     const socioCedula = s.cedula || s.cedulasocio || data.cedula_socio || '---';
 
-    const introText = `En la ciudad de **${acreedor.ciudad}**, a los **${formatDateFull(data.fecha_inicio)}**, se celebra el presente CONTRATO DE INVERSIÓN A PLAZO FIJO, bajo los términos y condiciones aquí descritos:\n\n` +
+    const introText = `En la ciudad de **${acreedor.ciudad}**, hoy **${formatDateFull(data.fecha_inicio)}**, se celebra el presente CONTRATO DE INVERSIÓN A PLAZO FIJO, bajo los términos y condiciones aquí descritos:\n\n` +
         `De una parte, la institución **${acreedor.institucion}**, representada por el Sr. **${acreedor.nombre}**, con C.I. **${acreedor.cedula}**, denominada en lo sucesivo como "EL DEPOSITARIO"; y de otra parte, el Sr/Sra. **${socioNombre}**, con C.I. **${socioCedula}**, de estado civil **${estadoCivilSocio}**, con domicilio en **${domicilioSocio}**, quien actúa por sus propios derechos y a quien se denominará como "EL DEPOSITANTE".`;
 
     y = renderJustifiedText(doc, introText, margin, y, contentWidth, 5.8);

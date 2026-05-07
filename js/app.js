@@ -2374,7 +2374,7 @@ window.loadDesembolsosPendientes = loadDesembolsosPendientes;
  */
 const CHANGELOG_ACCEPTED_VERSION_KEY = 'inka_changelog_accepted_version';
 const CHANGELOG_CACHE_PREFIX = 'inka_changelog_cache_';
-const CHANGELOG_CACHE_RENDERER_VERSION = '2';
+const CHANGELOG_CACHE_RENDERER_VERSION = '4';
 
 function getChangelogCacheKey(version) {
     return `${CHANGELOG_CACHE_PREFIX}${CHANGELOG_CACHE_RENDERER_VERSION}_${version}`;
@@ -2407,16 +2407,21 @@ function getDefaultChangelogHtml(version) {
     return normalizeChangelogHtml(`
         <div style="text-align: left; font-size: 14px; line-height: 1.6;">
             <p>Hemos actualizado el sistema a la versión <b>v${version}</b>. Este despliegue incluye:</p>
-            <h4 style="color: #10b981; margin-top: 15px;">PC: Precancelaciones Legacy</h4>
+            <h4 style="color: #10b981; margin-top: 15px;">Pólizas</h4>
             <ul style="padding-left: 20px;">
-                <li><b>Cálculo corregido:</b> Los créditos legacy o antiguos ahora pueden precancelarse con valores ajustados y correctos en PC.</li>
-                <li><b>Tabla ajustada:</b> El sistema reconstruye una tabla visual para créditos antiguos cuando la original no es confiable.</li>
-                <li><b>Sin ahorro legacy:</b> La precancelación legacy ya no suma ahorro donde históricamente no existía.</li>
+                <li><b>Renovar con descuentos completos:</b> Al renovar puedes revisar créditos normales y preferenciales antes de crear la nueva inversión.</li>
+                <li><b>Ver el valor real:</b> El modal muestra el valor al vencimiento, los descuentos aplicados y el valor final a renovar.</li>
+                <li><b>Descargar detalle en PDF:</b> Desde el modal de renovación puedes descargar el resumen con pagos y comprobantes cuando correspondan.</li>
             </ul>
-            <h4 style="color: #10b981; margin-top: 15px;">Infraestructura</h4>
+            <h4 style="color: #10b981; margin-top: 15px;">Créditos Preferenciales</h4>
             <ul style="padding-left: 20px;">
-                <li><b>Actualización obligatoria:</b> El Service Worker fuerza la toma de la nueva versión activa.</li>
-                <li><b>Changelog versionado:</b> Este resumen queda asociado a la versión para seguir mostrándose hasta que lo aceptes.</li>
+                <li><b>Registrar pagos:</b> En créditos desembolsados puedes registrar abonos o pago total directamente desde la tabla.</li>
+                <li><b>Ver saldo a hoy:</b> La tabla muestra el saldo actualizado considerando intereses y pagos realizados.</li>
+                <li><b>Archivar pendientes:</b> Los créditos pendientes que ya no se usarán quedan separados en la pestaña de archivados.</li>
+            </ul>
+            <h4 style="color: #10b981; margin-top: 15px;">Dashboard</h4>
+            <ul style="padding-left: 20px;">
+                <li><b>Alertas urgentes:</b> Si hay pólizas vencidas pendientes de renovación, verás una alerta con acceso directo a Pólizas.</li>
             </ul>
             <p style="margin-top: 15px; font-style: italic; color: #888;">Gracias por confiar en INKA CORP y LP Solutions.</p>
         </div>
@@ -2425,7 +2430,7 @@ function getDefaultChangelogHtml(version) {
 
 function extractVersionChangelog(markdown, version) {
     const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const matcher = new RegExp(`## \\[${escapedVersion}\\][\\s\\S]*?(?=\\n## \\[|\\n---|$)`);
+    const matcher = new RegExp(`##\\s*\\[${escapedVersion}\\][\\s\\S]*?(?=\\n##\\s*\\[|\\n---|$)`);
     const match = markdown.match(matcher);
     return match ? match[0].trim() : '';
 }
@@ -2452,7 +2457,7 @@ function renderChangelogSection(section, version) {
     const formatInlineMarkdown = (text) => normalizeChangelogHtml(text);
 
     lines.forEach((line) => {
-        if (line.startsWith('## [')) {
+        if (/^##\s*\[/.test(line)) {
             return;
         }
 

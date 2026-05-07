@@ -97,9 +97,17 @@
                 <span class="counter-label">Desembolsados</span>
                 <span id="count-pref-desembolsado" class="counter-value" style="color: #3B82F6;">0</span>
             </span>
+            <span class="estado-counter" data-estado="PAGADO" onclick="filterCreditosPrefByEstado('PAGADO')">
+                <span class="counter-label">Pagados</span>
+                <span id="count-pref-pagado" class="counter-value success">0</span>
+            </span>
             <span class="estado-counter" data-estado="RECHAZADO" onclick="filterCreditosPrefByEstado('RECHAZADO')">
                 <span class="counter-label">Rechazados</span>
                 <span id="count-pref-rechazado" class="counter-value danger">0</span>
+            </span>
+            <span class="estado-counter" data-estado="ARCHIVADO" onclick="filterCreditosPrefByEstado('ARCHIVADO')">
+                <span class="counter-label">Archivados</span>
+                <span id="count-pref-archivado" class="counter-value">0</span>
             </span>
         </div>
 
@@ -232,6 +240,11 @@
                 </div>
             </div>
 
+            <div class="credito-detail-section">
+                <h3 class="section-title"><i class="fas fa-receipt"></i> Pagos Registrados</h3>
+                <div id="det-pref-pagos-table">Sin pagos registrados</div>
+            </div>
+
             <!-- Motivos y Observaciones -->
             <div class="credito-detail-section">
                 <h3 class="section-title"><i class="fas fa-comment-alt"></i> Observaciones</h3>
@@ -260,6 +273,12 @@
             </div>
         </div>
         <div class="modal-footer">
+            <button id="btn-pagar-credito-pref" class="btn btn-success hidden" onclick="openPreferentialCreditPaymentModalFromDetail()">
+                <i class="fas fa-cash-register"></i> Registrar Pago
+            </button>
+            <button id="btn-archivar-credito-pref" class="btn btn-warning hidden" onclick="archiveCreditoPrefFromModal()">
+                <i class="fas fa-archive"></i> Archivar
+            </button>
             <button class="btn btn-secondary" data-close-modal>Cerrar</button>
         </div>
     </div>

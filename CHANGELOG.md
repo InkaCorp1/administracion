@@ -1,5 +1,20 @@
 # CHANGELOG - INKA CORP
 
+## [30.5.0] - 2026-05-07
+### Pólizas
+- **Renovar con descuentos completos:** Al renovar una póliza, ahora puedes revisar los créditos normales y preferenciales que se descontarán antes de crear la nueva inversión.
+- **Ver el valor real de renovación:** En el modal de renovación verás el valor de la póliza al vencimiento, los descuentos aplicados y el valor final a renovar.
+- **Descargar el detalle en PDF:** Desde el modal de renovación puedes descargar un PDF con el detalle de descuentos, pagos registrados y comprobantes cuando correspondan.
+
+### Créditos Preferenciales
+- **Registrar pagos desde el crédito:** En créditos preferenciales desembolsados ahora puedes registrar abonos o pago total directamente desde la tabla.
+- **Ver saldo actualizado:** La tabla muestra el saldo a hoy considerando intereses y pagos realizados.
+- **Consultar pagos en detalles:** Al abrir el detalle de un crédito preferencial verás la lista de pagos registrados, si existen.
+- **Archivar pendientes:** Los créditos preferenciales pendientes que ya no se usarán pueden archivarse y quedan separados en la pestaña de archivados.
+
+### Dashboard
+- **Alertas urgentes de pólizas vencidas:** Si hay pólizas vencidas pendientes de renovación, el dashboard muestra una alerta prioritaria con acceso directo a Pólizas.
+
 ## [30.0.0] - 2026-05-06
 ### Añadido
 - **Renovación de pólizas:** La renovación ahora permite descontar créditos normales y preferenciales antes de crear la nueva inversión.
