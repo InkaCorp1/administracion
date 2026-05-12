@@ -1277,7 +1277,8 @@ async function savePreferentialCreditPayment(credito, data) {
     } catch (err) {
         if (typeof window.hideLoader === 'function') window.hideLoader();
         console.error('Error registrando pago preferencial:', err);
-        Swal.fire('Error', err.message || 'No se pudo registrar el pago.', 'error');
+        await window.showFinancialError?.(err, 'No se pudo registrar el pago preferencial.')
+            || Swal.fire('Error', err.message || 'No se pudo registrar el pago.', 'error');
     }
 }
 
@@ -1582,7 +1583,8 @@ async function saveAbonoGlobalSocio(idSocio, data) {
 
     } catch (err) {
         if (typeof window.hideLoader === 'function') window.hideLoader();
-        Swal.fire('Error', err.message, 'error');
+        await window.showFinancialError?.(err, 'No se pudo registrar el abono preferencial.')
+            || Swal.fire('Error', err.message, 'error');
     }
 }
 

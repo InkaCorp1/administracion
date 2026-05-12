@@ -805,7 +805,8 @@ async function handlePagarPoliza(poliza) {
 
         } catch (error) {
             console.error('Error pagando póliza:', error);
-            Swal.fire('Error', 'No se pudo procesar el pago', 'error');
+            await window.showFinancialError?.(error, 'No se pudo procesar el pago de la póliza.')
+                || Swal.fire('Error', 'No se pudo procesar el pago', 'error');
         } finally {
             endLoading();
         }
@@ -1111,7 +1112,8 @@ async function handleRenovarPoliza(poliza) {
 
     } catch (error) {
         console.error('Error renovando póliza:', error);
-        Swal.fire('Error', 'No se pudo procesar la renovación', 'error');
+        await window.showFinancialError?.(error, 'No se pudo procesar la renovación.')
+            || Swal.fire('Error', 'No se pudo procesar la renovación', 'error');
     } finally {
         endLoading();
     }
@@ -2049,7 +2051,8 @@ async function savePoliza() {
 
     } catch (error) {
         console.error('Error al guardar póliza:', error);
-        Swal.fire('Error', 'No se pudo guardar la póliza', 'error');
+        await window.showFinancialError?.(error, 'No se pudo guardar la póliza.')
+            || Swal.fire('Error', 'No se pudo guardar la póliza', 'error');
     } finally {
         endLoading();
     }

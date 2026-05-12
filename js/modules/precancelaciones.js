@@ -1965,7 +1965,11 @@ async function handleConfirmarPrecancelacion() {
 
     } catch (error) {
         console.error('Error al procesar precancelación:', error);
-        showNotification('Error: ' + error.message, 'error');
+        if (window.showFinancialError) {
+            await window.showFinancialError(error, 'No se pudo procesar la precancelación.');
+        } else {
+            showNotification('Error: ' + error.message, 'error');
+        }
     } finally {
         endLoading();
     }
@@ -2034,43 +2038,7 @@ async function ejecutarProcesamiento(calculo, referencia, observacion, comproban
 
     if (errA) throw errA;
 
-    // 4. REGISTRAR INGRESO AUTOMÁTICO EN CAJA
-    // Primero, obtener la sesión actual de caja del usuario
-    const { data: cajaActiva, error: errCajaCheck } = await supabase
-        .from('ic_caja_aperturas')
-        .select('id_apertura')
-        .eq('id_usuario', user?.id)
-        .eq('estado', 'ABIERTA')
-        .order('fecha_apertura', { ascending: false })
-        .limit(1);
-
-    if (errCajaCheck) throw errCajaCheck;
-
-    if (cajaActiva && cajaActiva.length > 0) {
-        // Hay caja abierta, registrar el ingreso
-        const { error: errMovimiento } = await supabase
-            .from('ic_caja_movimientos')
-            .insert({
-                id_apertura: cajaActiva[0].id_apertura,
-                tipo_movimiento: 'INGRESO',
-                monto: calculo.montoPrecancelar,
-                descripcion: `Precancelación de crédito ${creditoActual.codigo_credito} - ${creditoActual.socio?.nombre}`,
-                metodo_pago: 'PRECANCELACION',
-                comprobante_url: comprobanteUrl,
-                categoria: 'PRECANCELACION',
-                id_usuario: user?.id,
-                fecha_movimiento: new Date().toISOString(),
-                referencia_externa: referencia || calculo.idCredito
-            });
-
-        if (errMovimiento) {
-            console.warn('[PRECANC] Advertencia al registrar ingreso en caja:', errMovimiento);
-            // No lanzamos error aquí, continuamos de todas formas
-        }
-    } else {
-        // No hay caja abierta, solo mostrar advertencia
-        console.warn('[PRECANC] No hay caja abierta para el usuario. El ingreso no se registró automáticamente.');
-    }
+    // 4. La caja se registra automáticamente por trigger al insertar la precancelación.
 
     // 5. Invalidar caché de créditos
     if (window.invalidateCache) {

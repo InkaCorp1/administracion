@@ -746,40 +746,6 @@ async function handleMobilePayment(e) {
             console.warn('[BANCOS MOBILE] No se pudo enviar webhook:', ownerWebhookResult.error);
         }
 
-        // 3. Registrar en Caja (Mobile: Reflejar en caja como EGRESO)
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user && window.sysCajaAbierta) {
-                const { data: activeSessions } = await supabase
-                    .from('ic_caja_aperturas')
-                    .select('id_apertura')
-                    .eq('id_usuario', user.id)
-                    .eq('estado', 'ABIERTA')
-                    .order('fecha_apertura', { ascending: false })
-                    .limit(1);
-
-                if (activeSessions && activeSessions.length > 0) {
-                    const idApertura = activeSessions[0].id_apertura;
-                    await supabase
-                        .from('ic_caja_movimientos')
-                        .insert({
-                            id_apertura: idApertura,
-                            id_usuario: user.id,
-                            tipo_movimiento: 'EGRESO',
-                            categoria: 'GASTO',
-                            monto: montoPagado,
-                            metodo_pago: 'TRANSFERENCIA',
-                            descripcion: `Pago Banco (M): ${banco ? banco.nombre_banco : 'Bancario'} (Cuota ${cuota ? cuota.cuota : 'N/A'})`,
-                            comprobante_url: imgUrl,
-                            id_referencia: idDetalle,
-                            tabla_referencia: 'ic_situacion_bancaria_detalle'
-                        });
-                }
-            }
-        } catch (cajaErr) {
-            console.warn('[Caja Mobile] Error:', cajaErr);
-        }
-
         await window.Swal.fire('¡Éxito!', 'Pago registrado correctamente', 'success');
 
         closeLitePago();
@@ -792,7 +758,11 @@ async function handleMobilePayment(e) {
 
     } catch (error) {
         console.error('Error en pago móvil:', error);
-        window.Swal.fire('Error', error.message, 'error');
+        if (window.showFinancialError) {
+            await window.showFinancialError(error, 'No se pudo registrar el pago bancario.');
+        } else {
+            window.Swal.fire('Error', error.message, 'error');
+        }
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-save"></i> Guardar Pago';

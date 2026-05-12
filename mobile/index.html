@@ -27,7 +27,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     
     <!-- Core Config/JS -->
-    <script src="../js/config.js?v=30.5.0"></script>
+    <script src="../js/config.js?v=31.0.0"></script>
     <script src="../js/auth.js"></script>
     <script>
         /**
@@ -483,7 +483,7 @@
         // Registro de Service Worker para Móvil
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                const serviceWorkerVersion = window.SW_VERSION || window.APP_VERSION || '30.5.0';
+                const serviceWorkerVersion = window.SW_VERSION || window.APP_VERSION || '31.0.0';
                 navigator.serviceWorker.register(`../sw.js?v=${encodeURIComponent(serviceWorkerVersion)}`, { updateViaCache: 'none' })
                     .then((registration) => {
                         console.log('[PWA] Service Worker registrado (Móvil)');

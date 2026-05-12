@@ -461,7 +461,8 @@ async function handleAdmFormSubmit(e) {
 
     } catch (err) {
         console.error('Error al guardar:', err);
-        window.showAlert(err.message, 'Error', 'error');
+        await window.showFinancialError?.(err, 'No se pudo guardar el gasto administrativo.')
+            || window.showAlert(err.message, 'Error', 'error');
     } finally {
         btnSave.disabled = false;
         btnSave.innerHTML = originalText;

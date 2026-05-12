@@ -1479,41 +1479,6 @@ async function handleBancoPaymentSubmit(e) {
             console.warn('[BANCOS] Error enviando webhook bancario:', webhookError);
         }
 
-        // 3. Registrar en Caja (Nuevo: Reflejar en caja como EGRESO)
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user && window.sysCajaAbierta) {
-                const { data: activeSessions } = await supabase
-                    .from('ic_caja_aperturas')
-                    .select('id_apertura')
-                    .eq('id_usuario', user.id)
-                    .eq('estado', 'ABIERTA')
-                    .order('fecha_apertura', { ascending: false })
-                    .limit(1);
-
-                if (activeSessions && activeSessions.length > 0) {
-                    const idApertura = activeSessions[0].id_apertura;
-                    const banco = (bancosData || []).find(b => b.id_transaccion === currentBancoId);
-                    await supabase
-                        .from('ic_caja_movimientos')
-                        .insert({
-                            id_apertura: idApertura,
-                            id_usuario: user.id,
-                            tipo_movimiento: 'EGRESO',
-                            categoria: 'GASTO',
-                            monto: montoPagado,
-                            metodo_pago: 'TRANSFERENCIA',
-                            descripcion: `Pago Banco: ${banco ? banco.nombre_banco : 'Bancario'} (Cuota ${currentBancoDetalle ? currentBancoDetalle.cuota : 'N/A'})`,
-                            comprobante_url: imgUrl,
-                            id_referencia: idDetalle,
-                            tabla_referencia: 'ic_situacion_bancaria_detalle'
-                        });
-                }
-            }
-        } catch (cajaErr) {
-            console.error('[Caja] Error al registrar movimiento:', cajaErr);
-        }
-
         closePremiumModals();
         await window.showAlert('El pago se ha registrado correctamente en el sistema.', '¡Pago Exitoso!', 'success');
 
@@ -1527,7 +1492,8 @@ async function handleBancoPaymentSubmit(e) {
 
     } catch (error) {
         console.error('Error al guardar pago:', error);
-        window.showAlert(error.message, 'Error', 'error');
+        await window.showFinancialError?.(error, 'No se pudo registrar el pago bancario.')
+            || window.showAlert(error.message, 'Error', 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-save"></i> Guardar Pago';
@@ -1718,42 +1684,6 @@ async function handlePrecancelarSubmit(e) {
 
         if (updateError) throw updateError;
 
-        // 3. Registrar en Caja (Nuevo: Reflejar la Precancelación)
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user && window.sysCajaAbierta) {
-                const { data: activeSessions } = await supabase
-                    .from('ic_caja_aperturas')
-                    .select('id_apertura')
-                    .eq('id_usuario', user.id)
-                    .eq('estado', 'ABIERTA')
-                    .order('fecha_apertura', { ascending: false })
-                    .limit(1);
-
-                if (activeSessions && activeSessions.length > 0) {
-                    const idApertura = activeSessions[0].id_apertura;
-                    const bancoObj = (bancosData || []).find(b => b.id_transaccion === currentBancoId);
-
-                    await supabase
-                        .from('ic_caja_movimientos')
-                        .insert({
-                            id_apertura: idApertura,
-                            id_usuario: user.id,
-                            tipo_movimiento: 'EGRESO',
-                            categoria: 'GASTO',
-                            monto: valorPagar,
-                            metodo_pago: 'TRANSFERENCIA',
-                            descripcion: `PRECANCELACIÓN BANCO: ${bancoObj ? bancoObj.nombre_banco : 'Bancario'}`,
-                            comprobante_url: imgUrl,
-                            id_referencia: currentBancoId,
-                            tabla_referencia: 'ic_situacion_bancaria'
-                        });
-                }
-            }
-        } catch (cajaErr) {
-            console.error('[Caja] Error al registrar precancelación:', cajaErr);
-        }
-
         // 3. Si se pagó todo, podrías archivar el crédito o dejar que el usuario lo haga
         // Por ahora refrescamos y cerramos
         closePremiumModals();
@@ -1766,7 +1696,8 @@ async function handlePrecancelarSubmit(e) {
 
     } catch (error) {
         console.error('Error al precancelar:', error);
-        window.showAlert(error.message, 'Error', 'error');
+        await window.showFinancialError?.(error, 'No se pudo registrar la precancelación bancaria.')
+            || window.showAlert(error.message, 'Error', 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-check-circle"></i> Registrar Precancelación';
@@ -2350,7 +2281,8 @@ async function handleSaveNewBanco() {
 
     } catch (error) {
         console.error('Error guardando nuevo banco:', error);
-        window.showAlert('Error al guardar: ' + error.message, 'Error', 'error');
+        await window.showFinancialError?.(error, 'No se pudo guardar la transacción bancaria.')
+            || window.showAlert('Error al guardar: ' + error.message, 'Error', 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-save"></i> Guardar y Crear';

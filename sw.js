@@ -1,13 +1,13 @@
 /**
  * INKA CORP - Service Worker
  * PWA Offline Support
- * Version 30.5.0 - Pagos preferenciales y auditoria de renovacion
+ * Version 31.0.0 - Network First y sincronizacion mayor
  */
 
-const SW_VERSION = '30.5.0';
+const SW_VERSION = '31.0.0';
 const CACHE_NAME = `inkacorp-v${SW_VERSION}`;
 const STATIC_CACHE = `inkacorp-static-v${SW_VERSION}`;
-const CHANGELOG_URL = 'CHANGELOG.md?v=';
+const CHANGELOG_URL = `CHANGELOG.md?v=${encodeURIComponent(SW_VERSION)}`;
 
 // Archivos esenciales para cachear (Shell de la app)
 const ESSENTIAL_FILES = [
@@ -102,7 +102,7 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Estrategia: Intercepción Limpia
+// Estrategia: Network First con fallback offline limpio
 self.addEventListener('fetch', (event) => {
     // Solo manejar peticiones GET
     if (event.request.method !== 'GET') return;

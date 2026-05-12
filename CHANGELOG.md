@@ -1,5 +1,16 @@
 # CHANGELOG - INKA CORP
 
+## [31.0.0] - 2026-05-12
+### Caja
+- **Caja más confiable:** Los cobros, pagos, desembolsos y devoluciones ahora se reflejan automáticamente en Caja cuando corresponden.
+- **Sin caja abierta no se registran movimientos:** Si intentas hacer una operación que mueve dinero, el sistema te avisará que primero debes abrir tu caja.
+- **Arqueo más claro:** Caja queda preparada para mostrar cuánto dinero debería haber según los movimientos registrados durante el turno.
+- **Mensajes más fáciles de entender:** Si falta caja abierta, usuario identificado o un monto válido, verás una alerta clara en lugar de un error técnico.
+- **Aportes separados:** Las aportaciones se mantienen fuera de Caja para no mezclar ese módulo con el dinero operativo del día.
+
+### Pólizas
+- **Renovaciones sin inflar Caja:** Cuando una póliza se renueva, el sistema evita contar esa reinversión como si fuera dinero nuevo entrando.
+
 ## [30.5.0] - 2026-05-07
 ### Pólizas
 - **Renovar con descuentos completos:** Al renovar una póliza, ahora puedes revisar los créditos normales y preferenciales que se descontarán antes de crear la nueva inversión.

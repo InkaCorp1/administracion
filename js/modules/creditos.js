@@ -2408,7 +2408,11 @@ async function confirmarPago() {
 
     } catch (error) {
         console.error('Error al registrar pago:', error);
-        showAlert('Error al registrar el pago: ' + (error.message || error), 'Error', 'error');
+        if (window.showFinancialError) {
+            await window.showFinancialError(error, 'No se pudo registrar el pago del crédito.');
+        } else {
+            showAlert('Error al registrar el pago: ' + (error.message || error), 'Error', 'error');
+        }
         resetConfirmPaymentButton(btnConfirmar);
     }
 }
@@ -4174,4 +4178,3 @@ async function generateCreditosPDF(data, filters) {
         Swal.fire('Error', 'No se pudo generar el reporte PDF', 'error');
     }
 }
-

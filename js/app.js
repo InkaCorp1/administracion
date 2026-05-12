@@ -1081,6 +1081,57 @@ function showAlert(message, title = '', type = 'info') {
     });
 }
 
+function getFriendlyFinancialError(error, fallbackMessage = 'No se pudo completar la operación financiera.') {
+    const rawMessage = String(error?.message || error?.details || error || '').trim();
+    const normalized = rawMessage.toLowerCase();
+
+    if (normalized.includes('bloqueo de caja') || normalized.includes('caja abierta') || normalized.includes('caja cerrada')) {
+        if (normalized.includes('no se pudo identificar el usuario') || normalized.includes('usuario responsable') || normalized.includes('auth.uid')) {
+            return {
+                title: 'Usuario no identificado',
+                message: 'No pudimos identificar el usuario responsable de esta operación. Cierra sesión, vuelve a ingresar e inténtalo nuevamente.',
+                type: 'warning'
+            };
+        }
+
+        if (normalized.includes('monto') && normalized.includes('mayor a cero')) {
+            return {
+                title: 'Monto inválido',
+                message: 'El monto de esta operación debe ser mayor a cero. Revisa el valor e inténtalo otra vez.',
+                type: 'warning'
+            };
+        }
+
+        return {
+            title: 'Caja cerrada',
+            message: 'Para registrar este movimiento primero debes abrir tu caja. Ve al módulo Caja, abre tu turno y vuelve a intentar.',
+            type: 'warning'
+        };
+    }
+
+    if (normalized.includes('duplicate key') || normalized.includes('ux_caja_movimientos_evento')) {
+        return {
+            title: 'Movimiento ya registrado',
+            message: 'Esta operación ya tiene un movimiento de caja asociado. No se creó un registro duplicado.',
+            type: 'info'
+        };
+    }
+
+    return {
+        title: 'No se pudo completar',
+        message: rawMessage || fallbackMessage,
+        type: 'error'
+    };
+}
+
+function showFinancialError(error, fallbackMessage) {
+    const friendly = getFriendlyFinancialError(error, fallbackMessage);
+    return showAlert(friendly.message, friendly.title, friendly.type);
+}
+
+window.getFriendlyFinancialError = getFriendlyFinancialError;
+window.showFinancialError = showFinancialError;
+
 /**
  * Muestra un confirm modal personalizado (reemplazo de confirm())
  * @param {string} message - Mensaje a mostrar

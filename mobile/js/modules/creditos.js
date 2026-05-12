@@ -1447,7 +1447,11 @@ async function confirmarPagoLite() {
 
     } catch (error) {
         console.error('Error procesando pago:', error);
-        if (window.Swal) Swal.fire('Error', error.message || 'No se pudo registrar el pago', 'error');
+        if (window.showFinancialError) {
+            await window.showFinancialError(error, 'No se pudo registrar el pago del crédito.');
+        } else if (window.Swal) {
+            Swal.fire('Error', error.message || 'No se pudo registrar el pago', 'error');
+        }
     } finally {
         resetLiteConfirmPaymentButton(btn);
     }

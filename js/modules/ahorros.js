@@ -451,7 +451,8 @@ async function confirmarDevolucion() {
 
     } catch (error) {
         console.error('Error devolviendo ahorro:', error);
-        showAlert('Error al devolver el ahorro: ' + (error.message || 'Error desconocido'), 'Error', 'error');
+        await window.showFinancialError?.(error, 'No se pudo devolver el ahorro.')
+            || showAlert('Error al devolver el ahorro: ' + (error.message || 'Error desconocido'), 'Error', 'error');
     } finally {
         btnConfirmar.disabled = false;
         btnConfirmar.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Devolución';

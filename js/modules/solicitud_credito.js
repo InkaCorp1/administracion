@@ -5452,7 +5452,11 @@ async function ejecutarDesembolsoConArchivos(idCredito, nombreSocio, tieneGarant
 
     } catch (error) {
         console.error('Error en el proceso de desembolso:', error);
-        showToast('Error: ' + error.message, 'error');
+        if (window.showFinancialError) {
+            await window.showFinancialError(error, 'No se pudo completar el desembolso.');
+        } else {
+            showToast('Error: ' + error.message, 'error');
+        }
         btn.disabled = false;
         btn.innerHTML = originalContent;
     }
@@ -5464,71 +5468,7 @@ async function completarActivacionCredito(idCredito) {
     const now = new Date().toISOString();
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // CARGAR DATOS DEL CRÉDITO PARA REGISTRO EN CAJA
-    const { data: infoCredito, error: errorCarga } = await supabase
-        .from('ic_creditos')
-        .select('capital, codigo_credito, id_socio, id_solicitud')
-        .eq('id_credito', idCredito)
-        .single();
-    
-    if (errorCarga) throw new Error('No se pudo obtener la información del crédito: ' + errorCarga.message);
-
-    // OBTENER NOMBRE DEL SOCIO
-    const { data: socioData } = await supabase
-        .from('ic_socios')
-        .select('nombre')
-        .eq('idsocio', infoCredito.id_socio)
-        .single();
-    
-    const nombreSocio = socioData?.nombre || 'SOCIO DESCONOCIDO';
-
-    // OBTENER URL DEL PAGARÉ (Para comprobante en Caja)
-    const { data: docData } = await supabase
-        .from('ic_creditos_documentos')
-        .select('pagare_url')
-        .eq('id_credito', idCredito)
-        .single();
-
-    const pagareUrl = docData?.pagare_url || null;
-
-    // 1. REGISTRAR EL EGRESO EN CAJA (Si hay caja abierta)
-    if (window.sysCajaAbierta) {
-        // Buscar id_apertura activo del usuario
-        const { data: { session } } = await supabase.auth.getSession();
-        const userId = session?.user?.id;
-
-        if (userId) {
-            const { data: cajaData } = await supabase
-                .from('ic_caja_aperturas')
-                .select('id_apertura')
-                .eq('id_usuario', userId)
-                .eq('estado', 'ABIERTA')
-                .order('fecha_apertura', { ascending: false })
-                .limit(1)
-                .single();
-
-            if (cajaData) {
-                const { error: errorMov } = await supabase
-                    .from('ic_caja_movimientos')
-                    .insert({
-                        id_apertura: cajaData.id_apertura,
-                        tipo_movimiento: 'EGRESO',
-                        categoria: 'DESEMBOLSO_CREDITO',
-                        monto: infoCredito.capital,
-                        metodo_pago: 'TRANSFERENCIA',
-                        descripcion: `DESEMBOLSO DE CRÉDITO ${infoCredito.codigo_credito} A: ${nombreSocio}`,
-                        comprobante_url: pagareUrl,
-                        id_referencia: idCredito,
-                        tabla_referencia: 'ic_creditos',
-                        id_usuario: userId
-                    });
-                
-                if (errorMov) console.error('[CAJA] Error registrando desembolso en bitácora:', errorMov);
-            }
-        }
-    }
-
-    // 2. ACTUALIZAR ESTADO DEL CRÉDITO A ACTIVO
+    // El egreso de caja se registra automáticamente por trigger al activar el crédito.
     const { error: errorCredito } = await supabase
         .from('ic_creditos')
         .update({

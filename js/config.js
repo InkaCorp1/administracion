@@ -8,7 +8,7 @@ if (typeof SUPABASE_URL === 'undefined') {
 }
 
 if (typeof APP_VERSION === 'undefined') {
-    var APP_VERSION = '30.5.0';
+    var APP_VERSION = '31.0.0';
     window.APP_VERSION = APP_VERSION;
     window.SW_VERSION = APP_VERSION;
 }
