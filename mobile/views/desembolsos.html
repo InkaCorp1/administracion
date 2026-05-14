@@ -1,9 +1,9 @@
-﻿<div class="section-header">
+﻿<div id="mobile-home-main-header" class="section-header">
     <h2 class="section-title">
-        <i class="fas fa-hand-holding-usd"></i>
-        <span>Desembolsos Pendientes</span>
+        <i id="mobile-home-main-icon" class="fas fa-home"></i>
+        <span id="mobile-home-main-title">Inicio</span>
     </h2>
-    <span class="section-badge" id="desembolsos-count">0</span>
+    <span class="section-badge" id="home-pending-count">0</span>
 </div>
 
 <!-- Aviso de Caja Cerrada (Oculto por defecto, se activa dinámicamente) -->
@@ -23,9 +23,58 @@
     </div>
 </div>
 
-<div id="desembolsos-container" class="desembolsos-container">
+<div id="mobile-home-status" class="mobile-home-status">
     <div class="loading-state">
         <div class="loading-spinner"></div>
-        <p>Buscando solicitudes...</p>
+        <p>Buscando procesos pendientes...</p>
     </div>
 </div>
+
+<section id="home-desembolsos-section" class="mobile-home-section hidden">
+    <div id="home-desembolsos-title" class="mobile-home-section-title">
+        <div>
+            <i class="fas fa-hand-holding-usd"></i>
+            <span>Desembolsos pendientes</span>
+        </div>
+        <span class="section-badge" id="desembolsos-count">0</span>
+    </div>
+    <div id="desembolsos-container" class="desembolsos-container"></div>
+</section>
+
+<section id="home-polizas-section" class="mobile-home-section hidden">
+    <div id="home-polizas-title" class="mobile-home-section-title">
+        <div>
+            <i class="fas fa-file-signature"></i>
+            <span>Pólizas por actualizar</span>
+        </div>
+        <span class="section-badge" id="polizas-pendientes-count">0</span>
+    </div>
+    <div id="polizas-pendientes-container" class="desembolsos-container"></div>
+</section>
+
+<section id="mobile-home-menu" class="mobile-home-menu hidden">
+    <div class="mobile-home-menu-title">Módulos</div>
+    <div class="mobile-home-menu-grid">
+        <button type="button" class="mobile-home-menu-item" onclick="loadMobileView('creditos')">
+            <i class="fas fa-hand-holding-usd"></i><span>Créditos</span>
+        </button>
+        <button type="button" class="mobile-home-menu-item" onclick="loadMobileView('bancos')">
+            <i class="fas fa-university"></i><span>Bancos</span>
+        </button>
+        <button type="button" class="mobile-home-menu-item" onclick="loadMobileView('caja')">
+            <i class="fas fa-cash-register"></i><span>Caja</span>
+        </button>
+        <button type="button" class="mobile-home-menu-item" onclick="loadMobileView('aportes')">
+            <i class="fas fa-piggy-bank"></i><span>Aportes</span>
+        </button>
+        <button type="button" class="mobile-home-menu-item" onclick="loadMobileView('simulador')">
+            <i class="fas fa-calculator"></i><span>Simulador</span>
+        </button>
+        <button type="button" class="mobile-home-menu-item" onclick="loadMobileView('socios')">
+            <i class="fas fa-users"></i><span>Socios</span>
+        </button>
+        <button type="button" class="mobile-home-menu-item" onclick="loadMobileView('precancelaciones')">
+            <i class="fas fa-calendar-check"></i><span>Precancelar</span>
+        </button>
+    </div>
+</section>

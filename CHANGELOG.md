@@ -1,5 +1,12 @@
 # CHANGELOG - INKA CORP
 
+## [31.1.1] - 2026-05-14
+### Móvil
+- **Inicio más útil:** En móvil ahora se muestran solo los procesos pendientes que necesitan atención.
+- **Pólizas desde el celular:** Puedes cargar el contrato firmado de una póliza desde móvil, tomando foto o subiendo una imagen.
+- **Vista más limpia:** Si solo hay pólizas por actualizar o solo desembolsos pendientes, el título principal se adapta y evita repetir secciones.
+- **Sin pendientes:** Cuando no hay procesos por atender, el inicio muestra un mensaje de tranquilidad y el menú de módulos disponibles.
+
 ## [31.1.0] - 2026-05-14
 ### Pólizas
 - **Nuevas pólizas más seguras:** Al registrar una póliza nueva, ahora primero queda como pendiente hasta cargar el contrato firmado.

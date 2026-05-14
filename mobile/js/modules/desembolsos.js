@@ -358,11 +358,21 @@ async function initDesembolsosModule() {
 async function loadDesembolsosPendientes() {
     const container = document.getElementById('desembolsos-container');
     const countBadge = document.getElementById('desembolsos-count');
+    const mainHeader = document.getElementById('mobile-home-main-header');
+    const mainIcon = document.getElementById('mobile-home-main-icon');
+    const mainTitle = document.getElementById('mobile-home-main-title');
+    const homeBadge = document.getElementById('home-pending-count');
+    const homeStatus = document.getElementById('mobile-home-status');
+    const homeMenu = document.getElementById('mobile-home-menu');
+    const desembolsosSection = document.getElementById('home-desembolsos-section');
+    const desembolsosTitle = document.getElementById('home-desembolsos-title');
+    const polizasTitle = document.getElementById('home-polizas-title');
     if (!container) return;
 
     try {
         const supabase = window.getSupabaseClient();
-        const { data: creditosPendientes, error } = await supabase
+        const [{ data: creditosPendientes, error }, polizasPendientes] = await Promise.all([
+            supabase
             .from('ic_creditos')
             .select(`
                 id_credito,
@@ -376,107 +386,517 @@ async function loadDesembolsosPendientes() {
                 id_socio
             `)
             .eq('estado_credito', 'PENDIENTE')
-            .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false }),
+            loadPolizasPendientesMobile()
+        ]);
 
         if (error) throw error;
 
         if (!creditosPendientes || creditosPendientes.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-check-circle"></i>
-                    <h3>Sin desembolsos pendientes</h3>
-                    <p>No hay créditos pendientes de desembolso en este momento.</p>
-                </div>
-            `;
+            container.innerHTML = '';
+            desembolsosSection?.classList.add('hidden');
+            if (desembolsosSection) desembolsosSection.style.display = 'none';
             if (countBadge) {
                 countBadge.textContent = '0';
                 countBadge.classList.add('hidden');
+                countBadge.style.display = 'none';
             }
-            return;
+        } else {
+            desembolsosSection?.classList.remove('hidden');
+            if (desembolsosSection) desembolsosSection.style.display = '';
+            if (countBadge) {
+                countBadge.textContent = creditosPendientes.length;
+                countBadge.classList.remove('hidden');
+                countBadge.style.display = '';
+
+                const alertBadge = document.querySelector('.mobile-caja-status-alert .alert-badge');
+                if (alertBadge) alertBadge.textContent = creditosPendientes.length;
+            }
+
+            const socioIds = [...new Set(creditosPendientes.map(c => c.id_socio))];
+            const { data: socios } = await supabase
+                .from('ic_socios')
+                .select('idsocio, nombre, cedula, whatsapp')
+                .in('idsocio', socioIds);
+
+            creditosPendientes.forEach(credito => {
+                credito.socio = socios?.find(s => s.idsocio === credito.id_socio) || {};
+            });
+
+            creditosData = creditosPendientes;
+            if (countBadge) countBadge.textContent = creditosPendientes.length;
+
+            container.innerHTML = creditosPendientes.map(credito => {
+                const socio = credito.socio || {};
+                const nombreCompleto = socio.nombre || 'Sin nombre';
+                const capitalFormatted = parseFloat(credito.capital).toLocaleString('es-EC', { minimumFractionDigits: 2 });
+                const cuotaFormatted = parseFloat(credito.cuota_con_ahorro).toLocaleString('es-EC', { minimumFractionDigits: 2 });
+
+                return `
+                    <div class="desembolso-card" data-id="${credito.id_credito}">
+                        <div class="desembolso-header">
+                            <div class="desembolso-socio">
+                                <div class="desembolso-nombre">${nombreCompleto}</div>
+                                <div class="desembolso-cedula">${socio.cedula || '-'} | ${credito.codigo_credito}</div>
+                            </div>
+                            <div class="desembolso-monto">
+                                <div class="desembolso-monto-valor">$${capitalFormatted}</div>
+                                <div class="desembolso-monto-label">Capital</div>
+                            </div>
+                        </div>
+                        <div class="desembolso-info">
+                            <div class="desembolso-info-item">
+                                <span class="desembolso-info-label">Plazo</span>
+                                <span class="desembolso-info-value">${credito.plazo} meses</span>
+                            </div>
+                            <div class="desembolso-info-item">
+                                <span class="desembolso-info-label">Cuota</span>
+                                <span class="desembolso-info-value">$${cuotaFormatted}</span>
+                            </div>
+                            <div class="desembolso-info-item">
+                                <span class="desembolso-info-label">Tasa</span>
+                                <span class="desembolso-info-value">${credito.tasa_interes_mensual}%</span>
+                            </div>
+                            <div class="desembolso-info-item">
+                                <span class="desembolso-info-label">Garante</span>
+                                <span class="desembolso-info-value">${credito.garante ? 'Sí' : 'No'}</span>
+                            </div>
+                        </div>
+                        <div class="desembolso-actions">
+                            <button class="desembolso-btn desembolso-btn-docs" onclick="generarDocumentosCreditoMobile('${credito.id_credito}')">
+                                <i class="fas fa-file-pdf"></i> Documentos
+                            </button>
+                            <button class="desembolso-btn desembolso-btn-action" onclick="desembolsarCreditoMobile('${credito.id_credito}')">
+                                <i class="fas fa-cloud-upload-alt"></i> Desembolsar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        if (countBadge) {
-            countBadge.textContent = creditosPendientes.length;
-            countBadge.classList.remove('hidden');
-            
-            // Actualizar el badge dinámico de la alerta de caja si existe
-            const alertBadge = document.querySelector('.mobile-caja-status-alert .alert-badge');
-            if (alertBadge) alertBadge.textContent = creditosPendientes.length;
-        }
+        renderPolizasPendientesMobile(polizasPendientes);
 
-        const socioIds = [...new Set(creditosPendientes.map(c => c.id_socio))];
-        const { data: socios } = await supabase
-            .from('ic_socios')
-            .select('idsocio, nombre, cedula, whatsapp')
-            .in('idsocio', socioIds);
+        const desembolsosTotal = creditosPendientes?.length || 0;
+        const polizasTotal = polizasPendientes?.length || 0;
+        const totalPendientes = desembolsosTotal + polizasTotal;
 
-        creditosPendientes.forEach(credito => {
-            credito.socio = socios?.find(s => s.idsocio === credito.id_socio) || {};
+        updateMobileHomeMainHeader({
+            mainHeader,
+            mainIcon,
+            mainTitle,
+            total: totalPendientes,
+            desembolsosTotal,
+            polizasTotal
         });
 
-        creditosData = creditosPendientes;
-        if (countBadge) countBadge.textContent = creditosPendientes.length;
+        const onlyOneCategory = (desembolsosTotal > 0 && polizasTotal === 0) || (polizasTotal > 0 && desembolsosTotal === 0);
+        desembolsosTitle?.classList.toggle('is-inline-hidden', onlyOneCategory);
+        polizasTitle?.classList.toggle('is-inline-hidden', onlyOneCategory);
 
-        container.innerHTML = creditosPendientes.map(credito => {
-            const socio = credito.socio || {};
-            const nombreCompleto = socio.nombre || 'Sin nombre';
-            const capitalFormatted = parseFloat(credito.capital).toLocaleString('es-EC', { minimumFractionDigits: 2 });
-            const cuotaFormatted = parseFloat(credito.cuota_con_ahorro).toLocaleString('es-EC', { minimumFractionDigits: 2 });
+        if (homeBadge) {
+            homeBadge.textContent = totalPendientes;
+            homeBadge.classList.toggle('hidden', totalPendientes === 0);
+            homeBadge.style.display = totalPendientes === 0 ? 'none' : '';
+        }
 
-            return `
-                <div class="desembolso-card" data-id="${credito.id_credito}">
-                    <div class="desembolso-header">
-                        <div class="desembolso-socio">
-                            <div class="desembolso-nombre">${nombreCompleto}</div>
-                            <div class="desembolso-cedula">${socio.cedula || '-'} | ${credito.codigo_credito}</div>
-                        </div>
-                        <div class="desembolso-monto">
-                            <div class="desembolso-monto-valor">$${capitalFormatted}</div>
-                            <div class="desembolso-monto-label">Capital</div>
-                        </div>
+        if (homeStatus) {
+            homeStatus.innerHTML = totalPendientes === 0
+                ? `
+                    <div class="mobile-home-excellent">
+                        <i class="fas fa-circle-check"></i>
+                        <h3>Excelente</h3>
+                        <p>No tienes procesos pendientes.</p>
                     </div>
-                    <div class="desembolso-info">
-                        <div class="desembolso-info-item">
-                            <span class="desembolso-info-label">Plazo</span>
-                            <span class="desembolso-info-value">${credito.plazo} meses</span>
-                        </div>
-                        <div class="desembolso-info-item">
-                            <span class="desembolso-info-label">Cuota</span>
-                            <span class="desembolso-info-value">$${cuotaFormatted}</span>
-                        </div>
-                        <div class="desembolso-info-item">
-                            <span class="desembolso-info-label">Tasa</span>
-                            <span class="desembolso-info-value">${credito.tasa_interes_mensual}%</span>
-                        </div>
-                        <div class="desembolso-info-item">
-                            <span class="desembolso-info-label">Garante</span>
-                            <span class="desembolso-info-value">${credito.garante ? 'Sí' : 'No'}</span>
-                        </div>
-                    </div>
-                    <div class="desembolso-actions">
-                        <button class="desembolso-btn desembolso-btn-docs" onclick="generarDocumentosCreditoMobile('${credito.id_credito}')">
-                            <i class="fas fa-file-pdf"></i> Documentos
-                        </button>
-                        <button class="desembolso-btn desembolso-btn-action" onclick="desembolsarCreditoMobile('${credito.id_credito}')">
-                            <i class="fas fa-cloud-upload-alt"></i> Desembolsar
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+                `
+                : '';
+            homeStatus.style.display = totalPendientes === 0 ? '' : 'none';
+        }
+
+        if (homeMenu) {
+            homeMenu.classList.toggle('hidden', totalPendientes > 0);
+            homeMenu.style.display = totalPendientes > 0 ? 'none' : '';
+        }
 
     } catch (error) {
         console.error('Error loading desembolsos:', error);
-        if (container) {
-            container.innerHTML = `
+        if (homeStatus) {
+            homeStatus.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle"></i>
                     <h3>Error al cargar</h3>
-                    <p>No se pudieron cargar los desembolsos. Intenta de nuevo.</p>
+                    <p>No se pudieron cargar los procesos pendientes. Intenta de nuevo.</p>
                 </div>
             `;
         }
     }
+}
+
+function updateMobileHomeMainHeader({ mainHeader, mainIcon, mainTitle, total, desembolsosTotal, polizasTotal }) {
+    if (!mainHeader) return;
+
+    if (total === 0) {
+        mainHeader.style.display = 'none';
+        return;
+    }
+
+    mainHeader.style.display = '';
+
+    let icon = 'fa-bell';
+    let title = 'Procesos pendientes';
+
+    if (desembolsosTotal > 0 && polizasTotal === 0) {
+        icon = 'fa-hand-holding-usd';
+        title = 'Desembolsos pendientes';
+    } else if (polizasTotal > 0 && desembolsosTotal === 0) {
+        icon = 'fa-file-signature';
+        title = 'Pólizas por actualizar';
+    }
+
+    if (mainIcon) mainIcon.className = `fas ${icon}`;
+    if (mainTitle) mainTitle.textContent = title;
+}
+
+async function loadPolizasPendientesMobile() {
+    const supabase = window.getSupabaseClient();
+    const { data, error } = await supabase
+        .from('ic_polizas')
+        .select(`
+            id_poliza,
+            id_socio,
+            fecha,
+            valor,
+            interes,
+            plazo,
+            fecha_vencimiento,
+            valor_final,
+            certificado_firmado,
+            estado,
+            socio:ic_socios (
+                idsocio,
+                nombre,
+                cedula
+            )
+        `)
+        .in('estado', ['PENDIENTE', 'ACTIVO'])
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []).filter(poliza => !String(poliza.certificado_firmado || '').trim());
+}
+
+function renderPolizasPendientesMobile(polizas) {
+    const section = document.getElementById('home-polizas-section');
+    const container = document.getElementById('polizas-pendientes-container');
+    const count = document.getElementById('polizas-pendientes-count');
+    if (!section || !container) return;
+
+    if (!polizas?.length) {
+        section.classList.add('hidden');
+        section.style.display = 'none';
+        container.innerHTML = '';
+        if (count) {
+            count.textContent = '0';
+            count.classList.add('hidden');
+            count.style.display = 'none';
+        }
+        return;
+    }
+
+    section.classList.remove('hidden');
+    section.style.display = '';
+    if (count) {
+        count.textContent = polizas.length;
+        count.classList.remove('hidden');
+        count.style.display = '';
+    }
+
+    container.innerHTML = polizas.map(poliza => {
+        const socio = poliza.socio || {};
+        const valor = parseFloat(poliza.valor || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 });
+        const isActive = poliza.estado === 'ACTIVO';
+        return `
+            <div class="desembolso-card poliza-mobile-card" data-id="${poliza.id_poliza}">
+                <div class="desembolso-header">
+                    <div class="desembolso-socio">
+                        <div class="desembolso-nombre">${socio.nombre || 'Socio sin nombre'}</div>
+                        <div class="desembolso-cedula">${socio.cedula || '-'} | ${isActive ? 'Comprobante pendiente' : 'Activación pendiente'}</div>
+                    </div>
+                    <div class="desembolso-monto">
+                        <div class="desembolso-monto-valor">$${valor}</div>
+                        <div class="desembolso-monto-label">Póliza</div>
+                    </div>
+                </div>
+                <div class="desembolso-info poliza-mobile-info">
+                    <div class="desembolso-info-item">
+                        <span class="desembolso-info-label">Estado</span>
+                        <span class="desembolso-info-value">${isActive ? 'Activa' : 'Pendiente'}</span>
+                    </div>
+                    <div class="desembolso-info-item">
+                        <span class="desembolso-info-label">Tasa</span>
+                        <span class="desembolso-info-value">${poliza.interes || 0}%</span>
+                    </div>
+                    <div class="desembolso-info-item">
+                        <span class="desembolso-info-label">Vence</span>
+                        <span class="desembolso-info-value">${window.formatDate ? window.formatDate(poliza.fecha_vencimiento) : poliza.fecha_vencimiento}</span>
+                    </div>
+                </div>
+                <div class="desembolso-actions">
+                    <button class="desembolso-btn desembolso-btn-action" onclick="openPolizaSignedUploadMobile('${poliza.id_poliza}')">
+                        <i class="fas fa-camera"></i> Subir firmado
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function openPolizaSignedUploadMobile(idPoliza) {
+    const existsInList = Array.from(document.querySelectorAll('.poliza-mobile-card'))
+        .some(card => card.dataset.id === idPoliza);
+    if (!existsInList) {
+        Swal.fire('No encontrado', 'No se encontró la póliza seleccionada.', 'warning');
+        return;
+    }
+
+    const supabase = window.getSupabaseClient();
+    const { data: polizaData, error: loadError } = await supabase
+        .from('ic_polizas')
+        .select(`
+            id_poliza,
+            id_socio,
+            fecha,
+            valor,
+            estado,
+            socio:ic_socios (
+                nombre,
+                cedula
+            )
+        `)
+        .eq('id_poliza', idPoliza)
+        .single();
+
+    if (loadError) {
+        Swal.fire('Error', 'No se pudo cargar la póliza.', 'error');
+        return;
+    }
+
+    const alreadyActive = polizaData.estado === 'ACTIVO';
+    if (!alreadyActive && window.validateCajaBeforeAction && !window.validateCajaBeforeAction('activar póliza')) {
+        return;
+    }
+
+    openPolizaSignedUploadModalMobile(polizaData, alreadyActive);
+}
+
+function openPolizaSignedUploadModalMobile(polizaData, alreadyActive) {
+    const existing = document.getElementById('mobile-poliza-upload-modal');
+    if (existing) existing.remove();
+
+    const socioNombre = polizaData.socio?.nombre || 'Socio';
+    const modalHTML = `
+        <div id="mobile-poliza-upload-modal" class="mobile-poliza-modal-overlay">
+            <div class="mobile-poliza-modal-backdrop" onclick="closePolizaSignedUploadModalMobile()"></div>
+            <div class="mobile-poliza-modal-card">
+                <div class="mobile-poliza-modal-header">
+                    <div>
+                        <h3>${alreadyActive ? 'Subir comprobante firmado' : 'Activar póliza'}</h3>
+                        <p>${socioNombre}</p>
+                    </div>
+                    <button type="button" class="mobile-poliza-modal-close" onclick="closePolizaSignedUploadModalMobile()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="mobile-poliza-modal-body">
+                    <div class="mobile-poliza-modal-note">
+                        ${alreadyActive ? 'La póliza ya está activa. Solo guardaremos el contrato firmado.' : 'Al subir el contrato firmado, la póliza pasará a estado activo.'}
+                    </div>
+                    <div class="mobile-poliza-upload-options">
+                        <button type="button" class="mobile-poliza-upload-option camera" onclick="document.getElementById('mobile-poliza-camera-input').click()">
+                            <i class="fas fa-camera"></i>
+                            <span>Tomar foto</span>
+                        </button>
+                        <button type="button" class="mobile-poliza-upload-option file" onclick="document.getElementById('mobile-poliza-file-input').click()">
+                            <i class="fas fa-folder-open"></i>
+                            <span>Cargar archivo</span>
+                        </button>
+                    </div>
+                    <input id="mobile-poliza-camera-input" type="file" accept="image/*" capture="environment" hidden onchange="handlePolizaSignedFileMobile('${polizaData.id_poliza}', this.files[0])">
+                    <input id="mobile-poliza-file-input" type="file" accept="image/*" hidden onchange="handlePolizaSignedFileMobile('${polizaData.id_poliza}', this.files[0])">
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    document.body.style.overflow = 'hidden';
+}
+
+function closePolizaSignedUploadModalMobile() {
+    const modal = document.getElementById('mobile-poliza-upload-modal');
+    if (modal) modal.remove();
+    document.body.style.overflow = '';
+}
+
+async function handlePolizaSignedFileMobile(idPoliza, file) {
+    if (!file) return;
+    if (!file.type?.startsWith('image/')) {
+        Swal.fire('Archivo inválido', 'El archivo debe ser una imagen.', 'warning');
+        return;
+    }
+
+    const supabase = window.getSupabaseClient();
+    const { data: polizaData, error: loadError } = await supabase
+        .from('ic_polizas')
+        .select(`
+            id_poliza,
+            id_socio,
+            fecha,
+            valor,
+            estado,
+            socio:ic_socios (
+                nombre,
+                cedula
+            )
+        `)
+        .eq('id_poliza', idPoliza)
+        .single();
+
+    if (loadError) {
+        Swal.fire('Error', 'No se pudo cargar la póliza.', 'error');
+        return;
+    }
+
+    const alreadyActive = polizaData.estado === 'ACTIVO';
+    if (!alreadyActive && window.validateCajaBeforeAction && !window.validateCajaBeforeAction('activar póliza')) {
+        return;
+    }
+
+    try {
+        closePolizaSignedUploadModalMobile();
+        Swal.fire({
+            title: 'Subiendo...',
+            text: 'Optimizando imagen y guardando comprobante.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const uploadResult = await uploadPolizaSignedDocumentMobileToWebp(file, polizaData);
+        if (!uploadResult.success) throw new Error(uploadResult.error || 'No se pudo subir el documento.');
+
+        const updateData = {
+            certificado_firmado: uploadResult.url,
+            updated_at: new Date().toISOString()
+        };
+        if (!alreadyActive) updateData.estado = 'ACTIVO';
+
+        const { error } = await supabase
+            .from('ic_polizas')
+            .update(updateData)
+            .eq('id_poliza', idPoliza);
+
+        if (error) throw error;
+
+        await Swal.fire(
+            alreadyActive ? 'Comprobante guardado' : 'Póliza activada',
+            alreadyActive ? 'El contrato firmado fue guardado correctamente.' : 'El contrato firmado fue guardado y la póliza quedó activa.',
+            'success'
+        );
+
+        await loadDesembolsosPendientes();
+    } catch (error) {
+        console.error('Error subiendo contrato firmado móvil:', error);
+        if (window.showFinancialError) {
+            await window.showFinancialError(error, 'No se pudo subir el contrato firmado.');
+        } else {
+            Swal.fire('Error', error.message || 'No se pudo subir el contrato firmado.', 'error');
+        }
+    }
+}
+
+async function uploadPolizaSignedDocumentMobileToWebp(file, poliza) {
+    try {
+        if (!file?.type?.startsWith('image/')) {
+            throw new Error('El contrato firmado debe ser una imagen.');
+        }
+
+        const supabase = window.getSupabaseClient();
+        const socioNombre = poliza.socio?.nombre || poliza.id_socio || 'socio';
+        const safeSocio = slugMobilePoliza(socioNombre);
+        const safeFecha = slugMobilePoliza(poliza.fecha || new Date().toISOString().split('T')[0]);
+        const safeValor = slugMobilePoliza(parseFloat(poliza.valor || 0).toFixed(2));
+        const path = `contratospolizas/${safeSocio}_${safeFecha}_${safeValor}_${Date.now()}.webp`;
+        const blob = await compressMobilePolizaImageToWebp(file);
+
+        const { error } = await supabase.storage
+            .from('inkacorp')
+            .upload(path, blob, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: 'image/webp'
+            });
+
+        if (error) throw error;
+
+        const { data } = supabase.storage.from('inkacorp').getPublicUrl(path);
+        if (!data?.publicUrl) throw new Error('No se pudo obtener la URL pública.');
+
+        return { success: true, url: data.publicUrl, path };
+    } catch (error) {
+        return { success: false, error: error.message || 'Error al subir contrato firmado.' };
+    }
+}
+
+function compressMobilePolizaImageToWebp(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        const img = new Image();
+        reader.onload = event => {
+            img.onload = () => {
+                const maxSize = 1600;
+                let { width, height } = img;
+                if (width > maxSize || height > maxSize) {
+                    const ratio = Math.min(maxSize / width, maxSize / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('No se pudo preparar la imagen.'));
+                    return;
+                }
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob(blob => {
+                    if (!blob) {
+                        reject(new Error('No se pudo convertir la imagen a WebP.'));
+                        return;
+                    }
+                    resolve(blob);
+                }, 'image/webp', 0.88);
+            };
+            img.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+            img.src = event.target.result;
+        };
+        reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+        reader.readAsDataURL(file);
+    });
+}
+
+function slugMobilePoliza(value) {
+    return String(value || 'poliza')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .toLowerCase()
+        .substring(0, 90) || 'poliza';
 }
 
 async function desembolsarCreditoMobile(idCredito) {
@@ -877,4 +1297,7 @@ window.ejecutarDesembolsoConArchivosMobile = ejecutarDesembolsoConArchivosMobile
 window.generarDocumentosCreditoMobile = generarDocumentosCreditoMobile;
 window.desembolsarCreditoMobile = desembolsarCreditoMobile;
 window.loadDesembolsosPendientes = loadDesembolsosPendientes;
-
+window.openPolizaSignedUploadMobile = openPolizaSignedUploadMobile;
+window.closePolizaSignedUploadModalMobile = closePolizaSignedUploadModalMobile;
+window.handlePolizaSignedFileMobile = handlePolizaSignedFileMobile;
+window.initDesembolsosModule = initDesembolsosModule;
