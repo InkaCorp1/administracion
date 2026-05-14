@@ -1,5 +1,14 @@
 # CHANGELOG - INKA CORP
 
+## [31.1.0] - 2026-05-14
+### Pólizas
+- **Nuevas pólizas más seguras:** Al registrar una póliza nueva, ahora primero queda como pendiente hasta cargar el contrato firmado.
+- **Contrato antes de guardar:** El sistema te pide generar el contrato PDF antes de registrar la nueva póliza, para que el socio pueda firmarlo.
+- **Pólizas por actualizar al inicio:** Las pólizas que aún no tienen documento firmado aparecen primero en la vista, con acceso rápido para completar el registro.
+- **Subida del contrato firmado:** Desde la lista de pólizas puedes cargar la foto del contrato firmado; si la póliza estaba pendiente, se activa automáticamente.
+- **Renovaciones sin bloqueo:** Las pólizas creadas por renovación siguen quedando activas inmediatamente; luego puedes subir el comprobante firmado cuando corresponda.
+- **Documentos más livianos:** Las fotos de contratos firmados se optimizan al subirlas para que carguen mejor sin perder legibilidad.
+
 ## [31.0.0] - 2026-05-12
 ### Caja
 - **Caja más confiable:** Los cobros, pagos, desembolsos y devoluciones ahora se reflejan automáticamente en Caja cuando corresponden.

@@ -1,10 +1,10 @@
 /**
  * INKA CORP - Service Worker
  * PWA Offline Support
- * Version 31.0.0 - Network First y sincronizacion mayor
+ * Version 31.1.0 - Sincronizacion minor PWA
  */
 
-const SW_VERSION = '31.0.0';
+const SW_VERSION = '31.1.0';
 const CACHE_NAME = `inkacorp-v${SW_VERSION}`;
 const STATIC_CACHE = `inkacorp-static-v${SW_VERSION}`;
 const CHANGELOG_URL = `CHANGELOG.md?v=${encodeURIComponent(SW_VERSION)}`;

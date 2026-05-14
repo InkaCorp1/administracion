@@ -229,18 +229,16 @@
                     <!-- ESTADO Y CERTIFICADO (Ocultos o en sección discreta) -->
                     <div class="modal-section-v2 extra-fields">
                         <div class="form-grid-v2">
-                            <div class="form-group-v2">
+                            <div class="form-group-v2" id="poliza-estado-field">
                                 <label class="field-label-v2" for="poliza-estado">Estado de la Póliza</label>
                                 <select id="poliza-estado" class="form-select-v2 mode-edit">
-                                    <option value="ACTIVO">Activo</option>
-                                    <option value="PAGADO">Pagado</option>
-                                    <option value="CAPITALIZADO">Capitalizado</option>
+                                    <option value="PENDIENTE">Pendiente de firma</option>
                                 </select>
                                 <div id="display-estado" class="mode-info hidden">
                                     <span class="badge badge-poliza-activo">ACTIVO</span>
                                 </div>
                             </div>
-                            <div class="form-group-v2">
+                            <div class="form-group-v2" id="poliza-certificado-field">
                                 <label class="field-label-v2" for="poliza-certificado">Comprobante Firmado (URL)</label>
                                 <input type="url" id="poliza-certificado" class="form-control-v2 mode-edit"
                                     placeholder="https://...">

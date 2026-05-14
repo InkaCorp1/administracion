@@ -30,6 +30,7 @@ function initPolizasModule() {
     // Global scope exposure
     window.viewPoliza = viewPoliza;
     window.openPolizaModal = openPolizaModal;
+    window.handleUploadPolizaSignedDocument = handleUploadPolizaSignedDocument;
 }
 
 function setupPolizasStickyHeaders() {
@@ -207,7 +208,8 @@ async function loadPolizas(forceRefresh = false) {
                     domicilio,
                     paisresidencia,
                     estadocivil,
-                    tipo
+                    tipo,
+                    fotoidentidad
                 )
             `)
             .order('created_at', { ascending: false });
@@ -263,6 +265,10 @@ function filterAndSortPolizas() {
         }
         return 0;
     });
+}
+
+function polizaNeedsSignedDocument(poliza) {
+    return !String(poliza?.certificado_firmado || '').trim();
 }
 
 function renderPolizasStats() {
@@ -328,10 +334,10 @@ function renderPolizas() {
 
     emptyDiv?.classList.add('hidden');
 
-    // Agrupar pólizas por estado (Priorizando Vencimientos Próximos)
+    // Agrupar pólizas por estado, dejando primero las que necesitan actualización de firma.
     const grouped = {};
     filteredPolizas.forEach(p => {
-        let est = p.estado || 'ACTIVO';
+        let est = polizaNeedsSignedDocument(p) ? 'ACTUALIZAR' : (p.estado || 'ACTIVO');
 
         // Si es ACTIVA y está en ventana de renovación, moverla a un grupo especial
         if (est === 'ACTIVO') {
@@ -346,10 +352,12 @@ function renderPolizas() {
     });
 
     // Orden de secciones (Vencimiento al principio como pidió el usuario)
-    const ESTADO_ORDER_POL = ['VENCIMIENTO', 'ACTIVO', 'PAGADO', 'CAPITALIZADO'];
+    const ESTADO_ORDER_POL = ['ACTUALIZAR', 'VENCIMIENTO', 'ACTIVO', 'PAGADO', 'CAPITALIZADO'];
     const CONFIG_POL = {
+        'ACTUALIZAR': { icon: 'fa-file-signature', color: '#F59E0B', label: 'Pólizas para Actualizar', bgColor: 'rgba(245, 158, 11, 0.15)' },
         'VENCIMIENTO': { icon: 'fa-clock', color: '#F59E0B', label: 'Ventana de Renovación (-21 a +3 días)', bgColor: 'rgba(245, 158, 11, 0.15)' },
         'ACTIVO': { icon: 'fa-certificate', color: '#10B981', label: 'Pólizas Activas', bgColor: 'rgba(16, 185, 129, 0.15)' },
+        'PENDIENTE': { icon: 'fa-hourglass-half', color: '#F59E0B', label: 'Pólizas Pendientes de Firma', bgColor: 'rgba(245, 158, 11, 0.15)' },
         'PAGADO': { icon: 'fa-check-circle', color: '#3B82F6', label: 'Pólizas Pagadas', bgColor: 'rgba(59, 130, 246, 0.15)' },
         'CAPITALIZADO': { icon: 'fa-redo-alt', color: '#8B5CF6', label: 'Pólizas Capitalizadas', bgColor: 'rgba(139, 92, 246, 0.15)' }
     };
@@ -358,6 +366,10 @@ function renderPolizas() {
 
     // Si hay filtro activo
     if (currentEstadoFilterPolizas) {
+        if (grouped['ACTUALIZAR']?.length > 0) {
+            html += renderPolizaSection('ACTUALIZAR', grouped['ACTUALIZAR'], CONFIG_POL['ACTUALIZAR']);
+        }
+
         if (currentEstadoFilterPolizas === 'ACTIVO') {
             // Si filtra por activos, mostrar Vencimientos y Activos normales
             if (grouped['VENCIMIENTO']?.length > 0) {
@@ -368,7 +380,9 @@ function renderPolizas() {
             }
         } else {
             const est = currentEstadoFilterPolizas;
-            html = renderPolizaSection(est, grouped[est] || [], CONFIG_POL[est]);
+            if (grouped[est]?.length > 0) {
+                html += renderPolizaSection(est, grouped[est], CONFIG_POL[est]);
+            }
         }
     } else {
         // Todas las secciones en orden de prioridad
@@ -433,6 +447,7 @@ function renderPolizaSection(estado, polizas, config) {
                                         <div class="socio-info">
                                             <div class="socio-name">${p.socio?.nombre || 'Socio Desconocido'}</div>
                                             <div class="socio-id">${p.socio?.cedula || '-'}</div>
+                                            ${polizaNeedsSignedDocument(p) ? '<div class="poliza-update-tag"><i class="fas fa-pen-nib"></i> Falta firma</div>' : ''}
                                         </div>
                                     </td>
                                     <td class="hide-mobile">${formatDate(p.fecha)}</td>
@@ -449,10 +464,17 @@ function renderPolizaSection(estado, polizas, config) {
                                     <td class="text-center">
                                         ${getEstadoBadgePoliza(p.estado)}
                                     </td>
-                                    <td class="text-center">
-                                        <button class="btn-icon" title="Ver Detalle" onclick="event.stopPropagation(); viewPoliza('${p.id_poliza}')">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
+                                    <td class="text-center poliza-actions-cell">
+                                        <div class="poliza-actions-inline">
+                                            <button class="btn-icon" title="Ver Detalle" onclick="event.stopPropagation(); viewPoliza('${p.id_poliza}')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            ${polizaNeedsSignedDocument(p) ? `
+                                                <button class="btn-icon" title="Subir documento firmado" onclick="event.stopPropagation(); handleUploadPolizaSignedDocument('${p.id_poliza}')">
+                                                    <i class="fas fa-file-upload"></i>
+                                                </button>
+                                            ` : ''}
+                                        </div>
                                     </td>
                                 </tr>
                             `;
@@ -467,6 +489,7 @@ function renderPolizaSection(estado, polizas, config) {
 function getEstadoBadgePoliza(estado) {
     const badges = {
         'ACTIVO': '<span class="badge badge-activo" style="background: rgba(16, 185, 129, 0.1); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.2); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">ACTIVO</span>',
+        'PENDIENTE': '<span class="badge badge-pendiente" style="background: rgba(245, 158, 11, 0.1); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.2); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">PENDIENTE</span>',
         'PAGADO': '<span class="badge badge-pagado" style="background: rgba(59, 130, 246, 0.1); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.2); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">PAGADO</span>',
         'CAPITALIZADO': '<span class="badge badge-capitalizado" style="background: rgba(139, 92, 246, 0.1); color: #8B5CF6; border: 1px solid rgba(139, 92, 246, 0.2); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">CAPITALIZADO</span>'
     };
@@ -558,6 +581,10 @@ function setupPolizasEventListeners() {
         savePoliza();
     });
 
+    document.getElementById('poliza-socio')?.addEventListener('change', () => {
+        setPolizaSocioAvatar(getSelectedPolizaSocio());
+    });
+
     // Cálculos Proyectados en Modal
     ['poliza-valor', 'poliza-interes', 'poliza-plazo', 'poliza-fecha'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', calculatePolizaProjections);
@@ -605,6 +632,60 @@ function setupPolizasEventListeners() {
     });
 }
 
+function getSelectedPolizaSocio() {
+    const selectedId = document.getElementById('poliza-socio')?.value;
+    if (!selectedId) return null;
+
+    const socios = window.dataCache?.socios || [];
+    return socios.find(s => String(s.idsocio) === String(selectedId)) || null;
+}
+
+function getCachedSocioPhotoForPoliza(idsocio) {
+    try {
+        const cached = JSON.parse(localStorage.getItem('inkacorp_fotos_cache') || '{}');
+        const entry = cached?.[idsocio];
+        if (!entry?.url) return null;
+
+        const maxAge = 24 * 60 * 60 * 1000;
+        if (entry.timestamp && Date.now() - entry.timestamp > maxAge) return null;
+        return entry.url;
+    } catch (error) {
+        return null;
+    }
+}
+
+function getPolizaSocioPhotoUrl(socio) {
+    if (!socio?.idsocio) return socio?.fotoidentidad || null;
+    return getCachedSocioPhotoForPoliza(socio.idsocio) || socio.fotoidentidad || null;
+}
+
+function getPolizaSocioInitials(socio) {
+    const nombre = String(socio?.nombre || '').trim();
+    if (!nombre) return '??';
+    return nombre
+        .split(/\s+/)
+        .map(part => part[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase();
+}
+
+function setPolizaSocioAvatar(socio) {
+    const avatar = document.getElementById('socio-avatar-display');
+    if (!avatar) return;
+
+    const fotoUrl = getPolizaSocioPhotoUrl(socio);
+    avatar.classList.remove('has-photo', 'photo-error');
+
+    if (fotoUrl) {
+        avatar.classList.add('has-photo');
+        avatar.innerHTML = `<img src="${escapePolizaHtml(fotoUrl)}" alt="Foto de ${escapePolizaHtml(socio?.nombre || 'socio')}" onerror="this.onerror=null; const p=this.parentElement; if(p){ p.classList.remove('has-photo'); p.classList.add('photo-error'); p.innerHTML='<i class=&quot;fas fa-exclamation-triangle&quot;></i><span>ACTUALIZAR</span>'; }">`;
+        return;
+    }
+
+    avatar.innerHTML = `<span id="socio-initials">${getPolizaSocioInitials(socio)}</span>`;
+}
+
 // ==========================================
 // CRUD OPERATIONS
 // ==========================================
@@ -614,6 +695,8 @@ function openPolizaModal(poliza = null) {
     const btnGuardar = document.getElementById('btn-guardar-poliza');
     const modalTitle = document.getElementById('modal-poliza-title');
     const actionsContainer = document.getElementById('poliza-actions-container');
+    const estadoField = document.getElementById('poliza-estado-field');
+    const certificadoField = document.getElementById('poliza-certificado-field');
 
     if (!modal || !form) return;
 
@@ -623,8 +706,10 @@ function openPolizaModal(poliza = null) {
     // Reset displays
     document.getElementById('display-vencimiento').textContent = '00/00/0000';
     document.getElementById('display-valor-final').textContent = '$0.00';
-    document.getElementById('socio-initials').textContent = '??';
+    setPolizaSocioAvatar(null);
     if (actionsContainer) actionsContainer.classList.add('hidden');
+    if (estadoField) estadoField.classList.remove('hidden');
+    if (certificadoField) certificadoField.classList.remove('hidden');
 
     // Reset preview de certificado
     const previewContainer = document.getElementById('poliza-certificado-preview-container');
@@ -640,6 +725,8 @@ function openPolizaModal(poliza = null) {
         // MODO INFORMACIÓN
         if (modalTitle) modalTitle.textContent = 'Reporte de Inversión';
         if (btnGuardar) btnGuardar.classList.add('hidden');
+        if (estadoField) estadoField.classList.remove('hidden');
+        if (certificadoField) certificadoField.classList.remove('hidden');
 
         editElements.forEach(el => el.classList.add('hidden'));
         infoElements.forEach(el => el.classList.remove('hidden'));
@@ -693,10 +780,7 @@ function openPolizaModal(poliza = null) {
             }
         }
 
-        if (poliza.socio) {
-            const initials = poliza.socio.nombre.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-            document.getElementById('socio-initials').textContent = initials;
-        }
+        setPolizaSocioAvatar(poliza.socio);
 
         if (poliza.certificado_firmado && previewContainer && previewImg) {
             previewImg.src = poliza.certificado_firmado;
@@ -708,12 +792,16 @@ function openPolizaModal(poliza = null) {
         if (modalTitle) modalTitle.textContent = 'Apertura de Póliza';
         if (btnGuardar) btnGuardar.classList.remove('hidden');
         if (actionsContainer) actionsContainer.classList.add('hidden');
+        if (estadoField) estadoField.classList.add('hidden');
+        if (certificadoField) certificadoField.classList.add('hidden');
 
         editElements.forEach(el => el.classList.remove('hidden'));
         infoElements.forEach(el => el.classList.add('hidden'));
 
         document.getElementById('poliza-id').value = '';
         document.getElementById('poliza-fecha').value = todayISODate();
+        document.getElementById('poliza-estado').value = 'PENDIENTE';
+        document.getElementById('poliza-certificado').value = '';
     }
 
     modal.classList.remove('hidden');
@@ -1997,6 +2085,254 @@ function calculateFixed17Maturity(fechaInicioStr, plazoMeses) {
     return toISODate(target);
 }
 
+async function confirmNewPolizaWithContract(data) {
+    let contratoGenerado = false;
+    const socio = getSelectedPolizaSocio() || { idsocio: data.id_socio };
+
+    const { value } = await Swal.fire({
+        title: 'Contrato requerido',
+        width: '760px',
+        html: `
+            <div style="text-align: left; color: #1e293b; line-height: 1.55;">
+                <p style="font-weight: 800; margin-bottom: 0.75rem;">
+                    Debes tener el contrato firmado.
+                </p>
+                <p style="margin-bottom: 1rem;">
+                    Primero genera el contrato PDF, haz que el socio lo firme y luego sube la foto del documento firmado desde la lista de pólizas. La póliza quedará como <b>PENDIENTE</b> y no se activará hasta cargar ese documento.
+                </p>
+                <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 0.85rem; padding: 0.9rem; color: #9a3412; font-weight: 700;">
+                    <i class="fas fa-triangle-exclamation"></i>
+                    Sin documento firmado no se activa la póliza.
+                </div>
+                <button type="button" id="btn-generar-contrato-nueva-poliza" class="swal2-confirm swal2-styled" style="width: 100%; margin: 1rem 0 0; background: #2563eb;">
+                    <i class="fas fa-file-pdf"></i> Generar contrato PDF
+                </button>
+            </div>
+        `,
+        icon: 'warning',
+        customClass: {
+            popup: 'poliza-swal-contrast'
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Guardar como pendiente',
+        confirmButtonColor: '#0B4E32',
+        cancelButtonText: 'Cancelar',
+        didOpen: () => {
+            const btnConfirm = Swal.getConfirmButton();
+            const btnPdf = document.getElementById('btn-generar-contrato-nueva-poliza');
+
+            btnConfirm.disabled = true;
+            btnConfirm.style.opacity = '0.5';
+
+            btnPdf?.addEventListener('click', async () => {
+                const previewWindow = window.open('', '_blank');
+                if (previewWindow) {
+                    previewWindow.document.write('<p style="font-family: sans-serif; padding: 24px;">Generando contrato...</p>');
+                }
+
+                await generatePolizaPDF({
+                    id_socio: data.id_socio,
+                    socio,
+                    capital: data.valor,
+                    interes: data.interes,
+                    fecha_inicio: data.fecha,
+                    fecha_venc: data.fecha_vencimiento,
+                    valor_final: data.valor_final
+                }, { preview: true, previewWindow });
+
+                contratoGenerado = true;
+                btnConfirm.disabled = false;
+                btnConfirm.style.opacity = '1';
+                btnPdf.innerHTML = '<i class="fas fa-check"></i> Contrato generado';
+                btnPdf.style.background = '#10B981';
+            });
+        },
+        preConfirm: () => {
+            if (!contratoGenerado) {
+                Swal.showValidationMessage('Primero debes generar el contrato PDF.');
+                return false;
+            }
+            return true;
+        }
+    });
+
+    return Boolean(value);
+}
+
+async function handleUploadPolizaSignedDocument(idPoliza) {
+    const poliza = allPolizas.find(p => String(p.id_poliza) === String(idPoliza));
+    if (!poliza) {
+        Swal.fire('No encontrado', 'No se encontró la póliza seleccionada.', 'warning');
+        return;
+    }
+
+    const alreadyActive = poliza.estado === 'ACTIVO';
+
+    if (!alreadyActive && typeof window.validateCajaBeforeAction === 'function') {
+        if (!window.validateCajaBeforeAction('ACTIVACIÓN DE PÓLIZA')) return;
+    }
+
+    const { value: file } = await Swal.fire({
+        title: 'Subir documento firmado',
+        html: `
+            <div style="text-align: left; color: #1e293b;">
+                <p style="margin-bottom: 0.75rem;">Selecciona la foto del contrato firmado por el socio.</p>
+                <p style="font-size: 0.85rem; color: #64748b; margin: 0;">${alreadyActive ? 'La póliza ya está activa; solo se guardará el comprobante firmado.' : 'Al guardar, la póliza pasará a estado ACTIVO.'}</p>
+            </div>
+        `,
+        input: 'file',
+        inputAttributes: {
+            accept: 'image/*',
+            'aria-label': 'Foto del contrato firmado'
+        },
+        customClass: {
+            popup: 'poliza-swal-contrast'
+        },
+        showCancelButton: true,
+        confirmButtonText: alreadyActive ? 'Subir comprobante' : 'Subir y activar',
+        confirmButtonColor: '#0B4E32',
+        cancelButtonText: 'Cancelar',
+        inputValidator: selectedFile => {
+            if (!selectedFile) return 'Debes seleccionar una foto del documento firmado.';
+            if (!selectedFile.type?.startsWith('image/')) return 'El archivo debe ser una imagen.';
+            return null;
+        }
+    });
+
+    if (!file) return;
+
+    try {
+        beginLoading('Subiendo documento firmado...');
+        const supabase = getSupabaseClient();
+        const uploadResult = await uploadPolizaSignedDocumentToWebp(file, poliza);
+
+        if (!uploadResult?.success) {
+            throw new Error(uploadResult?.error || 'No se pudo subir el documento firmado.');
+        }
+
+        const updateData = {
+            certificado_firmado: uploadResult.url,
+            updated_at: new Date().toISOString()
+        };
+
+        if (!alreadyActive) {
+            updateData.estado = 'ACTIVO';
+        }
+
+        const { error } = await supabase
+            .from('ic_polizas')
+            .update(updateData)
+            .eq('id_poliza', poliza.id_poliza);
+
+        if (error) throw error;
+
+        Swal.fire(
+            alreadyActive ? 'Comprobante guardado' : 'Póliza activada',
+            alreadyActive
+                ? 'El documento firmado fue cargado correctamente.'
+                : 'El documento firmado fue cargado correctamente y la póliza quedó activa.',
+            'success'
+        );
+        if (window.dataCache) window.dataCache.lastUpdate.polizas = 0;
+        await loadPolizas(true);
+    } catch (error) {
+        console.error('Error subiendo documento firmado de póliza:', error);
+        await window.showFinancialError?.(error, 'No se pudo subir el documento firmado.')
+            || Swal.fire('Error', error.message || 'No se pudo subir el documento firmado.', 'error');
+    } finally {
+        endLoading();
+    }
+}
+
+async function uploadPolizaSignedDocumentToWebp(file, poliza) {
+    try {
+        if (!file?.type?.startsWith('image/')) {
+            throw new Error('El documento firmado debe ser una imagen para convertirla a WebP.');
+        }
+
+        const supabase = window.getSupabaseClient();
+        if (!supabase) throw new Error('Cliente Supabase no disponible.');
+
+        const socioNombre = poliza.socio?.nombre || poliza.id_socio || 'socio';
+        const safeSocio = slugPolizaStorageName(socioNombre);
+        const safeFecha = slugPolizaStorageName(poliza.fecha || todayISODate());
+        const safeValor = slugPolizaStorageName(parseFloat(poliza.valor || 0).toFixed(2));
+        const path = `contratospolizas/${safeSocio}_${safeFecha}_${safeValor}_${Date.now()}.webp`;
+        const webpBlob = await compressPolizaSignedDocumentToWebp(file);
+
+        const { error } = await supabase.storage
+            .from('inkacorp')
+            .upload(path, webpBlob, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: 'image/webp'
+            });
+
+        if (error) throw error;
+
+        const { data: publicData } = supabase.storage.from('inkacorp').getPublicUrl(path);
+        if (!publicData?.publicUrl) throw new Error('No se pudo obtener URL pública del documento firmado.');
+
+        return { success: true, url: publicData.publicUrl, path };
+    } catch (error) {
+        console.error('Error subiendo documento firmado WebP:', error);
+        return { success: false, error: error.message || 'Error al subir documento firmado.' };
+    }
+}
+
+function compressPolizaSignedDocumentToWebp(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        const img = new Image();
+
+        reader.onload = (event) => {
+            img.onload = () => {
+                const maxSize = 1600;
+                let { width, height } = img;
+                if (width > maxSize || height > maxSize) {
+                    const ratio = Math.min(maxSize / width, maxSize / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('No se pudo preparar la compresión del documento firmado.'));
+                    return;
+                }
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob((blob) => {
+                    if (!blob) {
+                        reject(new Error('No se pudo convertir el documento firmado a WebP.'));
+                        return;
+                    }
+                    resolve(blob);
+                }, 'image/webp', 0.88);
+            };
+            img.onerror = () => reject(new Error('No se pudo leer la imagen del documento firmado.'));
+            img.src = event.target.result;
+        };
+        reader.onerror = () => reject(new Error('No se pudo leer el documento firmado.'));
+        reader.readAsDataURL(file);
+    });
+}
+
+function slugPolizaStorageName(value) {
+    return String(value || 'poliza')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .toLowerCase()
+        .substring(0, 90) || 'poliza';
+}
+
 async function savePoliza() {
     const form = document.getElementById('form-poliza');
     if (!form.checkValidity()) {
@@ -2005,11 +2341,7 @@ async function savePoliza() {
     }
 
     const id = document.getElementById('poliza-id').value;
-
-    // Solo validar caja si es una creación de póliza (implica flujo de dinero)
-    if (!id && typeof window.validateCajaBeforeAction === 'function') {
-        if (!window.validateCajaBeforeAction('NUEVA PÓLIZA')) return;
-    }
+    const isNewPoliza = !id;
 
     const data = {
         id_socio: document.getElementById('poliza-socio').value,
@@ -2019,25 +2351,36 @@ async function savePoliza() {
         plazo: parseInt(document.getElementById('poliza-plazo').value),
         fecha_vencimiento: document.getElementById('poliza-vencimiento').value,
         valor_final: parseFloat(document.getElementById('poliza-valor-final').value),
-        certificado_firmado: document.getElementById('poliza-certificado').value || null,
-        estado: document.getElementById('poliza-estado').value,
+        certificado_firmado: isNewPoliza ? null : (document.getElementById('poliza-certificado').value || null),
+        estado: isNewPoliza ? 'PENDIENTE' : (document.getElementById('poliza-estado').value || 'PENDIENTE'),
         updated_at: new Date().toISOString()
     };
 
+    if (isNewPoliza) {
+        const confirmed = await confirmNewPolizaWithContract(data);
+        if (!confirmed) return;
+    }
+
     try {
-        beginLoading('Guardando póliza...');
+        beginLoading(isNewPoliza ? 'Guardando póliza pendiente...' : 'Guardando póliza...');
         const supabase = getSupabaseClient();
 
         let result;
         if (id) {
             result = await supabase.from('ic_polizas').update(data).eq('id_poliza', id);
         } else {
-            result = await supabase.from('ic_polizas').insert([data]);
+            result = await supabase.from('ic_polizas').insert([data]).select('*').single();
         }
 
         if (result.error) throw result.error;
 
-        Swal.fire('Éxito', 'Póliza guardada correctamente', 'success');
+        Swal.fire(
+            isNewPoliza ? 'Póliza pendiente registrada' : 'Éxito',
+            isNewPoliza
+                ? 'La póliza quedó pendiente. Sube el documento firmado para activarla.'
+                : 'Póliza guardada correctamente',
+            'success'
+        );
 
         // Cerrar modal
         const modal = document.getElementById('poliza-modal');
@@ -2064,6 +2407,7 @@ async function savePoliza() {
 function getEstadoBadgePoliza(estado) {
     const badges = {
         'ACTIVO': '<span class="badge badge-poliza-activo">Activo</span>',
+        'PENDIENTE': '<span class="badge badge-poliza-pendiente">Pendiente</span>',
         'PAGADO': '<span class="badge badge-poliza-pagado">Pagado</span>',
         'CAPITALIZADO': '<span class="badge badge-poliza-capitalizado">Capitalizado</span>'
     };
@@ -2778,7 +3122,7 @@ async function generatePolizaPDF(data, options = {}) {
     doc.setFont("helvetica", "italic");
     doc.setFontSize(8);
     doc.setTextColor(80);
-    doc.text(`En fe de lo cual, las partes suscriben el presente documento de forma digital en ${acreedor.ciudad}, el ${formatDateFull(new Date().toISOString())}`, pageWidth / 2, y, { align: 'center' });
+    doc.text(`En fe de lo cual, las partes suscriben el presente documento en ${acreedor.ciudad}, el ${formatDateFull(new Date().toISOString())}`, pageWidth / 2, y, { align: 'center' });
 
     y += 30;
     doc.setLineWidth(0.4);
@@ -2806,7 +3150,7 @@ async function generatePolizaPDF(data, options = {}) {
     // Pie de página
     doc.setTextColor(150);
     doc.setFontSize(7);
-    doc.text(`ID Transacción: ${numContrato} | Generado digitalmente por sistema INKA CORP`, pageWidth / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+    doc.text(`ID Transacción: ${numContrato} | Generado por sistema INKA CORP`, pageWidth / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
 
     if (options.preview) {
         const blobUrl = doc.output('bloburl');
