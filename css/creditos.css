@@ -501,6 +501,22 @@
     color: #32e075;
 }
 
+.creditos-scope-btn {
+    border-color: rgba(242, 187, 58, 0.35) !important;
+    background: rgba(242, 187, 58, 0.12) !important;
+    color: var(--gold) !important;
+}
+
+.creditos-scope-btn:hover {
+    background: var(--gold) !important;
+    color: var(--gray-900) !important;
+}
+
+.creditos-scope-btn.hidden,
+.creditos-scope-separator.hidden {
+    display: none !important;
+}
+
 /* Scrollbar estilizado */
 .table-responsive::-webkit-scrollbar {
     width: 8px;

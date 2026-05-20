@@ -220,7 +220,13 @@
         <div class="morosos-section">
             <div class="section-header">
                 <h3 class="section-title danger"><i class="fas fa-exclamation-circle"></i> Socios en Mora</h3>
-                <span id="morosos-count" class="section-badge">0</span>
+                <div class="morosos-header-actions">
+                    <button id="dashboard-credit-scope-toggle" class="scope-toggle-btn hidden" onclick="toggleDashboardCreditScope()">
+                        <i class="fas fa-user-check"></i>
+                        <span>Mostrar todos</span>
+                    </button>
+                    <span id="morosos-count" class="section-badge">0</span>
+                </div>
             </div>
             <div id="socios-morosos-list" class="morosos-list">
                 <div class="activity-empty">
@@ -475,6 +481,37 @@
 
     .morosos-section .section-header {
         background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+    }
+
+    .morosos-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .scope-toggle-btn {
+        border: 1px solid rgba(242, 187, 58, 0.32);
+        background: rgba(242, 187, 58, 0.12);
+        color: var(--gold);
+        border-radius: 999px;
+        padding: 0.42rem 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.76rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .scope-toggle-btn:hover {
+        background: var(--gold);
+        color: var(--gray-900);
+    }
+
+    .scope-toggle-btn.hidden {
+        display: none;
     }
 
     .modules-grid {

@@ -11,6 +11,7 @@ let currentViewName = null;
 const viewCache = new Map();
 const DASHBOARD_POLIZA_RENOVACION_DIAS_ANTES = 3;
 const DASHBOARD_POLIZA_RENOVACION_DIAS_DESPUES = 21;
+let dashboardCreditScope = null;
 
 // Referencias a elementos del DOM globales
 let mainContent = null;
@@ -34,6 +35,27 @@ function getCurrentUser() {
 
 // Exponer globalmente
 window.getCurrentUser = getCurrentUser;
+
+function isAdmin() {
+    const user = getCurrentUser();
+    const role = String(user?.rol || user?.role || '').toLowerCase();
+    return role === 'admin' || role === 'administrador' || role === 'superadmin';
+}
+
+window.isAdmin = isAdmin;
+
+function shouldShowAllCreditsByDefault() {
+    const user = getCurrentUser();
+    return user?.preference_all_credits === true;
+}
+
+window.shouldShowAllCreditsByDefault = shouldShowAllCreditsByDefault;
+
+function canToggleAllCreditsScope() {
+    return isAdmin() || shouldShowAllCreditsByDefault();
+}
+
+window.canToggleAllCreditsScope = canToggleAllCreditsScope;
 
 /**
  * Obtiene los datos unificados del asesor/acreedor para todos los documentos del sistema
@@ -741,7 +763,16 @@ function setupEventListeners() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async (e) => {
             e.preventDefault();
+            e.stopPropagation();
             await logout();
+        });
+    }
+
+    const userProfileBox = document.querySelector('.user-profile');
+    if (userProfileBox) {
+        userProfileBox.addEventListener('click', (e) => {
+            if (e.target.closest('#logout-btn')) return;
+            openProfileSettings();
         });
     }
 
@@ -829,6 +860,96 @@ function setupEventListeners() {
             await loadView('dashboard');
         });
     }
+}
+
+async function openProfileSettings() {
+    const user = getCurrentUser();
+    if (!user?.id) {
+        showAlert('No pudimos identificar tu usuario actual.', 'Perfil', 'warning');
+        return;
+    }
+
+    const checked = user.preference_all_credits === true ? 'checked' : '';
+    const result = await Swal.fire({
+        title: 'Ajustes del perfil',
+        html: `
+            <div class="profile-settings-modal">
+                <div class="profile-settings-user">
+                    <div class="profile-settings-avatar">${getUserInitials(user.nombre || 'U')}</div>
+                    <div>
+                        <strong>${user.nombre || 'Usuario'}</strong>
+                        <span>${user.rol || 'usuario'}</span>
+                    </div>
+                </div>
+                <label class="profile-settings-toggle">
+                    <input type="checkbox" id="profile-pref-all-credits" ${checked}>
+                    <span class="profile-toggle-control"></span>
+                    <span class="profile-toggle-copy">
+                        <strong>Mostrar todos los créditos por defecto</strong>
+                        <small>Si está desactivado, el dashboard y Créditos muestran primero solo los créditos asignados a tu cobranza.</small>
+                    </span>
+                </label>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar ajuste',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0B4E32',
+        preConfirm: () => {
+            return {
+                preferenceAllCredits: document.getElementById('profile-pref-all-credits')?.checked === true
+            };
+        }
+    });
+
+    if (!result.isConfirmed) return;
+    const preferenceAllCredits = result.value?.preferenceAllCredits === true;
+
+    try {
+        const supabase = window.getSupabaseClient();
+        const { error } = await supabase
+            .from('ic_users')
+            .update({
+                preference_all_credits: preferenceAllCredits,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+
+        if (error) throw error;
+
+        currentUser = {
+            ...currentUser,
+            preference_all_credits: preferenceAllCredits
+        };
+        window.currentUser = currentUser;
+
+        if (window.forceRefreshCache) {
+            await window.forceRefreshCache();
+        }
+
+        if (currentViewName === 'dashboard') {
+            await loadSociosMorosos(true);
+        } else if (currentViewName === 'creditos' && typeof window.applyCreditCollectionScopePreference === 'function') {
+            window.applyCreditCollectionScopePreference();
+        }
+
+        showToast('Ajuste de perfil guardado', 'success');
+    } catch (error) {
+        console.error('Error guardando ajustes del perfil:', error);
+        showAlert('No se pudo guardar el ajuste: ' + (error.message || error), 'Error', 'error');
+    }
+}
+
+window.openProfileSettings = openProfileSettings;
+
+function getUserInitials(name) {
+    return String(name || 'U')
+        .split(' ')
+        .filter(Boolean)
+        .map(part => part[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2) || 'U';
 }
 
 // ==========================================
@@ -1596,18 +1717,21 @@ async function loadDashboardPriorityAlerts() {
 }
 
 // Cargar socios morosos para el dashboard (con caché)
-async function loadSociosMorosos() {
+async function loadSociosMorosos(forceRefresh = false) {
     const container = document.getElementById('socios-morosos-list');
     const countBadge = document.getElementById('morosos-count');
     if (!container) return;
 
+    dashboardCreditScope = getDefaultCreditCollectionScope();
+    updateDashboardCreditScopeToggle();
+
     // Verificar si hay caché válido de morosos
-    const CACHE_KEY = 'morosos';
-    const cacheIsValid = window.isCacheValid && window.isCacheValid(CACHE_KEY) && window.dataCache?.morosos?.length;
+    const CACHE_KEY = getDashboardMorososCacheKey();
+    const cacheIsValid = window.isCacheValid && window.isCacheValid(CACHE_KEY) && Array.isArray(window.dataCache?.[CACHE_KEY]);
 
     // Si hay caché válido, renderizar inmediatamente
-    if (cacheIsValid) {
-        renderMorososDashboard(window.dataCache.morosos, container, countBadge);
+    if (!forceRefresh && cacheIsValid) {
+        renderMorososDashboard(window.dataCache[CACHE_KEY], container, countBadge);
 
         // Actualizar en segundo plano
         setTimeout(() => {
@@ -1619,6 +1743,49 @@ async function loadSociosMorosos() {
     // Si no hay caché, cargar desde DB
     await fetchMorososFromDB(container, countBadge, false);
 }
+
+function getDefaultCreditCollectionScope() {
+    return shouldShowAllCreditsByDefault() ? 'all' : 'assigned';
+}
+
+function getDashboardMorososCacheKey() {
+    const user = getCurrentUser();
+    const userPart = dashboardCreditScope === 'assigned' ? (user?.id || 'sin_usuario') : 'todos';
+    return `morosos_${dashboardCreditScope}_${userPart}`;
+}
+
+function updateDashboardCreditScopeToggle() {
+    const btn = document.getElementById('dashboard-credit-scope-toggle');
+    if (!btn) return;
+
+    const canToggle = canToggleAllCreditsScope();
+    btn.classList.toggle('hidden', !canToggle);
+    if (!canToggle) return;
+
+    const showingAll = dashboardCreditScope === 'all';
+    btn.innerHTML = showingAll
+        ? '<i class="fas fa-user-check"></i><span>Ver solo míos</span>'
+        : '<i class="fas fa-users"></i><span>Mostrar todos</span>';
+}
+
+async function toggleDashboardCreditScope() {
+    dashboardCreditScope = dashboardCreditScope === 'all' ? 'assigned' : 'all';
+    updateDashboardCreditScopeToggle();
+
+    const container = document.getElementById('socios-morosos-list');
+    if (container) {
+        container.innerHTML = `
+            <div class="activity-empty">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Cargando...</p>
+            </div>
+        `;
+    }
+
+    await fetchMorososFromDB(container, document.getElementById('morosos-count'), false);
+}
+
+window.toggleDashboardCreditScope = toggleDashboardCreditScope;
 
 // Función para obtener morosos desde la base de datos
 async function fetchMorososFromDB(container, countBadge, isBackgroundUpdate) {
@@ -1637,6 +1804,7 @@ async function fetchMorososFromDB(container, countBadge, isBackgroundUpdate) {
                     id_credito,
                     capital,
                     estado_credito,
+                    encargado_cobranza,
                     socio:ic_socios (
                         idsocio,
                         nombre,
@@ -1656,20 +1824,15 @@ async function fetchMorososFromDB(container, countBadge, isBackgroundUpdate) {
         if (!cuotasVencidas || cuotasVencidas.length === 0) {
             // Guardar en caché que no hay morosos
             if (window.dataCache) {
-                window.dataCache.morosos = [];
+                const cacheKey = getDashboardMorososCacheKey();
+                window.dataCache[cacheKey] = [];
                 if (!window.dataCache.lastUpdate) window.dataCache.lastUpdate = {};
-                window.dataCache.lastUpdate.morosos = Date.now();
+                window.dataCache.lastUpdate[cacheKey] = Date.now();
                 if (window.saveCacheToDisk) window.saveCacheToDisk();
             }
 
             if (!isBackgroundUpdate) {
-                container.innerHTML = `
-                    <div class="activity-empty">
-                        <i class="fas fa-check-circle" style="color: #34d399;"></i>
-                        <p>No hay socios en mora</p>
-                    </div>
-                `;
-                if (countBadge) countBadge.textContent = '0';
+                renderMorososDashboard([], container, countBadge);
             }
             return;
         }
@@ -1678,6 +1841,8 @@ async function fetchMorososFromDB(container, countBadge, isBackgroundUpdate) {
         const morososMap = new Map();
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
+        const userId = getCurrentUser()?.id ? String(getCurrentUser().id) : '';
+        const onlyAssigned = dashboardCreditScope === 'assigned';
 
         cuotasVencidas.forEach(cuota => {
             if (!cuota.credito || !cuota.credito.socio) return;
@@ -1686,6 +1851,7 @@ async function fetchMorososFromDB(container, countBadge, isBackgroundUpdate) {
             // Excluir PAUSADOS, CANCELADOS o PRECANCELADOS del dashboard de mora
             const estadosPermitidos = ['ACTIVO', 'MOROSO'];
             if (!estadosPermitidos.includes(cuota.credito.estado_credito)) return;
+            if (onlyAssigned && String(cuota.credito.encargado_cobranza || '') !== userId) return;
 
             const socioId = cuota.credito.socio.idsocio;
             const fechaVencimiento = parseDate(cuota.fecha_vencimiento);
@@ -1707,7 +1873,8 @@ async function fetchMorososFromDB(container, countBadge, isBackgroundUpdate) {
                     montoVencido: parseFloat(cuota.cuota_total),
                     cuotasVencidas: 1,
                     diasMora: diasVencido > 0 ? diasVencido : 0,
-                    creditoId: cuota.credito.id_credito
+                    creditoId: cuota.credito.id_credito,
+                    encargadoCobranza: cuota.credito.encargado_cobranza || null
                 });
             }
         });
@@ -1718,9 +1885,10 @@ async function fetchMorososFromDB(container, countBadge, isBackgroundUpdate) {
 
         // Guardar en caché
         if (window.dataCache) {
-            window.dataCache.morosos = morosos;
+            const cacheKey = getDashboardMorososCacheKey();
+            window.dataCache[cacheKey] = morosos;
             if (!window.dataCache.lastUpdate) window.dataCache.lastUpdate = {};
-            window.dataCache.lastUpdate.morosos = Date.now();
+            window.dataCache.lastUpdate[cacheKey] = Date.now();
             if (window.saveCacheToDisk) window.saveCacheToDisk();
         }
 
@@ -2044,10 +2212,13 @@ async function loadDesembolsosPendientes() {
 // Función para renderizar morosos en el dashboard
 function renderMorososDashboard(morosos, container, countBadge) {
     if (!morosos || morosos.length === 0) {
+        const emptyMessage = dashboardCreditScope === 'assigned'
+            ? 'No hay socios en mora asignados a tu cobranza'
+            : 'No hay socios en mora';
         container.innerHTML = `
             <div class="activity-empty">
                 <i class="fas fa-check-circle" style="color: #34d399;"></i>
-                <p>No hay socios en mora</p>
+                <p>${emptyMessage}</p>
             </div>
         `;
         if (countBadge) countBadge.textContent = '0';

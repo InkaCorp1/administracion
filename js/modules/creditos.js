@@ -18,6 +18,7 @@ let currentUnpaidInstallments = []; // Para pagos múltiples
 let selectedComprobanteFile = null; // Archivo de comprobante de pago seleccionado
 let currentViewingAmortizacion = [];
 let currentViewingDebtSummary = null;
+let creditCollectionScope = 'assigned';
 
 // Mapeo de países a códigos ISO, nombres y URLs de banderas
 const PAIS_CONFIG = {
@@ -43,9 +44,6 @@ async function initCreditosModule() {
         }
     }
 
-    await loadCreditos();
-    setupCreditosEventListeners();
-
     // Exponer funciones al scope global para onclick handlers
     window.openPaymentModal = openPaymentModal;
     window.viewCredito = viewCredito;
@@ -57,6 +55,14 @@ async function initCreditosModule() {
     window.cleanupStickyHeaders = cleanupStickyHeaders;
     window.editCreditoCollector = editCreditoCollector;
     window.resendPaymentReminder = resendPaymentReminder;
+    window.toggleCreditCollectionScope = toggleCreditCollectionScope;
+    window.applyCreditCollectionScopePreference = applyCreditCollectionScopePreference;
+
+    // Aplicar la preferencia antes de cargar datos para que tabla y botón nazcan sincronizados.
+    applyCreditCollectionScopePreference(false);
+
+    await loadCreditos();
+    setupCreditosEventListeners();
 
     // Si ya lo abrimos desde caché arriba, esto no hará nada o refrescará si se cerró
     if (showCreditoId) {
@@ -315,11 +321,9 @@ async function loadCreditos(forceRefresh = false) {
             
             if (!needsRefresh) {
                 allCreditos = cachedData;
-                filteredCreditos = [...allCreditos];
                 updateEstadoCountsCreditos();
                 updateStats();
-                applySorting();
-                renderCreditosTable(filteredCreditos);
+                filterCreditos();
 
                 // Si el caché es reciente, no recargar
                 if (window.isCacheValid && window.isCacheValid('creditos')) {
@@ -355,8 +359,6 @@ async function loadCreditos(forceRefresh = false) {
         if (error) throw error;
 
         allCreditos = await attachEncargadosCobranzaToCreditos(creditos || []);
-        filteredCreditos = [...allCreditos];
-
         // Sincronizar estados morosos automáticamente
         await sincronizarEstadosMorosos(allCreditos);
 
@@ -367,8 +369,7 @@ async function loadCreditos(forceRefresh = false) {
 
         updateEstadoCountsCreditos();
         updateStats();
-        applySorting();
-        renderCreditosTable(filteredCreditos);
+        filterCreditos();
 
     } catch (error) {
         console.error('Error loading creditos:', error);
@@ -825,11 +826,12 @@ function updateCreditoReminderLocalState(creditoId, reminderTimestamp) {
 // ESTADÍSTICAS
 // ==========================================
 function updateStats() {
-    const activos = allCreditos.filter(c => c.estado_credito === 'ACTIVO');
-    const morosos = allCreditos.filter(c => c.estado_credito === 'MOROSO');
+    const scopedCreditos = getScopedCreditos();
+    const activos = scopedCreditos.filter(c => c.estado_credito === 'ACTIVO');
+    const morosos = scopedCreditos.filter(c => c.estado_credito === 'MOROSO');
 
     const carteraTotal = activos.reduce((sum, c) => sum + parseFloat(c.capital || 0), 0);
-    const ahorroTotal = allCreditos.reduce((sum, c) => {
+    const ahorroTotal = scopedCreditos.reduce((sum, c) => {
         return sum + (parseFloat(c.ahorro_programado_cuota || 0) * (c.cuotas_pagadas || 0));
     }, 0);
 
@@ -850,12 +852,13 @@ function updateStats() {
 // ACTUALIZAR CONTADORES
 // ==========================================
 function updateEstadoCountsCreditos() {
+    const scopedCreditos = getScopedCreditos();
     const counts = {
-        all: allCreditos.length,
-        activo: allCreditos.filter(c => c.estado_credito === 'ACTIVO').length,
-        moroso: allCreditos.filter(c => c.estado_credito === 'MOROSO').length,
-        cancelado: allCreditos.filter(c => c.estado_credito === 'CANCELADO').length,
-        precancelado: allCreditos.filter(c => c.estado_credito === 'PRECANCELADO').length
+        all: scopedCreditos.length,
+        activo: scopedCreditos.filter(c => c.estado_credito === 'ACTIVO').length,
+        moroso: scopedCreditos.filter(c => c.estado_credito === 'MOROSO').length,
+        cancelado: scopedCreditos.filter(c => c.estado_credito === 'CANCELADO').length,
+        precancelado: scopedCreditos.filter(c => c.estado_credito === 'PRECANCELADO').length
     };
 
     document.getElementById('count-all').textContent = counts.all;
@@ -917,10 +920,54 @@ async function sincronizarEstadosMorosos(creditos) {
 // ==========================================
 // FILTRAR CRÉDITOS
 // ==========================================
+function applyCreditCollectionScopePreference(shouldRefresh = true) {
+    creditCollectionScope = window.shouldShowAllCreditsByDefault?.() ? 'all' : 'assigned';
+    updateCreditCollectionScopeToggle();
+
+    if (shouldRefresh) {
+        updateEstadoCountsCreditos();
+        updateStats();
+        filterCreditos();
+    }
+}
+
+function toggleCreditCollectionScope() {
+    creditCollectionScope = creditCollectionScope === 'all' ? 'assigned' : 'all';
+    updateCreditCollectionScopeToggle();
+    updateEstadoCountsCreditos();
+    updateStats();
+    filterCreditos();
+}
+
+function updateCreditCollectionScopeToggle() {
+    const btn = document.getElementById('creditos-scope-toggle');
+    const separator = document.querySelector('.creditos-scope-separator');
+    const canToggle = window.canToggleAllCreditsScope?.() === true;
+
+    btn?.classList.toggle('hidden', !canToggle);
+    separator?.classList.toggle('hidden', !canToggle);
+
+    if (!btn || !canToggle) return;
+
+    const showingAll = creditCollectionScope === 'all';
+    btn.innerHTML = showingAll
+        ? '<i class="fas fa-user-check"></i><span>Ver solo míos</span>'
+        : '<i class="fas fa-users"></i><span>Mostrar todos</span>';
+    btn.title = showingAll ? 'Ver solo créditos asignados a mi cobranza' : 'Mostrar todos los créditos';
+}
+
+function getScopedCreditos() {
+    if (creditCollectionScope === 'all') return allCreditos;
+    const userId = window.getCurrentUser?.()?.id;
+    if (!userId) return [];
+    return allCreditos.filter(credito => String(credito.encargado_cobranza || '') === String(userId));
+}
+
 function filterCreditos() {
     const searchTerm = document.getElementById('search-creditos')?.value?.toLowerCase() || '';
+    const scopedCreditos = getScopedCreditos();
 
-    filteredCreditos = allCreditos.filter(credito => {
+    filteredCreditos = scopedCreditos.filter(credito => {
         // Filtro por estado (si está activado)
         if (currentEstadoFilterCreditos && credito.estado_credito !== currentEstadoFilterCreditos) {
             return false;
