@@ -43,7 +43,7 @@
     <!-- Librería de Gráficos ApexCharts -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-    <script src="js/config.js?v=31.2.0"></script>
+    <script src="js/config.js?v=31.3.0"></script>
     <script src="js/auth.js"></script>
     <script>
         /**
@@ -236,7 +236,17 @@
 
                 <div class="nav-section-title" style="margin-top: 1rem;">Configuración</div>
 
-
+                <div class="sidebar-preference-card">
+                    <div class="sidebar-preference-copy">
+                        <span>Créditos por defecto</span>
+                        <small id="sidebar-credit-scope-label">Solo míos</small>
+                    </div>
+                    <label class="sidebar-switch" title="Alternar entre solo mis créditos o todos por defecto">
+                        <input type="checkbox" id="sidebar-pref-all-credits"
+                            onchange="saveProfileCreditPreference(this.checked)">
+                        <span></span>
+                    </label>
+                </div>
 
             </nav>
 
@@ -346,7 +356,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/config.js?v=31.2.0"></script>
+    <script src="js/config.js?v=31.3.0"></script>
     <script src="js/auth.js"></script>
     <script src="js/app.js"></script>
     <script src="js/modules/socios.js"></script>
@@ -371,7 +381,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                const serviceWorkerVersion = window.SW_VERSION || window.APP_VERSION || '31.2.0';
+                const serviceWorkerVersion = window.SW_VERSION || window.APP_VERSION || '31.3.0';
                 navigator.serviceWorker.register(`sw.js?v=${encodeURIComponent(serviceWorkerVersion)}`, { updateViaCache: 'none' })
                     .then((registration) => {
                         console.log('[PWA] Service Worker registrado');

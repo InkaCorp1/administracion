@@ -719,8 +719,19 @@ function updateUI() {
         }
     }
 
+    updateSidebarCreditPreferenceControl();
+
     // Aplicar visibilidad de módulos según rol
     applyModuleVisibility();
+}
+
+function updateSidebarCreditPreferenceControl() {
+    const input = document.getElementById('sidebar-pref-all-credits');
+    const label = document.getElementById('sidebar-credit-scope-label');
+    const showAll = shouldShowAllCreditsByDefault();
+
+    if (input) input.checked = showAll;
+    if (label) label.textContent = showAll ? 'Todos' : 'Solo míos';
 }
 
 function applyModuleVisibility() {
@@ -905,12 +916,27 @@ async function openProfileSettings() {
     if (!result.isConfirmed) return;
     const preferenceAllCredits = result.value?.preferenceAllCredits === true;
 
+    await saveProfileCreditPreference(preferenceAllCredits);
+}
+
+window.openProfileSettings = openProfileSettings;
+
+async function saveProfileCreditPreference(preferenceAllCredits) {
+    const user = getCurrentUser();
+    if (!user?.id) {
+        showAlert('No pudimos identificar tu usuario actual.', 'Perfil', 'warning');
+        updateSidebarCreditPreferenceControl();
+        return;
+    }
+
+    const normalizedPreference = preferenceAllCredits === true;
+
     try {
         const supabase = window.getSupabaseClient();
         const { error } = await supabase
             .from('ic_users')
             .update({
-                preference_all_credits: preferenceAllCredits,
+                preference_all_credits: normalizedPreference,
                 updated_at: new Date().toISOString()
             })
             .eq('id', user.id);
@@ -919,9 +945,10 @@ async function openProfileSettings() {
 
         currentUser = {
             ...currentUser,
-            preference_all_credits: preferenceAllCredits
+            preference_all_credits: normalizedPreference
         };
         window.currentUser = currentUser;
+        updateSidebarCreditPreferenceControl();
 
         if (window.forceRefreshCache) {
             await window.forceRefreshCache();
@@ -933,14 +960,15 @@ async function openProfileSettings() {
             window.applyCreditCollectionScopePreference();
         }
 
-        showToast('Ajuste de perfil guardado', 'success');
+        showToast('Ajuste de créditos guardado', 'success');
     } catch (error) {
-        console.error('Error guardando ajustes del perfil:', error);
+        console.error('Error guardando preferencia de créditos:', error);
+        updateSidebarCreditPreferenceControl();
         showAlert('No se pudo guardar el ajuste: ' + (error.message || error), 'Error', 'error');
     }
 }
 
-window.openProfileSettings = openProfileSettings;
+window.saveProfileCreditPreference = saveProfileCreditPreference;
 
 function getUserInitials(name) {
     return String(name || 'U')

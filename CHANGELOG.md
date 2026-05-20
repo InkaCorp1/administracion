@@ -1,5 +1,13 @@
 # CHANGELOG - INKA CORP
 
+## [31.3.0] - 2026-05-20
+### Cobranza
+- **Vista de créditos según tu asignación:** El Dashboard y el módulo de Créditos pueden abrir mostrando primero solo los créditos asignados a tu cobranza.
+- **Opción para ver todos:** Cuando corresponda, puedes alternar entre “Mostrar todos” y “Ver solo míos” sin salir de la pantalla.
+- **Preferencia guardada por usuario:** Cada usuario puede decidir si quiere abrir por defecto solo sus créditos o todos los créditos disponibles.
+- **Ajuste visible en el sidebar:** En Configuración ahora tienes un switch rápido para cambiar entre “Solo míos” y “Todos”.
+- **También disponible en perfil:** El mismo ajuste sigue disponible desde el perfil del usuario para mantener una experiencia clara y consistente.
+
 ## [31.2.0] - 2026-05-20
 ### Créditos
 - **Recordatorios de pago por WhatsApp:** En la tabla de créditos ahora puedes reenviar un recordatorio de pago desde el nuevo botón de WhatsApp.
