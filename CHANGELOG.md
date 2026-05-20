@@ -1,5 +1,17 @@
 # CHANGELOG - INKA CORP
 
+## [31.2.0] - 2026-05-20
+### Créditos
+- **Recordatorios de pago por WhatsApp:** En la tabla de créditos ahora puedes reenviar un recordatorio de pago desde el nuevo botón de WhatsApp.
+- **Mensajes inteligentes:** El recordatorio se adapta según la fecha de pago: avisa si faltan varios días, si vence mañana, si vence hoy o si ya está atrasado.
+- **Tarjeta de pago incluida:** El socio recibe una imagen clara con el valor a pagar, la cuota correspondiente, el estado del pago y los datos para transferencia o depósito.
+- **Datos del encargado de cobranza:** El recordatorio toma el método de pago configurado para el encargado asignado al crédito.
+- **Seguimiento de recordatorios:** Al enviar un recordatorio, el sistema guarda la fecha del último envío para tener mejor control de cobranza.
+
+### Cobranza
+- **Encargado editable:** Desde el detalle del crédito puedes cambiar el encargado de cobranza cuando sea necesario.
+- **Notificación al encargado:** Al asignar un nuevo encargado, el sistema le envía una notificación para que sepa qué crédito debe revisar.
+
 ## [31.1.1] - 2026-05-14
 ### Móvil
 - **Inicio más útil:** En móvil ahora se muestran solo los procesos pendientes que necesitan atención.

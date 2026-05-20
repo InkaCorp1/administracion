@@ -55,6 +55,8 @@ async function initCreditosModule() {
     window.toggleEstadoFilter = toggleEstadoFilter;
     window.filterCreditosByEstado = filterCreditosByEstado;
     window.cleanupStickyHeaders = cleanupStickyHeaders;
+    window.editCreditoCollector = editCreditoCollector;
+    window.resendPaymentReminder = resendPaymentReminder;
 
     // Si ya lo abrimos desde caché arriba, esto no hará nada o refrescará si se cerró
     if (showCreditoId) {
@@ -305,7 +307,11 @@ async function loadCreditos(forceRefresh = false) {
             
             // Verificamos si los datos cacheados tienen la estructura necesaria (amortización)
             // Si al menos un moroso no tiene amortización, forzamos la actualización de Supabase
-            const needsRefresh = cachedData.some(c => c.estado_credito === 'MOROSO' && !c.amortizacion);
+            const needsRefresh = cachedData.some(c =>
+                (c.estado_credito === 'MOROSO' && !c.amortizacion) ||
+                !Object.prototype.hasOwnProperty.call(c, 'encargado_cobranza') ||
+                (c.encargado_cobranza && !c.encargado_cobranza_user)
+            );
             
             if (!needsRefresh) {
                 allCreditos = cachedData;
@@ -337,6 +343,8 @@ async function loadCreditos(forceRefresh = false) {
                     paisresidencia
                 ),
                 amortizacion:ic_creditos_amortizacion (
+                    id_detalle,
+                    numero_cuota,
                     cuota_total,
                     fecha_vencimiento,
                     estado_cuota
@@ -346,7 +354,7 @@ async function loadCreditos(forceRefresh = false) {
 
         if (error) throw error;
 
-        allCreditos = creditos || [];
+        allCreditos = await attachEncargadosCobranzaToCreditos(creditos || []);
         filteredCreditos = [...allCreditos];
 
         // Sincronizar estados morosos automáticamente
@@ -368,6 +376,448 @@ async function loadCreditos(forceRefresh = false) {
         if (!window.hasCacheData || !window.hasCacheData('creditos')) {
             showErrorMessage('Error al cargar los créditos');
         }
+    }
+}
+
+async function attachEncargadosCobranzaToCreditos(creditos) {
+    const ids = [...new Set(
+        (creditos || [])
+            .map(c => c.encargado_cobranza)
+            .filter(Boolean)
+            .map(String)
+    )];
+
+    if (!ids.length) return creditos || [];
+
+    try {
+        const supabase = window.getSupabaseClient();
+        const { data: usuarios, error } = await supabase
+            .from('ic_users')
+            .select('id, nombre, whatsapp')
+            .in('id', ids);
+
+        if (error) throw error;
+
+        const userMap = new Map((usuarios || []).map(user => [String(user.id), user]));
+        return (creditos || []).map(credito => ({
+            ...credito,
+            encargado_cobranza_user: userMap.get(String(credito.encargado_cobranza)) || null
+        }));
+    } catch (error) {
+        console.warn('No se pudieron cargar encargados de cobranza:', error);
+        return creditos || [];
+    }
+}
+
+async function loadActiveCollectionUsers() {
+    const supabase = window.getSupabaseClient();
+    const { data, error } = await supabase
+        .from('ic_users')
+        .select('id, nombre, whatsapp')
+        .eq('activo', true)
+        .order('nombre', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+}
+
+async function editCreditoCollector() {
+    if (!currentViewingCredito?.id_credito) {
+        Swal.fire('Sin crédito', 'Abre un crédito antes de cambiar el encargado.', 'warning');
+        return;
+    }
+
+    try {
+        const usuarios = await loadActiveCollectionUsers();
+        if (!usuarios.length) {
+            Swal.fire('Sin usuarios', 'No hay usuarios activos disponibles para asignar.', 'warning');
+            return;
+        }
+
+        const inputOptions = usuarios.reduce((options, user) => {
+            options[user.id] = user.nombre || user.id;
+            return options;
+        }, {});
+
+        const { value: selectedUserId } = await Swal.fire({
+            title: 'Cambiar encargado de cobranza',
+            input: 'select',
+            inputOptions,
+            inputValue: currentViewingCredito.encargado_cobranza || '',
+            inputPlaceholder: 'Seleccione un usuario',
+            showCancelButton: true,
+            confirmButtonText: 'Guardar encargado',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#0B4E32',
+            inputValidator: value => {
+                if (!value) return 'Debes seleccionar un usuario.';
+                return null;
+            }
+        });
+
+        if (!selectedUserId) return;
+
+        if (String(selectedUserId) === String(currentViewingCredito.encargado_cobranza || '')) {
+            showToast('El encargado seleccionado ya estaba asignado', 'info');
+            return;
+        }
+
+        const supabase = window.getSupabaseClient();
+        const previousCollectorName = currentViewingCredito.encargado_cobranza_user?.nombre || 'Sin encargado anterior';
+        const { error } = await supabase
+            .from('ic_creditos')
+            .update({
+                encargado_cobranza: selectedUserId,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id_credito', currentViewingCredito.id_credito);
+
+        if (error) throw error;
+
+        const selectedUser = usuarios.find(user => String(user.id) === String(selectedUserId)) || null;
+        currentViewingCredito.encargado_cobranza = selectedUserId;
+        currentViewingCredito.encargado_cobranza_user = selectedUser;
+
+        const index = allCreditos.findIndex(c => c.id_credito === currentViewingCredito.id_credito);
+        if (index >= 0) {
+            allCreditos[index] = {
+                ...allCreditos[index],
+                encargado_cobranza: selectedUserId,
+                encargado_cobranza_user: selectedUser
+            };
+        }
+
+        const filteredIndex = filteredCreditos.findIndex(c => c.id_credito === currentViewingCredito.id_credito);
+        if (filteredIndex >= 0) {
+            filteredCreditos[filteredIndex] = {
+                ...filteredCreditos[filteredIndex],
+                encargado_cobranza: selectedUserId,
+                encargado_cobranza_user: selectedUser
+            };
+        }
+
+        if (window.setCacheData) {
+            window.setCacheData('creditos', allCreditos);
+        }
+
+        const encargadoEl = document.getElementById('det-encargado-cobranza');
+        if (encargadoEl) encargadoEl.textContent = selectedUser?.nombre || '-';
+
+        const whatsapp = selectedUser?.whatsapp || '';
+        if (!whatsapp) {
+            showToast('Encargado actualizado, pero el usuario no tiene WhatsApp registrado', 'warning');
+            return;
+        }
+
+        const notificationResult = await sendTextNotificationWebhook({
+            whatsapp,
+            message: buildCollectorAssignmentMessage(currentViewingCredito, selectedUser, previousCollectorName)
+        });
+
+        showToast(
+            notificationResult.success
+                ? 'Encargado actualizado y notificado'
+                : 'Encargado actualizado, pero no se pudo enviar la notificación',
+            notificationResult.success ? 'success' : 'warning'
+        );
+    } catch (error) {
+        console.error('Error actualizando encargado de cobranza:', error);
+        Swal.fire('Error', error.message || 'No se pudo actualizar el encargado.', 'error');
+    }
+}
+
+function buildCollectorAssignmentMessage(credito, encargado, previousCollectorName = '') {
+    const socio = credito?.socio || {};
+    const codigoCredito = credito?.codigo_credito || credito?.id_credito || 'Sin código';
+    const socioNombre = socio.nombre || credito?.nombre_socio || 'Socio sin nombre';
+    const cedula = socio.cedula || credito?.cedula_socio || 'Sin cédula';
+    const capital = formatMoney(parseFloat(credito?.capital || 0));
+    const estado = credito?.estado_credito || 'Sin estado';
+    const cuotasPagadas = credito?.cuotas_pagadas ?? 0;
+    const plazo = credito?.plazo || credito?.numero_cuotas || '-';
+
+    return `¡Hola ${encargado?.nombre || 'equipo'}!\n\nSe te ha asignado como encargado de cobranza de este crédito:\n\nSocio: ${socioNombre}\nCédula: ${cedula}\nCrédito: ${codigoCredito}\nCapital: ${capital}\nEstado: ${estado}\nProgreso: ${cuotasPagadas}/${plazo} cuotas\nEncargado anterior: ${previousCollectorName}\n\nPor favor revisa el detalle en el módulo de Créditos.\n\nINKA CORP`;
+}
+
+async function resendPaymentReminder(creditoId, btn = null) {
+    const credito = allCreditos.find(c => String(c.id_credito) === String(creditoId));
+    if (!credito) {
+        Swal.fire('Crédito no encontrado', 'No se pudo ubicar el crédito para reenviar el recordatorio.', 'warning');
+        return;
+    }
+
+    try {
+        const cuota = getReminderTargetInstallment(credito);
+        if (!cuota) {
+            Swal.fire('Sin cuotas pendientes', 'Este crédito no tiene cuotas pendientes para recordar.', 'info');
+            return;
+        }
+
+        const socioWhatsapp = credito.socio?.whatsapp ? String(credito.socio.whatsapp).trim() : '';
+        if (!socioWhatsapp) {
+            Swal.fire('WhatsApp no registrado', 'El socio no tiene WhatsApp registrado para enviar el recordatorio.', 'warning');
+            return;
+        }
+
+        if (!credito.encargado_cobranza) {
+            Swal.fire('Encargado requerido', 'Este crédito no tiene encargado de cobranza asignado.', 'warning');
+            return;
+        }
+
+        const collector = await loadCreditCollectorPaymentInfo(credito.encargado_cobranza);
+        const paymentDetails = normalizeCollectorPaymentMethod(collector?.metodo_pago);
+
+        if (!paymentDetails) {
+            Swal.fire('Método de pago pendiente', 'El encargado de cobranza no tiene método de pago registrado.', 'warning');
+            return;
+        }
+
+        const reminderContext = buildPaymentReminderContext(credito, cuota, collector, paymentDetails);
+
+        const { isConfirmed } = await Swal.fire({
+            title: 'Reenviar recordatorio',
+            html: `
+                <div style="text-align:left; color:#d5e0ee; line-height:1.55;">
+                    <strong>Socio:</strong> ${credito.socio?.nombre || 'N/A'}<br>
+                    <strong>Cuota:</strong> ${reminderContext.numeroCuota}<br>
+                    <strong>Vencimiento:</strong> ${reminderContext.fechaVencimientoTexto}<br>
+                    <strong>Estado:</strong> ${reminderContext.estadoTexto}
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Enviar WhatsApp',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#0B4E32'
+        });
+
+        if (!isConfirmed) return;
+
+        setReminderButtonState(btn, true);
+        Swal.fire({
+            title: 'Enviando recordatorio...',
+            text: 'Generando tarjeta y enviando WhatsApp.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const image_base64 = await generatePaymentReminderCanvas(reminderContext);
+        const message = buildPaymentReminderMessage(reminderContext);
+        const webhookResult = await sendImageNotificationWebhook({
+            whatsapp: socioWhatsapp,
+            image_base64,
+            message
+        });
+
+        if (!webhookResult.success) {
+            throw new Error(webhookResult.error || 'No se pudo enviar el webhook de WhatsApp.');
+        }
+
+        const reminderTimestamp = new Date().toISOString();
+        const supabase = window.getSupabaseClient();
+        const { error: updateError } = await supabase
+            .from('ic_creditos')
+            .update({
+                ultimo_recordatorio: reminderTimestamp,
+                updated_at: reminderTimestamp
+            })
+            .eq('id_credito', credito.id_credito);
+
+        Swal.close();
+
+        if (updateError) {
+            console.warn('Recordatorio enviado, pero no se pudo guardar ultimo_recordatorio:', updateError);
+            Swal.fire(
+                'Recordatorio enviado',
+                'El WhatsApp se envió correctamente, pero no se pudo guardar la fecha del último recordatorio. Revisa si existe la columna ultimo_recordatorio en ic_creditos.',
+                'warning'
+            );
+            return;
+        }
+
+        updateCreditoReminderLocalState(credito.id_credito, reminderTimestamp);
+        showToast('Recordatorio de pago enviado correctamente', 'success');
+    } catch (error) {
+        console.error('Error reenviando recordatorio de pago:', error);
+        Swal.close();
+        Swal.fire('Error', error.message || 'No se pudo reenviar el recordatorio de pago.', 'error');
+    } finally {
+        setReminderButtonState(btn, false);
+    }
+}
+
+function setReminderButtonState(btn, isLoading) {
+    if (!btn) return;
+    btn.disabled = isLoading;
+    btn.innerHTML = isLoading
+        ? '<i class="fas fa-spinner fa-spin"></i>'
+        : '<i class="fab fa-whatsapp"></i>';
+}
+
+async function loadCreditCollectorPaymentInfo(userId) {
+    const supabase = window.getSupabaseClient();
+    const { data, error } = await supabase
+        .from('ic_users')
+        .select('id, nombre, whatsapp, metodo_pago')
+        .eq('id', userId)
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+function normalizeCollectorPaymentMethod(rawPaymentMethod) {
+    if (!rawPaymentMethod) return '';
+
+    if (typeof rawPaymentMethod === 'string') {
+        const trimmed = rawPaymentMethod.trim();
+        if (!trimmed) return '';
+
+        try {
+            return normalizeCollectorPaymentMethod(JSON.parse(trimmed));
+        } catch (_) {
+            return trimmed;
+        }
+    }
+
+    if (typeof rawPaymentMethod !== 'object') return String(rawPaymentMethod);
+
+    const method = rawPaymentMethod.metodo || rawPaymentMethod.metodo_pago || rawPaymentMethod.tipo_pago || rawPaymentMethod.tipo || 'Depósito o transferencia';
+    const lines = [
+        ['Método de pago', method],
+        ['Banco', rawPaymentMethod.banco || rawPaymentMethod.nombre_banco],
+        ['Tipo de cuenta', rawPaymentMethod.tipo_cuenta || rawPaymentMethod.cuenta_tipo],
+        ['Número de cuenta', rawPaymentMethod.numero_cuenta || rawPaymentMethod.cuenta || rawPaymentMethod.nro_cuenta],
+        ['Titular', rawPaymentMethod.titular || rawPaymentMethod.nombre_titular || rawPaymentMethod.a_nombre_de],
+        ['Cédula', rawPaymentMethod.cedula || rawPaymentMethod.identificacion]
+    ];
+
+    return lines
+        .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+        .map(([label, value]) => `${label}: ${value}`)
+        .join('\n');
+}
+
+function getReminderTargetInstallment(credito) {
+    const cuotas = Array.isArray(credito.amortizacion) ? credito.amortizacion : [];
+    const pendientes = cuotas
+        .filter(c => ['PENDIENTE', 'PARCIAL', 'VENCIDO'].includes(c.estado_cuota))
+        .sort((a, b) => String(a.fecha_vencimiento || '').localeCompare(String(b.fecha_vencimiento || '')));
+
+    return pendientes[0] || null;
+}
+
+function buildPaymentReminderContext(credito, cuota, collector, paymentDetails) {
+    const diasDiferencia = getDaysUntilDate(cuota.fecha_vencimiento);
+    const estado = getReminderStatus(diasDiferencia);
+    const cuotaTotal = parseFloat(cuota.cuota_total || credito.cuota_con_ahorro || 0);
+    const moraInfo = diasDiferencia < 0 ? calcularMora(cuota.fecha_vencimiento) : { montoMora: 0, diasMora: 0 };
+    const totalSugerido = cuotaTotal + (moraInfo.montoMora || 0);
+
+    return {
+        credito,
+        cuota,
+        collector,
+        paymentDetails,
+        socioNombre: credito.socio?.nombre || 'Socio',
+        socioCedula: credito.socio?.cedula || '-',
+        codigoCredito: credito.codigo_credito || credito.id_credito,
+        numeroCuota: cuota.numero_cuota || ((credito.cuotas_pagadas || 0) + 1),
+        plazo: credito.plazo || '-',
+        cuotaTotal,
+        mora: moraInfo.montoMora || 0,
+        totalSugerido,
+        diasDiferencia,
+        estadoTexto: estado.estadoTexto,
+        tituloImagen: estado.tituloImagen,
+        tonoImagen: estado.tonoImagen,
+        fraseImagen: estado.fraseImagen,
+        fraseMensaje: estado.fraseMensaje,
+        fechaVencimientoTexto: formatDateMedium(parseReminderDate(cuota.fecha_vencimiento))
+    };
+}
+
+function getDaysUntilDate(dateString) {
+    const target = parseReminderDate(dateString);
+    const today = parseReminderDate(getEcuadorDateString());
+    if (!target || !today) return 0;
+    target.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function parseReminderDate(dateString) {
+    if (!dateString) return null;
+    const [year, month, day] = String(dateString).split('-').map(Number);
+    if (!year || !month || !day) return parseDate(dateString);
+    return new Date(year, month - 1, day);
+}
+
+function getReminderStatus(diasDiferencia) {
+    if (diasDiferencia > 1) {
+        return {
+            estadoTexto: `Vence en ${diasDiferencia} días`,
+            tituloImagen: 'RECORDATORIO DE PAGO',
+            tonoImagen: '#0B4E32',
+            fraseImagen: `Tu cuota vence en ${diasDiferencia} días`,
+            fraseMensaje: `te recordamos respetuosamente que tu cuota deberá pagarse en ${diasDiferencia} días`
+        };
+    }
+
+    if (diasDiferencia === 1) {
+        return {
+            estadoTexto: 'Vence mañana',
+            tituloImagen: 'PAGO PRÓXIMO',
+            tonoImagen: '#0B4E32',
+            fraseImagen: 'Tu cuota vence mañana',
+            fraseMensaje: 'te recordamos respetuosamente que tu cuota deberá pagarse mañana'
+        };
+    }
+
+    if (diasDiferencia === 0) {
+        return {
+            estadoTexto: 'Vence hoy',
+            tituloImagen: 'PAGO HOY',
+            tonoImagen: '#D97706',
+            fraseImagen: 'Tu cuota vence hoy',
+            fraseMensaje: 'te recordamos respetuosamente que tu cuota vence hoy'
+        };
+    }
+
+    if (diasDiferencia === -1) {
+        return {
+            estadoTexto: 'Venció ayer',
+            tituloImagen: 'PAGO PENDIENTE',
+            tonoImagen: '#B91C1C',
+            fraseImagen: 'Tu cuota venció ayer',
+            fraseMensaje: 'te informamos respetuosamente que tu cuota venció ayer'
+        };
+    }
+
+    const diasAtraso = Math.abs(diasDiferencia);
+    return {
+        estadoTexto: `Venció hace ${diasAtraso} días`,
+        tituloImagen: 'PAGO PENDIENTE',
+        tonoImagen: '#B91C1C',
+        fraseImagen: `Tu cuota venció hace ${diasAtraso} días`,
+        fraseMensaje: `te informamos respetuosamente que tu cuota se encuentra pendiente desde hace ${diasAtraso} días`
+    };
+}
+
+function buildPaymentReminderMessage(context) {
+    const moraText = context.mora > 0 ? `\nMora al día de hoy: ${formatMoney(context.mora)}` : '';
+
+    return `¡Hola ${context.socioNombre.toUpperCase()}!\n\nEste es un recordatorio de pago de INKA CORP. ${context.fraseMensaje}.\n\nCrédito: ${context.codigoCredito}\nCuota: ${context.numeroCuota} de ${context.plazo}\nFecha de vencimiento: ${context.fechaVencimientoTexto}\nValor de cuota: ${formatMoney(context.cuotaTotal)}${moraText}\nTotal referencial a pagar: ${formatMoney(context.totalSugerido)}\n\n${context.paymentDetails}\n\nPor favor realiza el pago por depósito o transferencia y envía el comprobante por este medio para registrar tu cuota.\n\nGracias por tu puntualidad.`;
+}
+
+function updateCreditoReminderLocalState(creditoId, reminderTimestamp) {
+    [allCreditos, filteredCreditos].forEach(list => {
+        const item = list.find(c => String(c.id_credito) === String(creditoId));
+        if (item) item.ultimo_recordatorio = reminderTimestamp;
+    });
+
+    if (window.setCacheData) {
+        window.setCacheData('creditos', allCreditos);
     }
 }
 
@@ -824,9 +1274,14 @@ function renderCreditoRow(credito, sectionEstado = '') {
             <td class="col-prox-pago text-center">${proximoPago}</td>
             <td class="text-center">${estadoBadge}</td>
             <td class="text-center">
-                <button class="btn-icon btn-ver-credito" onclick="event.stopPropagation(); viewCredito('${credito.id_credito}', this)" title="Ver detalle">
-                    <i class="fas fa-eye"></i>
-                </button>
+                <div class="credito-row-actions">
+                    <button class="btn-icon btn-whatsapp-reminder" onclick="event.stopPropagation(); resendPaymentReminder('${credito.id_credito}', this)" title="Reenviar recordatorio de pago">
+                        <i class="fab fa-whatsapp"></i>
+                    </button>
+                    <button class="btn-icon btn-ver-credito" onclick="event.stopPropagation(); viewCredito('${credito.id_credito}', this)" title="Ver detalle">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
             </td>
         </tr>
     `;
@@ -1030,6 +1485,9 @@ async function viewCredito(creditoId, btn = null) {
     document.getElementById('det-nombre-socio').textContent = credito.socio?.nombre || '-';
     document.getElementById('det-cedula-socio').textContent = credito.socio?.cedula || '-';
     document.getElementById('det-whatsapp-socio').textContent = credito.socio?.whatsapp || '-';
+    const encargadoCobranza = credito.encargado_cobranza_user?.nombre || credito.encargado_cobranza_nombre || '-';
+    const encargadoEl = document.getElementById('det-encargado-cobranza');
+    if (encargadoEl) encargadoEl.textContent = encargadoCobranza;
     updateCreditoPdfMeta(credito);
 
     // Resumen
@@ -3279,6 +3737,160 @@ async function generateMultiQuotaReceiptCanvas(data) {
     });
 }
 
+async function generatePaymentReminderCanvas(data) {
+    return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 720;
+        canvas.height = 960;
+
+        const logo = new Image();
+        logo.crossOrigin = 'anonymous';
+        logo.src = 'https://i.ibb.co/3mC22Hc4/inka-corp.png';
+
+        logo.onload = () => draw(true);
+        logo.onerror = () => draw(false);
+
+        function draw(withLogo) {
+            const accent = data.tonoImagen || '#0B4E32';
+
+            ctx.fillStyle = '#F7FAF8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, 220);
+            gradient.addColorStop(0, '#063B28');
+            gradient.addColorStop(1, accent);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, 220);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.12)';
+            ctx.beginPath();
+            ctx.arc(620, 58, 118, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (withLogo) {
+                ctx.drawImage(logo, 44, 34, 76, 76);
+            }
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'left';
+            ctx.font = 'bold 34px Arial';
+            ctx.fillText(data.tituloImagen, withLogo ? 140 : 44, 72);
+            ctx.font = '18px Arial';
+            ctx.fillText('INKA CORP', withLogo ? 140 : 44, 104);
+
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 32px Arial';
+            wrapCanvasText(ctx, data.fraseImagen, canvas.width / 2, 172, 620, 36);
+
+            drawRoundRect(ctx, 48, 254, canvas.width - 96, 240, 26, '#FFFFFF', '#DDE7DF');
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#64748B';
+            ctx.font = 'bold 15px Arial';
+            ctx.fillText('SOCIO', 82, 302);
+            ctx.fillStyle = '#10251B';
+            ctx.font = 'bold 28px Arial';
+            wrapCanvasText(ctx, String(data.socioNombre || 'Socio').toUpperCase(), 82, 338, 430, 32, 'left');
+
+            ctx.fillStyle = accent;
+            ctx.textAlign = 'right';
+            ctx.font = 'bold 34px Arial';
+            ctx.fillText(formatMoney(data.totalSugerido), canvas.width - 82, 338);
+            ctx.fillStyle = '#64748B';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText('TOTAL REFERENCIAL', canvas.width - 82, 364);
+
+            ctx.textAlign = 'left';
+            const summary = [
+                ['Crédito', data.codigoCredito],
+                ['Cuota', `${data.numeroCuota} de ${data.plazo}`],
+                ['Vence', data.fechaVencimientoTexto],
+                ['Estado', data.estadoTexto]
+            ];
+
+            summary.forEach((item, index) => {
+                const x = index % 2 === 0 ? 82 : 390;
+                const y = index < 2 ? 418 : 466;
+                ctx.fillStyle = '#64748B';
+                ctx.font = 'bold 13px Arial';
+                ctx.fillText(item[0].toUpperCase(), x, y - 18);
+                ctx.fillStyle = '#10251B';
+                ctx.font = 'bold 20px Arial';
+                ctx.fillText(String(item[1] || '-'), x, y);
+            });
+
+            drawRoundRect(ctx, 48, 530, canvas.width - 96, 300, 26, '#10251B', '#213B30');
+            ctx.fillStyle = '#F8FAFC';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('Datos para el pago', 82, 580);
+
+            const paymentLines = String(data.paymentDetails || '')
+                .split('\n')
+                .map(line => line.trim())
+                .filter(Boolean);
+
+            let y = 622;
+            paymentLines.slice(0, 8).forEach(line => {
+                const [label, ...rest] = line.split(':');
+                const value = rest.join(':').trim();
+                ctx.fillStyle = '#94B8A5';
+                ctx.font = 'bold 15px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(`${label}:`, 82, y);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 18px Arial';
+                wrapCanvasText(ctx, value || '-', 250, y, 380, 22, 'left');
+                y += value && value.length > 32 ? 48 : 34;
+            });
+
+            drawRoundRect(ctx, 70, 862, canvas.width - 140, 48, 24, accent, accent);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 17px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Por favor envía tu comprobante después del pago', canvas.width / 2, 893);
+
+            resolve(canvas.toDataURL('image/png'));
+        }
+    });
+}
+
+function drawRoundRect(ctx, x, y, width, height, radius, fill, stroke) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, radius);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, align = 'center') {
+    const words = String(text || '').split(' ');
+    let line = '';
+    ctx.textAlign = align;
+
+    words.forEach((word, index) => {
+        const testLine = line ? `${line} ${word}` : word;
+        if (ctx.measureText(testLine).width > maxWidth && line) {
+            ctx.fillText(line, x, y);
+            line = word;
+            y += lineHeight;
+        } else {
+            line = testLine;
+        }
+
+        if (index === words.length - 1 && line) {
+            ctx.fillText(line, x, y);
+        }
+    });
+
+    return y;
+}
+
 /**
  * Genera una imagen de aviso de pago para el administrador
  */
@@ -3519,12 +4131,39 @@ async function sendImageNotificationWebhook(payload) {
     }
 }
 
+/**
+ * Envía notificaciones de texto por WhatsApp a n8n.
+ * Body esperado por el flujo: { whatsapp, message }
+ */
+async function sendTextNotificationWebhook(payload) {
+    const WEBHOOK_URL_N8N = 'https://lpn8nwebhook.luispintasolutions.com/webhook/mensajería_texto';
+
+    try {
+        console.log('Enviando notificación de texto a n8n:', WEBHOOK_URL_N8N);
+        const response = await fetch(WEBHOOK_URL_N8N, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                whatsapp: payload.whatsapp,
+                message: payload.message
+            })
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return { success: true };
+    } catch (error) {
+        console.error('Error enviando notificación de texto a n8n:', error);
+        return { success: false, error: error.message };
+    }
+}
+
 // Exponer funciones necesarias al scope global
 window.generateReceiptCanvas = generateReceiptCanvas;
 window.generateNoticeCanvas = generateNoticeCanvas;
 window.sendPaymentWebhook = sendPaymentWebhook;
 window.sendOwnerWebhook = sendOwnerWebhook;
 window.sendImageNotificationWebhook = sendImageNotificationWebhook;
+window.sendTextNotificationWebhook = sendTextNotificationWebhook;
 
 /* ==========================================
    REPORTES Y EXPORTACIÓN (ESTILO CORPORATIVO)

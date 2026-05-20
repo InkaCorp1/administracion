@@ -1,10 +1,10 @@
 /**
  * INKA CORP - Service Worker
  * PWA Offline Support
- * Version 31.1.1 - Patch móvil pólizas
+ * Version 31.2.0 - Recordatorios de cobranza
  */
 
-const SW_VERSION = '31.1.1';
+const SW_VERSION = '31.2.0';
 const CACHE_NAME = `inkacorp-v${SW_VERSION}`;
 const STATIC_CACHE = `inkacorp-static-v${SW_VERSION}`;
 const CHANGELOG_URL = `CHANGELOG.md?v=${encodeURIComponent(SW_VERSION)}`;

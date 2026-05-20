@@ -481,7 +481,24 @@
 .creditos-wrapper th:last-child,
 .creditos-wrapper td:last-child {
     text-align: center;
-    width: 60px;
+    width: 96px;
+}
+
+.credito-row-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.btn-whatsapp-reminder {
+    color: #25D366;
+}
+
+.btn-whatsapp-reminder:hover {
+    background: rgba(37, 211, 102, 0.16);
+    color: #32e075;
 }
 
 /* Scrollbar estilizado */
@@ -729,6 +746,37 @@
     font-size: 1rem;
     font-weight: 600;
     color: var(--white);
+}
+
+.credito-collector-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.credito-collector-inline span {
+    min-width: 0;
+}
+
+.btn-edit-collector {
+    width: 30px;
+    height: 30px;
+    border-radius: 0.45rem;
+    border: 1px solid rgba(242, 187, 58, 0.35);
+    background: rgba(242, 187, 58, 0.12);
+    color: var(--gold);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 0 0 30px;
+}
+
+.btn-edit-collector:hover {
+    background: var(--gold);
+    color: var(--gray-900);
 }
 
 /* Resumen Grid Detail */
