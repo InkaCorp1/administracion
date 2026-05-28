@@ -44,6 +44,13 @@ function isAdmin() {
 
 window.isAdmin = isAdmin;
 
+function isControlUser() {
+    const user = getCurrentUser();
+    return String(user?.rol || user?.role || '').toLowerCase() === 'control';
+}
+
+window.isControlUser = isControlUser;
+
 function shouldShowAllCreditsByDefault() {
     const user = getCurrentUser();
     return user?.preference_all_credits === true;
@@ -152,6 +159,8 @@ window.validateCajaBeforeAction = function(modulo = 'esta operación') {
  * en los módulos que requieren movimientos financieros.
  */
 async function checkCajaStatusGlobal() {
+    if (isControlUser()) return;
+
     const viewsWithCaja = [
         'creditos', 
         'precancelaciones', 
@@ -644,11 +653,13 @@ async function initApp() {
     updateUI();
 
     // Iniciar caché en segundo plano
-    startCacheRefresh();
+    if (!isControlUser()) {
+        startCacheRefresh();
+    }
 
     try {
         // Cargar vista inicial
-        const initialView = getViewFromURL();
+        const initialView = isControlUser() ? 'control' : getViewFromURL();
         
         // Determinar la URL correcta a mantener en la barra de direcciones
         const basePath = window.location.pathname.includes('index.html') ? 'index.html' : './';
@@ -686,7 +697,9 @@ function getViewFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
     const viewParam = urlParams.get('view');
     const hash = window.location.hash.replace('#', '');
-    const validViews = ['dashboard', 'socios', 'socios_edit', 'solicitud_credito', 'creditos', 'creditos_preferenciales', 'precancelaciones', 'resumen_general', 'ahorros', 'polizas', 'simulador', 'aportes', 'bancos', 'administrativos', 'caja', 'agenda', 'contratos'];
+    const validViews = ['dashboard', 'control', 'socios', 'socios_edit', 'solicitud_credito', 'creditos', 'creditos_preferenciales', 'precancelaciones', 'resumen_general', 'ahorros', 'polizas', 'simulador', 'aportes', 'bancos', 'administrativos', 'caja', 'agenda', 'contratos'];
+
+    if (isControlUser()) return 'control';
 
     // 1. Prioridad: Parámetro URL (?view=creditos) - SOPORTA HARD REFRESH
     if (viewParam && validViews.includes(viewParam)) return viewParam;
@@ -728,6 +741,10 @@ function updateUI() {
 function updateSidebarCreditPreferenceControl() {
     const input = document.getElementById('sidebar-pref-all-credits');
     const label = document.getElementById('sidebar-credit-scope-label');
+    const card = document.querySelector('.sidebar-preference-card');
+
+    if (card) card.classList.toggle('hidden', isControlUser());
+
     const showAll = shouldShowAllCreditsByDefault();
 
     if (input) input.checked = showAll;
@@ -735,10 +752,24 @@ function updateSidebarCreditPreferenceControl() {
 }
 
 function applyModuleVisibility() {
-    const navItems = document.querySelectorAll('.nav-item[data-module]');
+    const navItems = document.querySelectorAll('.nav-item[data-view]');
     navItems.forEach(item => {
         const module = item.dataset.module;
         const requiresAdmin = item.dataset.requiresAdmin === 'true';
+        const isControlOnly = item.dataset.controlOnly === 'true';
+
+        if (isControlUser()) {
+            item.style.display = isControlOnly ? '' : 'none';
+            item.classList.toggle('hidden', !isControlOnly);
+            item.classList.toggle('active', isControlOnly);
+            return;
+        }
+
+        if (isControlOnly) {
+            item.style.display = 'none';
+            item.classList.add('hidden');
+            return;
+        }
 
         // Si requiere admin y el usuario no es admin, ocultar
         if (requiresAdmin && !isAdmin()) {
@@ -794,7 +825,7 @@ function setupEventListeners() {
     navItems.forEach(item => {
         item.addEventListener('click', async (e) => {
             e.preventDefault();
-            const view = item.dataset.view;
+            const view = isControlUser() ? 'control' : item.dataset.view;
 
             // 1. Feedback inmediato: Cerrar sidebar y marcar activo
             closeSidebar();
@@ -863,12 +894,13 @@ function setupEventListeners() {
     const homeBtn = document.getElementById('home-shortcut');
     if (homeBtn) {
         homeBtn.addEventListener('click', async () => {
+            const targetView = isControlUser() ? 'control' : 'dashboard';
             // Actualizar navegación activa
             const navItems = document.querySelectorAll('.nav-item[data-view]');
             navItems.forEach(item => {
-                item.classList.toggle('active', item.dataset.view === 'dashboard');
+                item.classList.toggle('active', item.dataset.view === targetView);
             });
-            await loadView('dashboard');
+            await loadView(targetView);
         });
     }
 }
@@ -877,6 +909,27 @@ async function openProfileSettings() {
     const user = getCurrentUser();
     if (!user?.id) {
         showAlert('No pudimos identificar tu usuario actual.', 'Perfil', 'warning');
+        return;
+    }
+
+    if (isControlUser()) {
+        await Swal.fire({
+            title: 'Perfil de control',
+            html: `
+                <div class="profile-settings-modal">
+                    <div class="profile-settings-user">
+                        <div class="profile-settings-avatar">${getUserInitials(user.nombre || 'U')}</div>
+                        <div>
+                            <strong>${user.nombre || 'Usuario'}</strong>
+                            <span>control</span>
+                        </div>
+                    </div>
+                    <p style="color:#b2bcc9;margin-top:1rem;">Este perfil tiene acceso solo lectura para supervisión operativa.</p>
+                </div>
+            `,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#0B4E32'
+        });
         return;
     }
 
@@ -1412,6 +1465,10 @@ let isViewLoading = false;
 let pendingViewName = null;
 
 async function loadView(viewName, shouldPushState = true) {
+    if (isControlUser() && viewName !== 'control') {
+        viewName = 'control';
+    }
+
     if (!mainContent) mainContent = document.getElementById('main-content');
     if (!homeShortcut) homeShortcut = document.getElementById('home-shortcut');
 
@@ -1438,6 +1495,8 @@ async function loadView(viewName, shouldPushState = true) {
     // Togle mostrar shortcut de inicio (ocultar en dashboard)
     if (homeShortcut) {
         if (viewName === 'dashboard') {
+            homeShortcut.classList.add('hidden');
+        } else if (viewName === 'control') {
             homeShortcut.classList.add('hidden');
         } else {
             homeShortcut.classList.remove('hidden');
@@ -1521,6 +1580,9 @@ async function loadView(viewName, shouldPushState = true) {
         switch (viewName) {
             case 'dashboard':
                 await initDashboardView();
+                break;
+            case 'control':
+                if (typeof initControlModule === 'function') await initControlModule();
                 break;
             case 'socios':
                 if (typeof initSociosModule === 'function') await initSociosModule();

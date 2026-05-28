@@ -128,6 +128,31 @@ function setTodayDate() {
     if (dateLabel) dateLabel.textContent = today.toLocaleDateString('es-ES', options).toUpperCase();
 }
 
+function getCajaDateBoundaryISO(dateValue, endOfDay = false) {
+    if (!dateValue) return null;
+    const [year, month, day] = dateValue.split('-').map(Number);
+    const localDate = new Date(
+        year,
+        month - 1,
+        day,
+        endOfDay ? 23 : 0,
+        endOfDay ? 59 : 0,
+        endOfDay ? 59 : 0,
+        endOfDay ? 999 : 0
+    );
+    return localDate.toISOString();
+}
+
+function applyCajaDateFilters(query, start, end) {
+    const startISO = getCajaDateBoundaryISO(start, false);
+    const endISO = getCajaDateBoundaryISO(end, true);
+
+    if (startISO) query = query.gte('fecha_movimiento', startISO);
+    if (endISO) query = query.lte('fecha_movimiento', endISO);
+
+    return query;
+}
+
 /**
  * Verifica si existe una caja abierta para el usuario actual
  */
@@ -229,8 +254,7 @@ async function loadCajaData() {
             .select('*')
             .eq('id_usuario', currentSessionUser);
 
-        if (inputInicio) query = query.gte('fecha_movimiento', `${inputInicio}T00:00:00`);
-        if (inputFin) query = query.lte('fecha_movimiento', `${inputFin}T23:59:59`);
+        query = applyCajaDateFilters(query, inputInicio, inputFin);
 
         const { data: movimientos, error } = await query.order('fecha_movimiento', { ascending: false });
 
@@ -571,7 +595,7 @@ function renderMovimientosTable(movimientos) {
     if (!tbody) return;
 
     if (!movimientos || movimientos.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5">
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5">
             <div class="empty-state"><i class="fas fa-receipt fa-3x" style="opacity:0.2; margin-bottom:1rem; display:block;"></i><p>Sin movimientos aún</p></div>
         </td></tr>`;
         return;
@@ -590,6 +614,9 @@ function renderMovimientosTable(movimientos) {
             <td><span class="pago-method"><i class="fas fa-university"></i> ${m.metodo_pago}</span></td>
             <td class="text-right ${m.tipo_movimiento === 'INGRESO' ? 'text-success' : 'text-danger'}" style="font-weight:700;">
                 ${m.tipo_movimiento === 'INGRESO' ? '+' : '-'} ${formatCurrency(m.monto)}
+            </td>
+            <td class="text-right" style="font-weight:800; color:var(--gold);">
+                ${m.saldo_despues !== null && m.saldo_despues !== undefined ? formatCurrency(m.saldo_despues) : '---'}
             </td>
             <td class="text-center">
                 ${m.comprobante_url ? `<button onclick="window.open('${m.comprobante_url}', '_blank')" class="btn-icon-v2" title="Ver Comprobante"><i class="fas fa-eye"></i></button>` : '---'}
@@ -948,13 +975,9 @@ function showReportePdfModal() {
     const modal = document.getElementById('modal-reporte-pdf');
     if (!modal) return;
 
-    // Set default dates (today and 1 month ago)
-    const today = new Date();
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(today.getMonth() - 1);
-    
-    document.getElementById('reporte-inicio').value = oneMonthAgo.toISOString().split('T')[0];
-    document.getElementById('reporte-fin').value = today.toISOString().split('T')[0];
+    const periodSelect = document.getElementById('reporte-periodo');
+    if (periodSelect) periodSelect.value = 'MES_ACTUAL';
+    updateCajaReportPeriod();
 
     // Load users if admin
     const userSelect = document.getElementById('reporte-usuario');
@@ -976,13 +999,59 @@ function showReportePdfModal() {
                 }
             });
         document.getElementById('reporte-user-group').classList.remove('hidden');
+        document.getElementById('reporte-admin-mode-group')?.classList.remove('hidden');
     } else {
         document.getElementById('reporte-user-group').classList.add('hidden');
+        document.getElementById('reporte-admin-mode-group')?.classList.add('hidden');
     }
 
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
     document.body.classList.add('modal-open');
+}
+
+function formatCajaInputDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getCajaReportPeriodDates(period) {
+    const today = new Date();
+    const start = new Date(today);
+
+    if (period === 'MES_ACTUAL') {
+        start.setDate(1);
+    } else if (period === 'ULTIMOS_7') {
+        start.setDate(today.getDate() - 6);
+    } else if (period === 'ULTIMOS_30') {
+        start.setDate(today.getDate() - 29);
+    }
+
+    return {
+        inicio: formatCajaInputDate(start),
+        fin: formatCajaInputDate(today)
+    };
+}
+
+function updateCajaReportPeriod() {
+    const period = document.getElementById('reporte-periodo')?.value || 'MES_ACTUAL';
+    const startInput = document.getElementById('reporte-inicio');
+    const endInput = document.getElementById('reporte-fin');
+    const customDates = document.getElementById('reporte-fechas-personalizadas');
+    const isCustom = period === 'PERSONALIZADO';
+
+    customDates?.classList.toggle('hidden', !isCustom);
+    if (!isCustom && startInput && endInput) {
+        const dates = getCajaReportPeriodDates(period);
+        startInput.value = dates.inicio;
+        endInput.value = dates.fin;
+    } else if (isCustom && startInput && endInput && (!startInput.value || !endInput.value)) {
+        const dates = getCajaReportPeriodDates('MES_ACTUAL');
+        startInput.value = dates.inicio;
+        endInput.value = dates.fin;
+    }
 }
 
 function updateReportOptionStyle(radio) {
@@ -999,7 +1068,9 @@ async function handleGenerarReportePdf(e) {
         fin: formData.get('fecha_fin'),
         id_usuario: formData.get('id_usuario'),
         tipo: formData.get('tipo_movimiento'),
-        formato: formData.get('formato')
+        formato: formData.get('formato'),
+        periodo: formData.get('periodo'),
+        modoAdmin: formData.get('modo_admin') || 'CONSOLIDADO'
     };
 
     if (loggedInUser.rol !== 'admin') {
@@ -1028,9 +1099,9 @@ async function generateElegantCajaReport(filters) {
 
     // 1. Fetch Data
     let query = sb.from(MOVIMIENTOS_TABLE)
-        .select(`*, ic_users (nombre)`)
-        .gte('fecha_movimiento', `${filters.inicio}T00:00:00`)
-        .lte('fecha_movimiento', `${filters.fin}T23:59:59`);
+        .select(`*, ic_users (nombre)`);
+
+    query = applyCajaDateFilters(query, filters.inicio, filters.fin);
 
     if (filters.id_usuario !== 'all') {
         query = query.eq('id_usuario', filters.id_usuario);
@@ -1044,9 +1115,13 @@ async function generateElegantCajaReport(filters) {
     if (error) throw error;
     if (!movs || movs.length === 0) throw new Error("No se encontraron movimientos para los filtros seleccionados.");
 
-    // Grouping logic if 'all' users
+    const isConsolidated = filters.id_usuario === 'all' && filters.modoAdmin !== 'POR_USUARIO';
+
+    // Grouping logic
     let groupedData = {};
-    if (filters.id_usuario === 'all') {
+    if (isConsolidated) {
+        groupedData['Consolidado General'] = movs;
+    } else if (filters.id_usuario === 'all') {
         movs.forEach(m => {
             const userName = m.ic_users?.nombre || 'Desconocido';
             if (!groupedData[userName]) groupedData[userName] = [];
@@ -1061,7 +1136,11 @@ async function generateElegantCajaReport(filters) {
     const verdeInka = [11, 78, 50];
     const doradoInka = [242, 187, 58];
     const slate500 = [100, 116, 139];
+    const slate900 = [15, 23, 42];
+    const emerald50 = [236, 253, 245];
     const logoUrl = 'https://i.ibb.co/3mC22Hc4/inka-corp.png';
+    const periodLabel = `${filters.inicio} al ${filters.fin}`;
+    const reportModeLabel = isConsolidated ? 'CONSOLIDADO GENERAL' : 'DETALLE POR USUARIO';
 
     const renderHeader = (userName) => {
         try { doc.addImage(logoUrl, 'PNG', 15, 12, 18, 18); } catch(e){}
@@ -1073,16 +1152,21 @@ async function generateElegantCajaReport(filters) {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...slate500);
-        doc.text(`REPORTE DE CAJA: ${userName.toUpperCase()}`, 38, 24);
+        doc.text(`REPORTE DE CAJA - ${reportModeLabel}`, 38, 24);
 
         const now = new Date();
         doc.setFontSize(8);
         doc.text(`Generado: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 145, 18);
-        doc.text(`Filtro: ${filters.inicio} al ${filters.fin}`, 145, 23);
+        doc.text(`Periodo: ${periodLabel}`, 145, 23);
 
         doc.setDrawColor(...doradoInka);
         doc.setLineWidth(0.5);
         doc.line(15, 30, 195, 30);
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...slate900);
+        doc.text(userName.toUpperCase(), 15, 38);
     };
 
     const userNames = Object.keys(groupedData).sort();
@@ -1101,23 +1185,25 @@ async function generateElegantCajaReport(filters) {
         });
 
         // Summary for this user
+        doc.setFillColor(...emerald50);
+        doc.roundedRect(15, 43, 180, 18, 2, 2, 'F');
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...verdeInka);
-        doc.text("RESUMEN DE MOVIMIENTOS", 15, 40);
+        doc.text("RESUMEN", 20, 50);
 
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0, 0, 0);
-        doc.text(`Total Ingresos:`, 15, 48);
-        doc.text(`${formatCurrency(uIngresos)}`, 45, 48);
+        doc.setTextColor(...slate900);
+        doc.text(`Ingresos:`, 48, 50);
+        doc.text(`${formatCurrency(uIngresos)}`, 65, 50);
         
-        doc.text(`Total Egresos:`, 75, 48);
-        doc.text(`${formatCurrency(uEgresos)}`, 105, 48);
+        doc.text(`Egresos:`, 93, 50);
+        doc.text(`${formatCurrency(uEgresos)}`, 108, 50);
         
         doc.setFont('helvetica', 'bold');
-        doc.text(`SALDO NETO:`, 140, 48);
-        doc.text(`${formatCurrency(uIngresos - uEgresos)}`, 170, 48);
+        doc.text(`Neto:`, 138, 50);
+        doc.text(`${formatCurrency(uIngresos - uEgresos)}`, 150, 50);
 
         // Table
         if (filters.formato === 'DETALLADO') {
@@ -1126,12 +1212,13 @@ async function generateElegantCajaReport(filters) {
                 m.categoria?.replace('_', ' ') || 'MANUAL',
                 m.descripcion || '---',
                 m.metodo_pago,
-                { content: formatCurrency(m.monto), styles: { textColor: m.tipo_movimiento === 'INGRESO' ? [0, 128, 0] : [200, 0, 0], fontStyle: 'bold', halign: 'right' } }
+                { content: formatCurrency(m.monto), styles: { textColor: m.tipo_movimiento === 'INGRESO' ? [0, 128, 0] : [200, 0, 0], fontStyle: 'bold', halign: 'right' } },
+                { content: m.saldo_despues !== null && m.saldo_despues !== undefined ? formatCurrency(m.saldo_despues) : '---', styles: { fontStyle: 'bold', halign: 'right' } }
             ]);
 
             doc.autoTable({
-                startY: 55,
-                head: [['Fecha/Hora', 'Categoría', 'Descripción', 'Método', 'Monto']],
+                startY: 68,
+                head: [['Fecha/Hora', 'Categoría', 'Descripción', 'Método', 'Monto', 'Saldo']],
                 body: tableBody,
                 headStyles: { fillColor: verdeInka, textColor: [255, 255, 255], fontStyle: 'bold' },
                 alternateRowStyles: { fillColor: [245, 245, 245] },
@@ -1139,9 +1226,10 @@ async function generateElegantCajaReport(filters) {
                 styles: { fontSize: 8, cellPadding: 2 },
                 columnStyles: {
                     0: { cellWidth: 35 },
-                    1: { cellWidth: 30 },
-                    3: { cellWidth: 30 },
-                    4: { cellWidth: 30 }
+                    1: { cellWidth: 25 },
+                    3: { cellWidth: 25 },
+                    4: { cellWidth: 25 },
+                    5: { cellWidth: 30 }
                 }
             });
         } else {
@@ -1164,7 +1252,7 @@ async function generateElegantCajaReport(filters) {
             ]);
 
             doc.autoTable({
-                startY: 55,
+                startY: 68,
                 head: [['Categoría', 'Movs', 'Ingresos', 'Egresos', 'Neto']],
                 body: tableBody,
                 headStyles: { fillColor: verdeInka, textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -1185,7 +1273,7 @@ async function generateElegantCajaReport(filters) {
     });
 
     // Save
-    const fileName = `Reporte_Caja_${filters.id_usuario === 'all' ? 'Multiusuario' : filters.id_usuario}_${filters.inicio}_al_${filters.fin}.pdf`;
+    const fileName = `Reporte_Caja_${isConsolidated ? 'Consolidado' : filters.id_usuario === 'all' ? 'Por_Usuario' : filters.id_usuario}_${filters.inicio}_al_${filters.fin}.pdf`;
     doc.save(fileName);
 }
 
@@ -1259,6 +1347,7 @@ window.generateCajaProposalPDF = generateCajaProposalPDF;
 window.switchUserCaja = switchUserCaja;
 window.showReportePdfModal = showReportePdfModal;
 window.handleGenerarReportePdf = handleGenerarReportePdf;
+window.updateCajaReportPeriod = updateCajaReportPeriod;
 window.previewFile = previewFile;
 window.updateReportOptionStyle = updateReportOptionStyle;
 

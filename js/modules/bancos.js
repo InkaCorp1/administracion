@@ -39,8 +39,52 @@ function formatBancoNotificationTimestamp() {
     });
 }
 
-function buildBancoPaymentOwnerMessage(banco, cuotaDetalle, montoPagado, fechaPago, fechaRegistro, comprobanteUrl) {
-    return `JOSÉ KLEVER NISHVE CORO se ha registrado un pago bancario con los siguientes detalles:\n\n🏦 Banco: ${(banco?.nombre_banco || 'BANCO').toUpperCase()}\n👤 A nombre de: ${(banco?.a_nombre_de || 'N/A').toUpperCase()}\n📑 Transacción: ${banco?.id_transaccion || currentBancoId || 'N/A'}\n🔢 Cuota: ${cuotaDetalle?.cuota || 'N/A'} de ${banco?.plazo || 'N/A'}\n💵 Valor pagado: ${formatBancoMoney(montoPagado)}\n📅 Fecha Pago: ${formatBancoNotificationDate(fechaPago)}\n🕐 Registro: ${fechaRegistro}\n🧾 Comprobante: almacenado correctamente en bucket\n🔗 URL comprobante: ${comprobanteUrl}`;
+function buildBancoPaymentOwnerMessage(banco, cuotaDetalle, montoPagado, fechaPago, fechaRegistro, comprobanteUrl, comentario = '') {
+    const comentarioText = comentario ? `\n💬 Comentario: ${comentario}` : '';
+    return `JOSÉ KLEVER NISHVE CORO se ha registrado un pago bancario con los siguientes detalles:\n\n🏦 Banco: ${(banco?.nombre_banco || 'BANCO').toUpperCase()}\n👤 A nombre de: ${(banco?.a_nombre_de || 'N/A').toUpperCase()}\n📑 Transacción: ${banco?.id_transaccion || currentBancoId || 'N/A'}\n🔢 Cuota: ${cuotaDetalle?.cuota || 'N/A'} de ${banco?.plazo || 'N/A'}\n💵 Valor pagado: ${formatBancoMoney(montoPagado)}\n📅 Fecha Pago: ${formatBancoNotificationDate(fechaPago)}${comentarioText}\n🕐 Registro: ${fechaRegistro}\n🔗 URL comprobante: ${comprobanteUrl}`;
+}
+
+function buildBancoLoggedUserMessage(usuario, banco, cuotaDetalle, montoPagado, fechaPago, joseNotified, comentario = '') {
+    const nombre = usuario?.nombre || 'usuario';
+    const comentarioText = comentario ? `\n💬 Comentario: ${comentario}` : '';
+    const joseStatus = joseNotified
+        ? 'También se ha notificado correctamente a José.'
+        : 'Atención: no se pudo confirmar la notificación a José.';
+
+    return `¡Hola ${nombre}!\n\n✅ El pago bancario se ha registrado correctamente.\n\n🏦 Banco: ${(banco?.nombre_banco || 'BANCO').toUpperCase()}\n👤 A nombre de: ${(banco?.a_nombre_de || 'N/A').toUpperCase()}\n📑 Transacción: ${banco?.id_transaccion || currentBancoId || 'N/A'}\n🔢 Cuota: ${cuotaDetalle?.cuota || 'N/A'} de ${banco?.plazo || 'N/A'}\n💵 Valor pagado: ${formatBancoMoney(montoPagado)}\n📅 Fecha Pago: ${formatBancoNotificationDate(fechaPago)}${comentarioText}\n\n${joseStatus}`;
+}
+
+async function getLoggedBancoNotificationUser(supabase) {
+    const currentUser = window.currentUser || (typeof window.getCurrentUser === 'function' ? await window.getCurrentUser() : null);
+    const userId = currentUser?.id;
+
+    if (currentUser?.whatsapp) {
+        return {
+            id: userId,
+            nombre: currentUser.nombre || currentUser.email || 'Usuario',
+            whatsapp: String(currentUser.whatsapp).trim()
+        };
+    }
+
+    if (!userId || !supabase) return null;
+
+    const { data, error } = await supabase
+        .from('ic_users')
+        .select('id, nombre, whatsapp')
+        .eq('id', userId)
+        .single();
+
+    if (error || !data?.whatsapp) return null;
+
+    return {
+        id: data.id,
+        nombre: data.nombre || currentUser?.email || 'Usuario',
+        whatsapp: String(data.whatsapp).trim()
+    };
+}
+
+function normalizeBancoWhatsapp(value) {
+    return String(value || '').replace(/\D/g, '');
 }
 
 async function sendBancoNotificationWebhook(payload) {
@@ -1343,6 +1387,7 @@ function openPagoBancoModal(item) {
     document.getElementById('pago-banco-id-detalle').value = item.id_detalle;
     document.getElementById('pago-banco-cuota-num').textContent = item.cuota;
     document.getElementById('pago-banco-valor').value = item.valor;
+    document.getElementById('pago-banco-comentario').value = item.comentario || '';
 
     // Set default date to today
     document.getElementById('pago-banco-fecha').value = new Date().toISOString().split('T')[0];
@@ -1358,6 +1403,10 @@ function openPagoBancoModal(item) {
 function showComprobanteViewer(item) {
     document.getElementById('viewer-img-banco').src = item.fotografia || 'img/no-image.png';
     document.getElementById('viewer-fecha-banco').textContent = item.fecha_pagado || 'N/A';
+    const comentario = (item.comentario || '').trim();
+    const comentarioRow = document.getElementById('viewer-comentario-banco-row');
+    document.getElementById('viewer-comentario-banco').textContent = comentario;
+    comentarioRow.classList.toggle('hidden', !comentario);
     document.getElementById('modal-comprobante-banco').classList.remove('hidden');
     document.body.classList.add('modal-open');
 }
@@ -1425,6 +1474,7 @@ async function handleBancoPaymentSubmit(e) {
     const fecha = document.getElementById('pago-banco-fecha').value;
     const previewImg = document.getElementById('pago-banco-preview');
     const montoPagado = parseFloat(document.getElementById('pago-banco-valor').value) || parseFloat(currentBancoDetalle?.valor || 0) || 0;
+    const comentario = document.getElementById('pago-banco-comentario').value.trim();
 
     if (!currentBancoReceiptFile || !previewImg.src || previewImg.src.includes('data:image/gif')) {
         return window.showAlert('Por favor sube o toma una foto del comprobante', 'Comprobante requerido', 'warning');
@@ -1451,14 +1501,17 @@ async function handleBancoPaymentSubmit(e) {
             .update({
                 estado: 'PAGADO',
                 fecha_pagado: fecha,
-                fotografia: imgUrl
+                fotografia: imgUrl,
+                comentario: comentario || null
             })
             .eq('id_detalle', idDetalle);
 
         if (updateError) throw updateError;
 
+        const banco = (bancosData || []).find(b => b.id_transaccion === currentBancoId);
+        let joseWebhookResult = { success: false };
+
         try {
-            const banco = (bancosData || []).find(b => b.id_transaccion === currentBancoId);
             const ownerWebhookResult = await sendBancoNotificationWebhook({
                 whatsapp: '19175309618',
                 image_base64: imgUrl,
@@ -1468,9 +1521,11 @@ async function handleBancoPaymentSubmit(e) {
                     montoPagado,
                     fecha,
                     formatBancoNotificationTimestamp(),
-                    imgUrl
+                    imgUrl,
+                    comentario
                 )
             });
+            joseWebhookResult = ownerWebhookResult;
 
             if (!ownerWebhookResult.success) {
                 console.warn('[BANCOS] No se pudo enviar webhook de notificación:', ownerWebhookResult.error);
@@ -1479,8 +1534,39 @@ async function handleBancoPaymentSubmit(e) {
             console.warn('[BANCOS] Error enviando webhook bancario:', webhookError);
         }
 
+        try {
+            const loggedUser = await getLoggedBancoNotificationUser(supabase);
+            const shouldNotifyLoggedUser = loggedUser?.whatsapp
+                && normalizeBancoWhatsapp(loggedUser.whatsapp) !== normalizeBancoWhatsapp('19175309618');
+
+            if (shouldNotifyLoggedUser) {
+                const loggedUserWebhookResult = await sendBancoNotificationWebhook({
+                    whatsapp: loggedUser.whatsapp,
+                    image_base64: imgUrl,
+                    message: buildBancoLoggedUserMessage(
+                        loggedUser,
+                        banco,
+                        currentBancoDetalle,
+                        montoPagado,
+                        fecha,
+                        joseWebhookResult.success,
+                        comentario
+                    )
+                });
+
+                if (!loggedUserWebhookResult.success) {
+                    console.warn('[BANCOS] No se pudo notificar al usuario logeado:', loggedUserWebhookResult.error);
+                }
+            }
+        } catch (loggedUserWebhookError) {
+            console.warn('[BANCOS] Error notificando al usuario logeado:', loggedUserWebhookError);
+        }
+
         closePremiumModals();
-        await window.showAlert('El pago se ha registrado correctamente en el sistema.', '¡Pago Exitoso!', 'success');
+        const successMessage = joseWebhookResult.success
+            ? 'El pago se ha registrado correctamente y José fue notificado.'
+            : 'El pago se ha registrado correctamente, pero no se pudo confirmar la notificación a José.';
+        await window.showAlert(successMessage, '¡Pago Exitoso!', 'success');
 
         // Recargar tabla de amortización para el banco actual
         if (currentBancoId) {

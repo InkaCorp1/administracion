@@ -1071,6 +1071,14 @@
     box-shadow: 0 0 0 4px var(--primary-glow);
 }
 
+.textarea-premium {
+    min-height: 96px;
+    resize: vertical;
+    line-height: 1.4;
+    font-family: inherit;
+    font-weight: 500;
+}
+
 .input-premium.readonly {
     background: var(--black-soft);
     cursor: not-allowed;

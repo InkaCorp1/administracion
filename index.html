@@ -31,6 +31,7 @@
     <link rel="stylesheet" href="css/agenda.css">
     <link rel="stylesheet" href="css/resumen_general.css">
     <link rel="stylesheet" href="css/contratos.css?v=1.2">
+    <link rel="stylesheet" href="css/control.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -43,7 +44,7 @@
     <!-- Librería de Gráficos ApexCharts -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-    <script src="js/config.js?v=31.3.0"></script>
+    <script src="js/config.js?v=31.4.0"></script>
     <script src="js/auth.js"></script>
     <script>
         /**
@@ -149,6 +150,11 @@
 
             <nav class="nav-menu">
                 <div class="nav-section-title">Navegación</div>
+
+                <a href="#" class="nav-item hidden" data-view="control" data-module="control" data-control-only="true">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Panel de Control</span>
+                </a>
 
                 <a href="index.html" class="nav-item active" data-view="dashboard">
                     <i class="fas fa-th-large"></i>
@@ -356,7 +362,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/config.js?v=31.3.0"></script>
+    <script src="js/config.js?v=31.4.0"></script>
     <script src="js/auth.js"></script>
     <script src="js/app.js"></script>
     <script src="js/modules/socios.js"></script>
@@ -376,12 +382,13 @@
     <script src="js/modules/agenda.js"></script>
     <script src="js/modules/contratos.js"></script>
     <script src="js/modules/caja.js"></script>
+    <script src="js/modules/control.js"></script>
 
     <!-- Registro de Service Worker PWA -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                const serviceWorkerVersion = window.SW_VERSION || window.APP_VERSION || '31.3.0';
+                const serviceWorkerVersion = window.SW_VERSION || window.APP_VERSION || '31.4.0';
                 navigator.serviceWorker.register(`sw.js?v=${encodeURIComponent(serviceWorkerVersion)}`, { updateViaCache: 'none' })
                     .then((registration) => {
                         console.log('[PWA] Service Worker registrado');

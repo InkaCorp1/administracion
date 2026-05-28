@@ -1,10 +1,10 @@
 /**
  * INKA CORP - Service Worker
  * PWA Offline Support
- * Version 31.3.0 - Preferencias de cobranza
+ * Version 31.4.0 - Reportes de caja
  */
 
-const SW_VERSION = '31.3.0';
+const SW_VERSION = '31.4.0';
 const CACHE_NAME = `inkacorp-v${SW_VERSION}`;
 const STATIC_CACHE = `inkacorp-static-v${SW_VERSION}`;
 const CHANGELOG_URL = `CHANGELOG.md?v=${encodeURIComponent(SW_VERSION)}`;
@@ -18,6 +18,7 @@ const ESSENTIAL_FILES = [
     '404.html',
     CHANGELOG_URL,
     'css/styles.css',
+    'css/control.css',
     'js/config.js',
     'js/auth.js',
     'js/app.js',
@@ -46,8 +47,10 @@ const MODULE_FILES = [
     'css/bancos.css',
     'js/modules/administrativos.js',
     'js/modules/contratos.js',
+    'js/modules/control.js',
     'css/contratos.css',
     'views/contratos.html',
+    'views/control.html',
     'mobile/css/mobile-styles.css',
     'mobile/views/precancelaciones.html',
     'mobile/css/modules/precancelaciones.css',

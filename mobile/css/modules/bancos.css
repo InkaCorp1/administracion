@@ -692,6 +692,21 @@
     border-color: var(--bank-border);
 }
 
+.lite-textarea-wrapper {
+    align-items: flex-start;
+}
+
+.lite-textarea-wrapper i {
+    top: 16px;
+}
+
+.lite-textarea {
+    min-height: 92px;
+    resize: vertical;
+    line-height: 1.4;
+    font-family: inherit;
+}
+
 /* Fallback / Compatibility */
 
 /* Corregir capas de alertas para superar los modales Full-Screen */

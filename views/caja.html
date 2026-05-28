@@ -131,13 +131,14 @@
                         <th>Descripción</th>
                         <th>Método</th>
                         <th class="text-right">Monto</th>
+                        <th class="text-right">Saldo</th>
                         <th class="text-center">Comprobante</th>
                     </tr>
                 </thead>
                 <tbody id="caja-movimientos-body">
                     <!-- Dinámico -->
                     <tr>
-                        <td colspan="6" class="text-center py-5">
+                        <td colspan="7" class="text-center py-5">
                             <div class="empty-state">
                                 <i class="fas fa-receipt"></i>
                                 <p>No hay movimientos registrados en este periodo.</p>
@@ -334,8 +335,18 @@
         <form id="form-reporte-pdf" onsubmit="handleGenerarReportePdf(event)">
             <div class="modal-body">
                 <p class="mb-4">Configure los filtros para el informe de caja.</p>
+
+                <div class="form-group mb-4">
+                    <label class="form-label">Periodo</label>
+                    <select name="periodo" id="reporte-periodo" class="input-v2" onchange="updateCajaReportPeriod()">
+                        <option value="MES_ACTUAL">Mes actual</option>
+                        <option value="ULTIMOS_30">Últimos 30 días</option>
+                        <option value="ULTIMOS_7">Últimos 7 días</option>
+                        <option value="PERSONALIZADO">Fecha personalizada</option>
+                    </select>
+                </div>
                 
-                <div class="form-row-reports">
+                <div class="form-row-reports" id="reporte-fechas-personalizadas">
                     <div class="form-group mb-4">
                         <label class="form-label">Desde</label>
                         <input type="date" name="fecha_inicio" id="reporte-inicio" class="input-v2" required>
@@ -351,6 +362,14 @@
                     <select name="id_usuario" id="reporte-usuario" class="input-v2">
                         <option value="all">TODOS LOS USUARIOS</option>
                         <!-- Dinámico -->
+                    </select>
+                </div>
+
+                <div class="form-group mb-4 hidden" id="reporte-admin-mode-group">
+                    <label class="form-label">Vista del Reporte</label>
+                    <select name="modo_admin" id="reporte-modo-admin" class="input-v2">
+                        <option value="CONSOLIDADO">Consolidado</option>
+                        <option value="POR_USUARIO">Separado por usuario</option>
                     </select>
                 </div>
 

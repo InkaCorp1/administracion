@@ -1,0 +1,98 @@
+<div class="control-shell">
+    <section class="control-hero">
+        <div>
+            <span class="control-eyebrow"><i class="fas fa-shield-alt"></i> Supervisión solo lectura</span>
+            <h1>Panel de Control Operativo</h1>
+            <p>Seguimiento de créditos, cajas, bancos, pólizas y movimientos de dinero.</p>
+        </div>
+        <div class="control-hero-actions">
+            <button class="control-icon-btn" onclick="refreshControlDashboard()" title="Actualizar">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <span id="control-last-update" class="control-last-update">--</span>
+        </div>
+    </section>
+
+    <section class="control-summary-grid">
+        <button class="control-stat" onclick="applyControlSummaryCard('movimientos', { tipo_movimiento: 'INGRESO' })">
+            <span>Ingresos del mes</span>
+            <strong id="control-stat-ingresos">$0.00</strong>
+            <small>Ver ingresos</small>
+        </button>
+        <button class="control-stat" onclick="applyControlSummaryCard('movimientos', { tipo_movimiento: 'EGRESO' })">
+            <span>Egresos del mes</span>
+            <strong id="control-stat-egresos">$0.00</strong>
+            <small>Ver egresos</small>
+        </button>
+        <button class="control-stat" onclick="applyControlSummaryCard('creditos', { riesgo: 'true' })">
+            <span>Créditos en riesgo</span>
+            <strong id="control-stat-creditos">0</strong>
+            <small>Filtrar cartera</small>
+        </button>
+        <button class="control-stat" onclick="applyControlSummaryCard('bancos', { estado_control: 'VENCIDO,PROXIMO' })">
+            <span>Obligaciones próximas</span>
+            <strong id="control-stat-bancos">0</strong>
+            <small>Filtrar bancos</small>
+        </button>
+        <button class="control-stat" onclick="applyControlSummaryCard('polizas', { estado_control: 'FALTA_CONTRATO,VENCIDA,POR_VENCER' })">
+            <span>Pólizas por revisar</span>
+            <strong id="control-stat-polizas">0</strong>
+            <small>Filtrar pólizas</small>
+        </button>
+    </section>
+
+    <section id="control-alerts" class="control-alerts hidden"></section>
+
+    <section class="control-tabs" aria-label="Vistas de control">
+        <button class="control-tab active" data-control-tab="movimientos">
+            <i class="fas fa-exchange-alt"></i> Movimientos
+        </button>
+        <button class="control-tab" data-control-tab="creditos">
+            <i class="fas fa-user-tie"></i> Créditos por responsable
+        </button>
+        <button class="control-tab" data-control-tab="cajas">
+            <i class="fas fa-cash-register"></i> Cajas
+        </button>
+        <button class="control-tab" data-control-tab="bancos">
+            <i class="fas fa-university"></i> Bancos
+        </button>
+        <button class="control-tab" data-control-tab="polizas">
+            <i class="fas fa-certificate"></i> Pólizas
+        </button>
+    </section>
+
+    <section class="control-panel">
+        <div class="control-panel-header">
+            <div>
+                <h2 id="control-table-title">Movimientos de dinero</h2>
+                <p id="control-table-subtitle">Últimos movimientos registrados en caja.</p>
+            </div>
+            <div class="control-filters">
+                <select id="control-period-filter" class="control-select" onchange="renderControlActiveTab()">
+                    <option value="month">Mes actual</option>
+                    <option value="7">Últimos 7 días</option>
+                    <option value="30">Últimos 30 días</option>
+                    <option value="all">Todo</option>
+                </select>
+                <div id="control-context-filters" class="control-context-filters"></div>
+                <select id="control-sort-filter" class="control-select" onchange="renderControlActiveTab()"></select>
+                <input id="control-search" class="control-search" type="search" placeholder="Buscar..." oninput="renderControlActiveTab()">
+                <button id="control-credit-report-btn" class="control-report-btn hidden" onclick="generateControlCreditsReport()" title="Generar reporte de créditos">
+                    <i class="fas fa-file-pdf"></i>
+                    Reporte
+                </button>
+                <button class="control-clear-btn" onclick="clearControlFilters()" title="Limpiar filtros">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="control-active-filters" class="control-active-filters"></div>
+        </div>
+
+        <div id="control-table-wrap" class="control-table-wrap">
+            <div class="control-loading">
+                <i class="fas fa-circle-notch fa-spin"></i>
+                <span>Cargando información...</span>
+            </div>
+        </div>
+    </section>
+</div>

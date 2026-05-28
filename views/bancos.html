@@ -247,6 +247,12 @@
                 </div>
 
                 <div class="form-group-premium">
+                    <label for="pago-banco-comentario"><i class="fas fa-comment-alt"></i> Comentario</label>
+                    <textarea id="pago-banco-comentario" class="input-premium textarea-premium" rows="3"
+                        placeholder="Detalle u observación del pago"></textarea>
+                </div>
+
+                <div class="form-group-premium">
                     <label for="banco-camera"><i class="fas fa-camera"></i> Comprobante de Pago</label>
                     <div class="upload-area-premium" id="pago-banco-dropzone">
                         <div id="pago-banco-upload-placeholder">
@@ -300,6 +306,7 @@
             </div>
             <div class="comprobante-info-footer">
                 <p>Pagado el: <span id="viewer-fecha-banco">--/--/----</span></p>
+                <p id="viewer-comentario-banco-row" class="hidden">Comentario: <span id="viewer-comentario-banco"></span></p>
             </div>
         </div>
         <div class="modal-footer-premium">

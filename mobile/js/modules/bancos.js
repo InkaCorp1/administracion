@@ -36,8 +36,62 @@ function formatBancoLiteTimestamp() {
     });
 }
 
-function buildBancoLiteOwnerMessage(banco, cuotaDetalle, montoPagado, fechaPago, fechaRegistro, comprobanteUrl) {
-    return `JOSÉ KLEVER NISHVE CORO se ha registrado un pago bancario desde móvil con los siguientes detalles:\n\n🏦 Banco: ${(banco?.nombre_banco || 'BANCO').toUpperCase()}\n👤 A nombre de: ${(banco?.a_nombre_de || 'N/A').toUpperCase()}\n📑 Transacción: ${banco?.id_transaccion || currentBankId || 'N/A'}\n🔢 Cuota: ${cuotaDetalle?.cuota || 'N/A'} de ${banco?.plazo || 'N/A'}\n💵 Valor pagado: ${formatBancoLiteMoney(montoPagado)}\n📅 Fecha Pago: ${formatBancoLiteDate(fechaPago)}\n🕐 Registro: ${fechaRegistro}\n🧾 Comprobante: almacenado correctamente en bucket\n🔗 URL comprobante: ${comprobanteUrl}`;
+function escapeBancoLiteHTML(value) {
+    return String(value || '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function buildBancoLiteOwnerMessage(banco, cuotaDetalle, montoPagado, fechaPago, fechaRegistro, comprobanteUrl, comentario = '') {
+    const comentarioText = comentario ? `\n💬 Comentario: ${comentario}` : '';
+    return `JOSÉ KLEVER NISHVE CORO se ha registrado un pago bancario desde móvil con los siguientes detalles:\n\n🏦 Banco: ${(banco?.nombre_banco || 'BANCO').toUpperCase()}\n👤 A nombre de: ${(banco?.a_nombre_de || 'N/A').toUpperCase()}\n📑 Transacción: ${banco?.id_transaccion || currentBankId || 'N/A'}\n🔢 Cuota: ${cuotaDetalle?.cuota || 'N/A'} de ${banco?.plazo || 'N/A'}\n💵 Valor pagado: ${formatBancoLiteMoney(montoPagado)}\n📅 Fecha Pago: ${formatBancoLiteDate(fechaPago)}${comentarioText}\n🕐 Registro: ${fechaRegistro}\n🔗 URL comprobante: ${comprobanteUrl}`;
+}
+
+function buildBancoLiteLoggedUserMessage(usuario, banco, cuotaDetalle, montoPagado, fechaPago, joseNotified, comentario = '') {
+    const nombre = usuario?.nombre || 'usuario';
+    const comentarioText = comentario ? `\n💬 Comentario: ${comentario}` : '';
+    const joseStatus = joseNotified
+        ? 'También se ha notificado correctamente a José.'
+        : 'Atención: no se pudo confirmar la notificación a José.';
+
+    return `¡Hola ${nombre}!\n\n✅ El pago bancario se ha registrado correctamente.\n\n🏦 Banco: ${(banco?.nombre_banco || 'BANCO').toUpperCase()}\n👤 A nombre de: ${(banco?.a_nombre_de || 'N/A').toUpperCase()}\n📑 Transacción: ${banco?.id_transaccion || currentBankId || 'N/A'}\n🔢 Cuota: ${cuotaDetalle?.cuota || 'N/A'} de ${banco?.plazo || 'N/A'}\n💵 Valor pagado: ${formatBancoLiteMoney(montoPagado)}\n📅 Fecha Pago: ${formatBancoLiteDate(fechaPago)}${comentarioText}\n\n${joseStatus}`;
+}
+
+async function getLoggedBancoLiteNotificationUser(supabase) {
+    const currentUser = window.currentUser || (typeof window.getCurrentUser === 'function' ? await window.getCurrentUser() : null);
+    const userId = currentUser?.id;
+
+    if (currentUser?.whatsapp) {
+        return {
+            id: userId,
+            nombre: currentUser.nombre || currentUser.email || 'Usuario',
+            whatsapp: String(currentUser.whatsapp).trim()
+        };
+    }
+
+    if (!userId || !supabase) return null;
+
+    const { data, error } = await supabase
+        .from('ic_users')
+        .select('id, nombre, whatsapp')
+        .eq('id', userId)
+        .single();
+
+    if (error || !data?.whatsapp) return null;
+
+    return {
+        id: data.id,
+        nombre: data.nombre || currentUser?.email || 'Usuario',
+        whatsapp: String(data.whatsapp).trim()
+    };
+}
+
+function normalizeBancoLiteWhatsapp(value) {
+    return String(value || '').replace(/\D/g, '');
 }
 
 async function sendBancoNotificationWebhookLite(payload) {
@@ -472,6 +526,13 @@ function showLiteComprobante(idDetalle) {
     const monto = item.valor || 0;
     const cuotaN = item.cuota || '-';
     const fechaP = item.fecha_pagado ? window.formatDate(item.fecha_pagado) : '---';
+    const comentario = (item.comentario || '').trim();
+    const comentarioHTML = comentario ? `
+                <div class="receipt-info-item" style="align-items: flex-start;">
+                    <span style="color: var(--text-muted); font-weight: 600;">Comentario</span>
+                    <span style="font-weight: 700; color: var(--text-primary); text-align: right; max-width: 62%;">${escapeBancoLiteHTML(comentario)}</span>
+                </div>
+    ` : '';
 
     const container = document.getElementById('lite-pago-detalle-container-bancos');
     if (!container) return;
@@ -520,6 +581,7 @@ function showLiteComprobante(idDetalle) {
                     <span style="color: var(--text-muted); font-weight: 600;">Cuota Número</span>
                     <span style="font-weight: 700; color: var(--text-primary);">#${cuotaN}</span>
                 </div>
+                ${comentarioHTML}
             </div>
 
             ${finalUrl ? `
@@ -610,6 +672,7 @@ function openLitePago(idDetalle) {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     document.getElementById('lite-pago-fecha').value = `${year}-${month}-${day}`;
+    document.getElementById('lite-pago-comentario').value = cuota.comentario || '';
 
     clearLitePagoPreview();
 
@@ -689,6 +752,7 @@ async function handleMobilePayment(e) {
     const idDetalle = document.getElementById('lite-pago-id-detalle').value;
     const fecha = document.getElementById('lite-pago-fecha').value;
     const valorManual = document.getElementById('lite-pago-valor-inputs').value;
+    const comentario = document.getElementById('lite-pago-comentario').value.trim();
 
     if (!currentLitePagoFile) {
         return window.Swal.fire('Espera', 'Por favor sube una foto del comprobante', 'warning');
@@ -718,7 +782,8 @@ async function handleMobilePayment(e) {
                 estado: 'PAGADO',
                 fecha_pagado: fecha,
                 fotografia: imgUrl,
-                valor: montoPagado
+                valor: montoPagado,
+                comentario: comentario || null
             })
             .eq('id_detalle', idDetalle);
 
@@ -731,7 +796,8 @@ async function handleMobilePayment(e) {
                 montoPagado,
                 fecha,
                 formatBancoLiteTimestamp(),
-                imgUrl
+                imgUrl,
+                comentario
             )
         });
 
@@ -746,7 +812,38 @@ async function handleMobilePayment(e) {
             console.warn('[BANCOS MOBILE] No se pudo enviar webhook:', ownerWebhookResult.error);
         }
 
-        await window.Swal.fire('¡Éxito!', 'Pago registrado correctamente', 'success');
+        try {
+            const loggedUser = await getLoggedBancoLiteNotificationUser(supabase);
+            const shouldNotifyLoggedUser = loggedUser?.whatsapp
+                && normalizeBancoLiteWhatsapp(loggedUser.whatsapp) !== normalizeBancoLiteWhatsapp('19175309618');
+
+            if (shouldNotifyLoggedUser) {
+                const loggedUserWebhookResult = await sendBancoNotificationWebhookLite({
+                    whatsapp: loggedUser.whatsapp,
+                    image_base64: imgUrl,
+                    message: buildBancoLiteLoggedUserMessage(
+                        loggedUser,
+                        banco,
+                        cuota,
+                        montoPagado,
+                        fecha,
+                        ownerWebhookResult.success,
+                        comentario
+                    )
+                });
+
+                if (!loggedUserWebhookResult.success) {
+                    console.warn('[BANCOS MOBILE] No se pudo notificar al usuario logeado:', loggedUserWebhookResult.error);
+                }
+            }
+        } catch (loggedUserWebhookError) {
+            console.warn('[BANCOS MOBILE] Error notificando al usuario logeado:', loggedUserWebhookError);
+        }
+
+        const successMessage = ownerWebhookResult.success
+            ? 'Pago registrado correctamente. José fue notificado.'
+            : 'Pago registrado correctamente, pero no se pudo confirmar la notificación a José.';
+        await window.Swal.fire('¡Éxito!', successMessage, 'success');
 
         closeLitePago();
 

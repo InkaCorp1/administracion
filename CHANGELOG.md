@@ -1,5 +1,13 @@
 # CHANGELOG - INKA CORP
 
+## [31.4.0] - 2026-05-26
+### Caja
+- **Saldo visible por movimiento:** La tabla de Caja ahora muestra el saldo que queda después de cada ingreso o egreso, facilitando revisar el historial del turno.
+- **Reportes por periodos rápidos:** Puedes generar reportes del mes actual, últimos 30 días, últimos 7 días o un rango personalizado.
+- **Reportes para administradores:** Los usuarios administradores pueden generar reportes consolidados de todos los usuarios o separados por usuario.
+- **PDF de Caja más completo:** El reporte detallado incluye el saldo de cada movimiento y un resumen más claro de ingresos, egresos y saldo neto.
+- **Fechas más confiables:** Los movimientos del día se muestran correctamente aunque hayan sido registrados en la tarde o noche.
+
 ## [31.3.0] - 2026-05-20
 ### Cobranza
 - **Vista de créditos según tu asignación:** El Dashboard y el módulo de Créditos pueden abrir mostrando primero solo los créditos asignados a tu cobranza.
