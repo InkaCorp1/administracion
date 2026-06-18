@@ -270,6 +270,21 @@
     transform: scale(0.98);
 }
 
+.desembolso-card-emergente {
+    border-left-color: #22c55e;
+}
+
+.desembolso-tipo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.4rem;
+    color: #86efac;
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
 .desembolso-header {
     display: flex;
     justify-content: space-between;
@@ -369,6 +384,11 @@
     background: linear-gradient(135deg, var(--primary) 0%, #0f7f4f 100%);
     color: white;
     box-shadow: 0 8px 16px rgba(11, 78, 50, 0.28);
+}
+
+.desembolso-btn-emergente {
+    width: 100%;
+    flex-basis: 100%;
 }
 
 .desembolso-btn:active {

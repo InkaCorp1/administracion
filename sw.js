@@ -1,10 +1,10 @@
 /**
  * INKA CORP - Service Worker
  * PWA Offline Support
- * Version 31.4.0 - Reportes de caja
+ * Version 31.5.5 - Resumen de pagare alineado al credito normal
  */
 
-const SW_VERSION = '31.4.0';
+const SW_VERSION = '31.5.5';
 const CACHE_NAME = `inkacorp-v${SW_VERSION}`;
 const STATIC_CACHE = `inkacorp-static-v${SW_VERSION}`;
 const CHANGELOG_URL = `CHANGELOG.md?v=${encodeURIComponent(SW_VERSION)}`;
@@ -37,6 +37,9 @@ const MODULE_FILES = [
     'css/creditos.css',
     'mobile/js/modules/creditos.js',
     'js/modules/creditos_preferenciales.js',
+    'js/modules/creditos_emergentes.js?v=31.5.5',
+    'views/creditos_emergentes.html?v=31.5.5',
+    'css/creditos_emergentes.css?v=31.5.5',
     'js/modules/polizas.js',
     'js/modules/precancelaciones.js',
     'js/modules/ahorros.js',
@@ -136,14 +139,14 @@ self.addEventListener('fetch', (event) => {
                     const responseClone = response.clone();
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
                 }
-                
+
                 return response;
             })
             .catch(() => {
                 // Fallback offline
                 return caches.match(event.request).then(cached => {
                     if (cached) return cached;
-                    
+
                     if (isNavigation) {
                         const isMobileRoute = url.pathname.includes('/mobile/') || url.pathname.includes('/m-');
                         const fallbackFile = isMobileRoute ? 'mobile/index.html' : 'index.html';

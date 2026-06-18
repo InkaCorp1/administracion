@@ -56,7 +56,7 @@ body {
     height: 100vh;
     height: -webkit-fill-available;
     width: 100%;
-    max-width: 500px;
+    max-width: none;
     margin: 0 auto;
     background: var(--bg-card);
     position: relative;
@@ -367,6 +367,25 @@ body.swal2-shown {
 .swal2-popup:not(.report-full-modal) .swal2-html-container,
 .swal2-popup:not(.report-full-modal) #swal2-html-container {
     color: #d2dfef !important;
+}
+
+.swal2-popup:not(.report-full-modal) .swal2-input,
+.swal2-popup:not(.report-full-modal) .swal2-textarea {
+    background: #111827 !important;
+    border: 2px solid rgba(147, 197, 253, 0.72) !important;
+    color: #f8fafc !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18) !important;
+    caret-color: #f8fafc !important;
+}
+
+.swal2-popup:not(.report-full-modal) .swal2-input::placeholder,
+.swal2-popup:not(.report-full-modal) .swal2-textarea::placeholder {
+    color: #94a3b8 !important;
+}
+
+.swal2-popup:not(.report-full-modal) .swal2-input-label {
+    color: #cbd5e1 !important;
+    font-weight: 800 !important;
 }
 
 .swal2-popup:not(.report-full-modal) .swal2-actions {

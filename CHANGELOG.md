@@ -1,5 +1,27 @@
 # CHANGELOG - INKA CORP
 
+## [31.5.5] - 2026-06-18
+### Créditos Emergentes
+- **Nuevo módulo de créditos emergentes:** Ya puedes gestionar solicitudes especiales para socios desde un solo lugar, pasando por solicitud, aprobación, colocación, desembolso y pago.
+- **Disponible únicamente para socios:** Las solicitudes se registran utilizando la información de socios que ya existe en el sistema.
+- **Búsqueda rápida de socios:** El selector permite buscar por nombre o cédula para registrar una solicitud con mayor facilidad.
+- **Condiciones claras antes de guardar:** El formulario muestra previamente el interés del plazo, los gastos administrativos y el total que deberá pagarse al vencimiento.
+- **Gastos proporcionales al plazo:** Los gastos administrativos utilizan una referencia del 20% anual y se calculan únicamente por el tiempo real del crédito.
+- **Tasas fáciles de revisar:** Puedes ingresar la tasa mensual o anual y consultar sus equivalencias sin perder la precisión utilizada en los cálculos.
+- **Fecha y vencimiento automáticos:** La solicitud conserva su fecha original y calcula la fecha de vencimiento según el plazo registrado en días o meses.
+- **Tarjetas con información completa:** Cada crédito muestra capital, total al vencimiento, interés, gastos administrativos, plazo, tasa y fechas importantes de forma ordenada.
+
+### Documentos y Desembolso
+- **Acuerdo de préstamo y pagaré:** Desde el crédito colocado puedes generar los documentos correspondientes, preparados según el estado civil del socio.
+- **Pagaré más claro:** El pagaré presenta el acreedor, vencimiento y valor total en números y letras; además incluye en su contenido el domicilio, país de residencia y lugar de pago.
+- **Fecha de firma precargada:** La fecha de firma toma automáticamente la fecha de solicitud y puede ajustarse antes de generar los documentos.
+- **Firmados obligatorios:** El desembolso se habilita únicamente después de cargar el acuerdo de préstamo y el pagaré firmados.
+- **Control de Caja:** El sistema verifica que exista una caja abierta antes de completar el desembolso y registra el movimiento correspondiente.
+
+### Dashboard y Móvil
+- **Pendientes visibles desde el inicio:** Los créditos emergentes colocados aparecen junto con los demás desembolsos pendientes en el dashboard y en el inicio móvil.
+- **Proceso completo desde el celular:** En móvil puedes generar los documentos, cargar los firmados y completar el desembolso desde un panel adaptado a pantallas pequeñas.
+
 ## [31.4.0] - 2026-05-26
 ### Caja
 - **Saldo visible por movimiento:** La tabla de Caja ahora muestra el saldo que queda después de cada ingreso o egreso, facilitando revisar el historial del turno.

@@ -1,0 +1,187 @@
+<!-- Vista Creditos Emergentes - INKA CORP -->
+<div class="content-wrapper emergentes-wrapper">
+    <div class="standard-hero emergentes-hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <div class="hero-icon">
+                <i class="fas fa-bolt"></i>
+            </div>
+            <h1 class="hero-title">Creditos Emergentes</h1>
+            <p class="hero-subtitle">Solicitud, aprobacion, colocacion y desembolso</p>
+        </div>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <span class="hero-value" id="stat-emergentes-total">0</span>
+                <span class="hero-label">Total</span>
+            </div>
+            <div class="hero-stat warning">
+                <span class="hero-value" id="stat-emergentes-solicitados">0</span>
+                <span class="hero-label">Solicitados</span>
+            </div>
+            <div class="hero-stat highlight">
+                <span class="hero-value" id="stat-emergentes-desembolsados">0</span>
+                <span class="hero-label">Desembolsados</span>
+            </div>
+            <div class="hero-stat danger">
+                <span class="hero-value" id="stat-emergentes-alertas">0</span>
+                <span class="hero-label">Alertas</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="emergentes-toolbar">
+        <button class="toolbar-btn btn-sync" onclick="refreshCreditosEmergentes()" title="Sincronizar">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+        <div class="toolbar-separator"></div>
+        <button class="toolbar-btn btn-emergente-new" onclick="openEmergenteSolicitudModal()">
+            <i class="fas fa-plus"></i>
+            <span>Nueva Solicitud</span>
+        </button>
+        <div class="toolbar-separator"></div>
+        <button class="toolbar-btn emergente-filter active" data-estado="" onclick="filterCreditosEmergentes('')">
+            <span>Todos</span>
+            <span id="count-emergentes-all" class="filter-count">0</span>
+        </button>
+        <button class="toolbar-btn emergente-filter" data-estado="SOLICITADO" onclick="filterCreditosEmergentes('SOLICITADO')">
+            <span>Solicitados</span>
+            <span id="count-emergentes-solicitado" class="filter-count">0</span>
+        </button>
+        <button class="toolbar-btn emergente-filter" data-estado="APROBADO" onclick="filterCreditosEmergentes('APROBADO')">
+            <span>Aprobados</span>
+            <span id="count-emergentes-aprobado" class="filter-count">0</span>
+        </button>
+        <button class="toolbar-btn emergente-filter" data-estado="COLOCADO" onclick="filterCreditosEmergentes('COLOCADO')">
+            <span>Colocados</span>
+            <span id="count-emergentes-colocado" class="filter-count">0</span>
+        </button>
+        <button class="toolbar-btn emergente-filter" data-estado="DESEMBOLSADO" onclick="filterCreditosEmergentes('DESEMBOLSADO')">
+            <span>Desembolsados</span>
+            <span id="count-emergentes-desembolsado" class="filter-count">0</span>
+        </button>
+        <button class="toolbar-btn emergente-filter" data-estado="PAGADO" onclick="filterCreditosEmergentes('PAGADO')">
+            <span>Pagados</span>
+            <span id="count-emergentes-pagado" class="filter-count">0</span>
+        </button>
+        <div class="toolbar-search">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-emergentes" placeholder="Buscar socio, codigo o motivo...">
+        </div>
+    </div>
+
+    <div class="emergentes-alert-strip" id="emergentes-alert-strip">
+        <i class="fas fa-bell"></i>
+        <span id="emergentes-alert-text">Sin vencimientos urgentes</span>
+    </div>
+
+    <div id="emergentes-grid" class="emergentes-grid">
+        <div class="loading-placeholder">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Cargando creditos emergentes...</span>
+        </div>
+    </div>
+</div>
+
+<div id="modal-emergente-solicitud" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card emergente-modal-card">
+        <div class="modal-header emergente-modal-header">
+            <h3><i class="fas fa-bolt"></i> Nueva Solicitud Emergente</h3>
+            <button class="modal-close" data-close-modal><i class="fas fa-times"></i></button>
+        </div>
+        <form id="form-emergente-solicitud" class="modal-body emergente-form">
+            <div class="form-grid">
+                <label class="emergente-field-socio">
+                    <span>Socio</span>
+                    <div class="emergente-combobox" id="emergente-socio-combobox">
+                        <input id="emergente-socio-search" type="text" autocomplete="off"
+                            placeholder="Buscar por nombre o cedula..." required>
+                        <input id="emergente-socio" type="hidden" required>
+                        <button type="button" class="emergente-combobox-toggle" title="Mostrar socios">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div id="emergente-socio-options" class="emergente-combobox-options hidden"></div>
+                    </div>
+                </label>
+                <label>
+                    <span>Monto solicitado</span>
+                    <input id="emergente-monto" type="number" min="1" step="0.01" required>
+                </label>
+                <label>
+                    <span>Fecha de solicitud</span>
+                    <input id="emergente-fecha-solicitud" type="date" required>
+                </label>
+                <label>
+                    <span>Plazo</span>
+                    <input id="emergente-plazo" type="number" min="1" step="1" value="30" required>
+                </label>
+                <label>
+                    <span>Unidad</span>
+                    <select id="emergente-plazo-unidad">
+                        <option value="DIAS">Dias</option>
+                        <option value="MESES">Meses</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Tasa (%)</span>
+                    <input id="emergente-tasa" type="number" min="0" step="0.01" value="2.00">
+                </label>
+                <label>
+                    <span>Tipo de tasa</span>
+                    <select id="emergente-tasa-tipo">
+                        <option value="MENSUAL">Mensual</option>
+                        <option value="ANUAL">Anual</option>
+                    </select>
+                </label>
+                <div class="emergente-rate-preview span-4" id="emergente-rate-preview">
+                    <div><span>Mensual</span><strong id="emergente-rate-monthly">2.00%</strong></div>
+                    <div><span>Anual</span><strong id="emergente-rate-annual">24.00%</strong></div>
+                    <div><span>Diario</span><strong id="emergente-rate-daily">0.07%</strong></div>
+                </div>
+                <div class="emergente-term-preview span-4">
+                    <div>
+                        <span>Interes del plazo</span>
+                        <strong id="emergente-term-interest">$0.00</strong>
+                    </div>
+                    <div>
+                        <span>Gastos administrativos</span>
+                        <strong id="emergente-term-admin">$0.00</strong>
+                        <small id="emergente-term-admin-rate">0.00%</small>
+                    </div>
+                    <div>
+                        <span>Total al vencimiento</span>
+                        <strong id="emergente-term-total">$0.00</strong>
+                    </div>
+                </div>
+                <label class="emergente-field-origin">
+                    <span>Origen del plazo</span>
+                    <select id="emergente-plazo-origen">
+                        <option value="MANUAL">Manual</option>
+                        <option value="ESTANDAR">Estandar</option>
+                    </select>
+                </label>
+                <label class="emergente-field-reason">
+                    <span>Motivo</span>
+                    <textarea id="emergente-motivo" rows="3" required></textarea>
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar Solicitud
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="modal-emergente-detalle" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card emergente-modal-card wide">
+        <div class="modal-header emergente-modal-header">
+            <h3><i class="fas fa-file-invoice-dollar"></i> <span id="emergente-detalle-title">Detalle</span></h3>
+            <button class="modal-close" data-close-modal><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" id="emergente-detalle-body"></div>
+    </div>
+</div>

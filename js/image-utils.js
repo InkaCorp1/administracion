@@ -11,14 +11,18 @@ const COMPRESSION_CONFIG = {
     maxWidth: 1200,
     maxHeight: 1200,
     quality: 0.8,
-    mimeType: 'image/webp'
+    mimeType: 'image/webp',
+    targetMaxBytes: 550 * 1024,
+    minQuality: 0.48
 };
 
 const COMPRESSIBLE_IMAGE_TYPES = new Set([
     'image/jpeg',
     'image/jpg',
     'image/png',
-    'image/webp'
+    'image/webp',
+    'image/heic',
+    'image/heif'
 ]);
 
 // ==========================================
@@ -38,7 +42,7 @@ async function compressImage(file, options = {}) {
     const originalSize = file.size;
 
     // Si no es imagen, retornar original
-    if (!file.type.startsWith('image/')) {
+    if (!isProbablyImageFile(file)) {
         console.warn('compressImage: El archivo no es una imagen');
         return {
             blob: file,
@@ -50,7 +54,28 @@ async function compressImage(file, options = {}) {
         };
     }
 
-    if (!COMPRESSIBLE_IMAGE_TYPES.has(file.type)) {
+    let inputFile = file;
+    let inputType = normalizeFileMimeType(file);
+
+    if (isHeicFile(file)) {
+        try {
+            inputFile = await convertHeicToJpeg(file);
+            inputType = 'image/jpeg';
+        } catch (error) {
+            console.warn('compressImage: No se pudo convertir HEIC/HEIF en el navegador.', error);
+            return {
+                blob: file,
+                wasCompressed: false,
+                originalSize,
+                compressedSize: originalSize,
+                outputMimeType: file.type || 'application/octet-stream',
+                outputExtension: getExtensionFromFile(file),
+                warning: 'El archivo HEIC no pudo convertirse automáticamente. Cambia la cámara del iPhone a formato "Más compatible" o selecciona una imagen JPG/PNG.'
+            };
+        }
+    }
+
+    if (!COMPRESSIBLE_IMAGE_TYPES.has(inputType)) {
         console.warn(`compressImage: Tipo no compatible para compresión (${file.type}). Usando original.`);
         return {
             blob: file,
@@ -105,7 +130,7 @@ async function compressImage(file, options = {}) {
                 ctx.drawImage(img, 0, 0, width, height);
 
                 // Convertir a blob
-                canvas.toBlob((blob) => {
+                canvasToCompressedBlob(canvas, config).then((blob) => {
                     if (!blob) {
                         console.error('compressImage: Canvas.toBlob retornó null, usando original');
                         resolve({
@@ -121,8 +146,8 @@ async function compressImage(file, options = {}) {
 
                     const compressedSize = blob.size;
 
-                    // Si la compresión aumentó el tamaño, usar original
-                    if (compressedSize >= originalSize) {
+                    // Si la compresión aumentó el tamaño, usar original salvo que venía de HEIC convertido.
+                    if (compressedSize >= originalSize && !isHeicFile(file)) {
                         console.log(`compressImage: Compresión ineficiente (${originalSize} -> ${compressedSize} bytes). Usando original.`);
                         resolve({
                             blob: file,
@@ -144,7 +169,7 @@ async function compressImage(file, options = {}) {
                             outputExtension: getExtensionFromMimeType(config.mimeType)
                         });
                     }
-                }, config.mimeType, config.quality);
+                });
             };
 
             img.onerror = () => {
@@ -174,7 +199,89 @@ async function compressImage(file, options = {}) {
             });
         };
 
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(inputFile);
+    });
+}
+
+function normalizeFileMimeType(file) {
+    const type = String(file?.type || '').toLowerCase();
+    if (type) return type;
+    const ext = getExtensionFromFile(file);
+    if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+    if (ext === 'png') return 'image/png';
+    if (ext === 'webp') return 'image/webp';
+    if (ext === 'heic') return 'image/heic';
+    if (ext === 'heif') return 'image/heif';
+    return '';
+}
+
+function isProbablyImageFile(file) {
+    const type = normalizeFileMimeType(file);
+    return type.startsWith('image/');
+}
+
+function isHeicFile(file) {
+    const type = normalizeFileMimeType(file);
+    const ext = getExtensionFromFile(file);
+    return type === 'image/heic' || type === 'image/heif' || ext === 'heic' || ext === 'heif';
+}
+
+function canvasToBlob(canvas, mimeType, quality) {
+    return new Promise(resolve => canvas.toBlob(resolve, mimeType, quality));
+}
+
+async function canvasToCompressedBlob(canvas, config) {
+    const targetMaxBytes = Number(config.targetMaxBytes || 0);
+    const minQuality = Number(config.minQuality || 0.45);
+    let quality = Number(config.quality || 0.8);
+    let blob = await canvasToBlob(canvas, config.mimeType, quality);
+
+    while (blob && targetMaxBytes > 0 && blob.size > targetMaxBytes && quality > minQuality) {
+        quality = Math.max(minQuality, quality - 0.1);
+        blob = await canvasToBlob(canvas, config.mimeType, quality);
+    }
+
+    return blob;
+}
+
+async function ensureHeic2Any() {
+    if (window.heic2any) return window.heic2any;
+
+    await new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[data-heic2any-loader="true"]');
+        if (existing) {
+            existing.addEventListener('load', resolve, { once: true });
+            existing.addEventListener('error', reject, { once: true });
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+        script.async = true;
+        script.dataset.heic2anyLoader = 'true';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+
+    if (!window.heic2any) {
+        throw new Error('No se pudo cargar el conversor HEIC.');
+    }
+
+    return window.heic2any;
+}
+
+async function convertHeicToJpeg(file) {
+    const heic2any = await ensureHeic2Any();
+    const converted = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.82
+    });
+    const blob = Array.isArray(converted) ? converted[0] : converted;
+    return new File([blob], `${(file.name || 'iphone').replace(/\.(heic|heif)$/i, '')}.jpg`, {
+        type: 'image/jpeg',
+        lastModified: Date.now()
     });
 }
 
@@ -207,7 +314,7 @@ function getExtensionFromFile(file) {
  * @param {string} bucketName - Nombre del bucket (opcional, usa STORAGE_BUCKET por defecto)
  * @returns {Promise<{success: boolean, url?: string, error?: string}>}
  */
-async function uploadFileToStorage(file, folder, id, bucketName = STORAGE_BUCKET) {
+async function uploadFileToStorage(file, folder, id, bucketName = STORAGE_BUCKET, compressionOptions = {}) {
     try {
         const supabase = window.getSupabaseClient();
 
@@ -223,8 +330,9 @@ async function uploadFileToStorage(file, folder, id, bucketName = STORAGE_BUCKET
         let extension = getExtensionFromFile(file);
 
         // 1. Si es imagen, intentar compresión
-        if (file.type && file.type.startsWith('image/')) {
-            const compressionRes = await compressImage(file);
+        if (isProbablyImageFile(file)) {
+            const compressionRes = await compressImage(file, compressionOptions);
+            if (compressionRes.warning) console.warn(compressionRes.warning);
             uploadBlob = compressionRes.blob;
             wasCompressed = compressionRes.wasCompressed;
             originalSize = compressionRes.originalSize;
@@ -286,8 +394,8 @@ async function uploadFileToStorage(file, folder, id, bucketName = STORAGE_BUCKET
 /**
  * Alias para compatibilidad con módulos existentes que usaban uploadImageToStorage
  */
-async function uploadImageToStorage(file, folder, id, bucketName = STORAGE_BUCKET) {
-    return uploadFileToStorage(file, folder, id, bucketName);
+async function uploadImageToStorage(file, folder, id, bucketName = STORAGE_BUCKET, compressionOptions = {}) {
+    return uploadFileToStorage(file, folder, id, bucketName, compressionOptions);
 }
 
 /**

@@ -86,6 +86,17 @@
         </button>
     </div>
 
+    <!-- Solicitudes Manuales -->
+    <div id="caja-aprobaciones-mobile" class="mobile-approval-section hidden">
+        <div class="mobile-section-title approval-title-mobile">
+            <h3>Solicitudes de Caja</h3>
+            <span id="caja-aprobaciones-count-mobile">0</span>
+        </div>
+        <div id="caja-aprobaciones-list-mobile" class="mobile-approval-list">
+            <!-- Dinámico -->
+        </div>
+    </div>
+
     <!-- Lista de Movimientos -->
     <div class="mobile-section-title">
         <h3 id="caja-movimientos-title">Movimientos Recientes</h3>
@@ -150,31 +161,67 @@
                     <label>Descripción / Motivo</label>
                     <input type="text" name="descripcion" class="mobile-input-v2" placeholder="Ej: Pago de servicios..." required>
                 </div>
-                <div class="mobile-form-group" style="margin-top: 1.5rem;">
-                    <label>Comprobante o Evidencia</label>
-                    <div class="mobile-upload-options">
-                        <div class="upload-option" onclick="document.getElementById('manual-comprobante-camera').click()">
-                            <div class="option-icon camera"><i class="fas fa-camera"></i></div>
-                            <span>Cámara</span>
-                        </div>
-                        <div class="upload-option" onclick="document.getElementById('manual-comprobante-gallery').click()">
-                            <div class="option-icon gallery"><i class="fas fa-image"></i></div>
-                            <span>Galería</span>
-                        </div>
-                    </div>
-                    <input type="file" id="manual-comprobante-camera" accept="image/*" capture="environment" class="hidden" onchange="previewMobileImage(event, 'preview-box')">
-                    <input type="file" id="manual-comprobante-gallery" accept="image/*" class="hidden" onchange="previewMobileImage(event, 'preview-box')">
-                    <div id="preview-box" class="mobile-preview-box hidden">
-                        <img id="preview-img" src="">
+                <div class="mobile-approval-note">
+                    <i class="fas fa-shield-alt"></i>
+                    <div>
+                        <strong>Primero se solicita aprobación.</strong>
+                        <span>Cuando se apruebe, podrás subir el comprobante final y recién se reflejará en caja.</span>
                     </div>
                 </div>
             </div>
             <div class="modal-footer lite-footer">
                 <button type="submit" id="btn-save-manual" class="lite-btn primary">
-                    <i class="fas fa-save"></i> REGISTRAR EN CAJA
+                    <i class="fas fa-paper-plane"></i> SOLICITAR APROBACIÓN
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal Subir Comprobante Manual -->
+<div id="modal-caja-proof-upload-mobile" class="modal-overlay caja-proof-upload-mobile">
+    <div class="modal-content lite-modal">
+        <div class="modal-header lite-header">
+            <h3><i class="fas fa-receipt"></i> Comprobante final</h3>
+            <button class="modal-close" onclick="closeCajaProofUploadModalMobile()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body lite-body">
+            <p class="proof-upload-copy-mobile">Toma una foto o carga el comprobante desde galería. Las fotos se comprimen automáticamente.</p>
+            <div class="mobile-upload-options proof-mobile-options">
+                <div class="upload-option" onclick="document.getElementById('caja-proof-camera-mobile').click()">
+                    <div class="option-icon camera"><i class="fas fa-camera"></i></div>
+                    <span>Tomar foto</span>
+                </div>
+                <div class="upload-option" onclick="document.getElementById('caja-proof-gallery-mobile').click()">
+                    <div class="option-icon gallery"><i class="fas fa-image"></i></div>
+                    <span>Galería</span>
+                </div>
+            </div>
+            <input type="file" id="caja-proof-camera-mobile" accept="image/*,.heic,.heif" capture="environment" class="hidden" onchange="handleCajaProofFileSelectedMobile(event)">
+            <input type="file" id="caja-proof-gallery-mobile" accept="image/*,.heic,.heif,application/pdf" class="hidden" onchange="handleCajaProofFileSelectedMobile(event)">
+            <div id="caja-proof-preview-mobile" class="proof-preview-mobile hidden"></div>
+            <div id="caja-proof-compression-note-mobile" class="proof-compression-note-mobile hidden"></div>
+        </div>
+        <div class="modal-footer lite-footer">
+            <button type="button" class="lite-btn primary" onclick="submitCajaProofUploadMobile()">
+                <i class="fas fa-upload"></i> SUBIR Y REGISTRAR
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Bloqueante Aprobaciones -->
+<div id="modal-caja-aprobaciones-mobile" class="modal-overlay approval-blocking-mobile">
+    <div class="modal-content lite-modal">
+        <div class="modal-header lite-header">
+            <h3><i class="fas fa-user-check"></i> Aprobaciones pendientes</h3>
+        </div>
+        <div class="modal-body lite-body">
+            <p class="approval-blocking-copy-mobile">Debes aprobar o rechazar estas solicitudes antes de continuar.</p>
+            <div id="caja-aprobaciones-modal-list-mobile" class="mobile-approval-list">
+                <!-- Dinámico -->
+            </div>
+        </div>
     </div>
 </div>
 

@@ -294,6 +294,314 @@
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
 }
 
+/* Aprobaciones manuales */
+.mobile-approval-section {
+    margin-bottom: 1.5rem;
+}
+
+.approval-title-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.approval-title-mobile span {
+    min-width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: #f59e0b;
+    color: white;
+    font-weight: 900;
+}
+
+.mobile-approval-list {
+    display: grid;
+    gap: 0.9rem;
+    padding: 0 1rem 1rem;
+}
+
+.mobile-approval-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 5px solid #f59e0b;
+    border-radius: 1.35rem;
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.mobile-approval-card.income {
+    border-left-color: #10b981;
+}
+
+.mobile-approval-card.expense {
+    border-left-color: #ef4444;
+}
+
+.approval-mobile-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
+}
+
+.approval-mobile-type {
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+}
+
+.approval-mobile-top strong {
+    color: #f59e0b;
+    font-size: 1.25rem;
+    font-weight: 950;
+}
+
+.mobile-approval-card p {
+    margin: 0 0 0.75rem;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.approval-mobile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.9rem;
+}
+
+.approval-mobile-meta span {
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--text-secondary);
+    border-radius: 999px;
+    padding: 0.28rem 0.55rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+
+.approval-mobile-meta span.pending {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+}
+
+.approval-mobile-meta span.approved {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+}
+
+.approval-mobile-actions {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.approval-mobile-waiting {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.9rem;
+    border-radius: 1rem;
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--text-secondary);
+    font-weight: 850;
+}
+
+.approval-blocking-mobile {
+    z-index: 5000;
+    background: rgba(15, 23, 42, 0.98);
+    align-items: stretch;
+}
+
+.approval-blocking-mobile .lite-modal {
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+    background: #121922;
+}
+
+.approval-blocking-mobile .lite-body {
+    overflow-y: auto;
+    background: #121922 !important;
+}
+
+.approval-blocking-mobile .lite-header {
+    border-radius: 0;
+    background: #065f46;
+}
+
+.approval-blocking-copy-mobile {
+    color: var(--text-secondary);
+    font-weight: 700;
+    line-height: 1.45;
+    margin: 0 0 1rem;
+}
+
+.approval-blocking-mobile .mobile-approval-list {
+    padding: 0;
+}
+
+.mobile-approval-note {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 1.2rem;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.22);
+}
+
+.mobile-approval-note i {
+    color: #f59e0b;
+    font-size: 1.3rem;
+    margin-top: 0.1rem;
+}
+
+.mobile-approval-note strong {
+    display: block;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.mobile-approval-note span {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.caja-proof-upload-mobile .lite-modal {
+    background: #151c26 !important;
+}
+
+.caja-proof-upload-mobile .lite-body,
+.caja-proof-upload-mobile .lite-footer {
+    background: #151c26 !important;
+}
+
+.proof-upload-copy-mobile {
+    color: #cbd5e1;
+    font-weight: 700;
+    line-height: 1.45;
+    margin: 0 0 1rem;
+}
+
+.proof-mobile-options {
+    margin-bottom: 1rem;
+}
+
+.proof-preview-mobile {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1rem;
+    padding: 0.85rem;
+    margin-bottom: 0.8rem;
+}
+
+.proof-preview-icon-mobile {
+    width: 46px;
+    height: 46px;
+    border-radius: 0.9rem;
+    display: grid;
+    place-items: center;
+    background: rgba(16, 185, 129, 0.13);
+    color: #10f1ab;
+    flex: 0 0 auto;
+}
+
+.proof-preview-icon-mobile.pdf {
+    background: rgba(239, 68, 68, 0.13);
+    color: #ff6b6b;
+}
+
+.proof-preview-mobile strong,
+.proof-preview-mobile span {
+    display: block;
+}
+
+.proof-preview-mobile strong {
+    color: #f8fafc;
+    word-break: break-word;
+    line-height: 1.25;
+}
+
+.proof-preview-mobile span {
+    color: #94a3b8;
+    font-size: 0.82rem;
+    margin-top: 0.15rem;
+}
+
+.proof-compression-note-mobile {
+    color: #c9d8ea;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.22);
+    border-radius: 1rem;
+    padding: 0.8rem;
+    font-size: 0.83rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.proof-compression-note-mobile i {
+    color: #60a5fa;
+    margin-right: 0.35rem;
+}
+
+/* Caja: modales con contraste alto */
+#modal-apertura-caja .lite-modal,
+#modal-movimiento-manual .lite-modal,
+#modal-cierre-caja .lite-modal,
+#modal-transferencia-mobile .lite-modal,
+#modal-aceptar-transferencia-mobile .lite-modal {
+    background: #151c26 !important;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+#modal-apertura-caja .lite-body,
+#modal-movimiento-manual .lite-body,
+#modal-cierre-caja .lite-body,
+#modal-transferencia-mobile .lite-body,
+#modal-aceptar-transferencia-mobile .lite-body,
+#modal-apertura-caja .lite-footer,
+#modal-movimiento-manual .lite-footer,
+#modal-cierre-caja .lite-footer,
+#modal-transferencia-mobile .lite-footer,
+#modal-aceptar-transferencia-mobile .lite-footer {
+    background: #151c26 !important;
+}
+
+#modal-apertura-caja .mobile-input-v2,
+#modal-movimiento-manual .mobile-input-v2,
+#modal-cierre-caja .mobile-input-v2,
+#modal-transferencia-mobile .mobile-input-v2 {
+    background: #0f172a !important;
+    border: 1px solid rgba(148, 163, 184, 0.28) !important;
+    border-radius: 0.9rem;
+    color: #f8fafc !important;
+    padding: 0.85rem 0.95rem;
+}
+
+#modal-apertura-caja .mobile-input-v2::placeholder,
+#modal-movimiento-manual .mobile-input-v2::placeholder,
+#modal-cierre-caja .mobile-input-v2::placeholder,
+#modal-transferencia-mobile .mobile-input-v2::placeholder {
+    color: #7f8da3 !important;
+}
+
+#modal-apertura-caja .mobile-form-group label,
+#modal-movimiento-manual .mobile-form-group label,
+#modal-cierre-caja .mobile-form-group label,
+#modal-transferencia-mobile .mobile-form-group label {
+    color: #d5deeb;
+}
+
 /* Lista de Movimientos */
 .mobile-section-title {
     padding: 0 1.5rem;

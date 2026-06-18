@@ -168,6 +168,7 @@ async function checkCajaStatusGlobal() {
         'administrativos', 
         'bancos', 
         'creditos_preferenciales', 
+        'creditos_emergentes',
         'solicitud_credito', 
         'ahorros',
         'resumen_general',
@@ -277,6 +278,7 @@ const CACHE_TYPES = [
     'socios',
     'creditos',
     'creditos_preferenciales',
+    'creditos_emergentes',
     'solicitudes',
     'precancelaciones',
     'polizas',
@@ -595,7 +597,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (isMobile && !allowDesktopFromMobile && !window.location.pathname.includes('/mobile/')) {
         console.log('[APP] Bloqueando carga de PC en móvil...');
-        window.location.replace(window.location.origin + window.location.pathname.replace(/\/$/, '') + '/mobile/');
+        const viewParam = urlParams.get('view');
+        const mobileModules = ['creditos', 'desembolsos', 'aportes', 'bancos', 'simulador', 'socios', 'caja'];
+        const targetView = viewParam && mobileModules.includes(viewParam) ? `?view=${viewParam}` : '';
+        let mobileBasePath = window.location.pathname;
+        if (!mobileBasePath.endsWith('/')) {
+            mobileBasePath = mobileBasePath.substring(0, mobileBasePath.lastIndexOf('/') + 1);
+        }
+        window.location.replace(window.location.origin + mobileBasePath + 'mobile/' + targetView);
         return;
     }
 
@@ -697,7 +706,7 @@ function getViewFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
     const viewParam = urlParams.get('view');
     const hash = window.location.hash.replace('#', '');
-    const validViews = ['dashboard', 'control', 'socios', 'socios_edit', 'solicitud_credito', 'creditos', 'creditos_preferenciales', 'precancelaciones', 'resumen_general', 'ahorros', 'polizas', 'simulador', 'aportes', 'bancos', 'administrativos', 'caja', 'agenda', 'contratos'];
+    const validViews = ['dashboard', 'control', 'socios', 'socios_edit', 'solicitud_credito', 'creditos', 'creditos_preferenciales', 'creditos_emergentes', 'precancelaciones', 'resumen_general', 'ahorros', 'polizas', 'simulador', 'aportes', 'bancos', 'administrativos', 'caja', 'agenda', 'contratos'];
 
     if (isControlUser()) return 'control';
 
@@ -1510,7 +1519,7 @@ async function loadView(viewName, shouldPushState = true) {
     if (viewName === 'agenda') {
         // Si el contenido principal está vacío (ej. carga inicial), cargamos dashboard de fondo
         if (mainContent && (mainContent.innerHTML === '' || currentViewName === null)) {
-            fetch('views/dashboard.html')
+            fetch(`views/dashboard.html?v=${encodeURIComponent(window.APP_VERSION || '31.5.5')}`)
                 .then(response => response.ok ? response.text() : '')
                 .then(html => {
                     if (html && mainContent) {
@@ -1557,7 +1566,8 @@ async function loadView(viewName, shouldPushState = true) {
         if (typeof closeAgendaModal === 'function') closeAgendaModal();
 
         // 2. Cargar HTML de la vista
-        const response = await fetch(`views/${viewName}.html`);
+        const viewVersion = encodeURIComponent(window.APP_VERSION || '31.5.5');
+        const response = await fetch(`views/${viewName}.html?v=${viewVersion}`);
         
         if (!response.ok) {
             console.warn(`Vista "${viewName}" no encontrada. Redirigiendo a dashboard.`);
@@ -1606,6 +1616,9 @@ async function loadView(viewName, shouldPushState = true) {
                 break;
             case 'creditos_preferenciales':
                 if (typeof initCreditosPreferencialesModule === 'function') await initCreditosPreferencialesModule();
+                break;
+            case 'creditos_emergentes':
+                if (typeof initCreditosEmergentesModule === 'function') await initCreditosEmergentesModule();
                 break;
             case 'precancelaciones':
                 if (typeof initPrecancelacionesModule === 'function') await initPrecancelacionesModule();
@@ -2195,53 +2208,85 @@ async function loadDesembolsosPendientes() {
     try {
         const supabase = window.getSupabaseClient();
 
-        // Obtener créditos en estado PENDIENTE (colocados pero no desembolsados)
-        const { data: creditosPendientes, error } = await supabase
-            .from('ic_creditos')
-            .select(`
-                id_credito,
-                codigo_credito,
-                capital,
-                plazo,
-                cuota_con_ahorro,
-                tasa_interes_mensual,
-                fecha_desembolso,
-                garante,
-                created_at,
-                id_socio
-            `)
-            .eq('estado_credito', 'PENDIENTE')
-            .order('created_at', { ascending: false });
+        const [
+            { data: creditosPendientes, error: creditosError },
+            { data: emergentesPendientes, error: emergentesError }
+        ] = await Promise.all([
+            supabase
+                .from('ic_creditos')
+                .select(`
+                    id_credito,
+                    codigo_credito,
+                    capital,
+                    plazo,
+                    cuota_con_ahorro,
+                    tasa_interes_mensual,
+                    fecha_desembolso,
+                    garante,
+                    created_at,
+                    id_socio
+                `)
+                .eq('estado_credito', 'PENDIENTE')
+                .order('created_at', { ascending: false }),
+            supabase
+                .from('ic_creditos_emergentes')
+                .select(`
+                    id_emergente,
+                    codigo_emergente,
+                    id_socio,
+                    monto_solicitado,
+                    monto_aprobado,
+                    monto_total,
+                    plazo_valor,
+                    plazo_unidad,
+                    tasa_interes_porcentaje,
+                    fecha_vencimiento,
+                    created_at
+                `)
+                .eq('estado', 'COLOCADO')
+                .order('created_at', { ascending: false })
+        ]);
 
-        if (error) {
-            console.error('Error cargando desembolsos pendientes:', error);
-            return;
-        }
+        if (creditosError) throw creditosError;
+        if (emergentesError) throw emergentesError;
+
+        const creditosNormales = creditosPendientes || [];
+        const creditosEmergentes = emergentesPendientes || [];
 
         // Mostrar u ocultar sección según haya datos
-        if (!creditosPendientes || creditosPendientes.length === 0) {
+        if (creditosNormales.length === 0 && creditosEmergentes.length === 0) {
             section.classList.add('hidden');
+            container.innerHTML = '';
+            if (countBadge) countBadge.textContent = '0';
             updatePriorityAlertsLayout();
             return;
         }
 
         // Cargar datos de socios relacionados
-        const socioIds = [...new Set(creditosPendientes.map(c => c.id_socio))];
-        const { data: socios } = await supabase
-            .from('ic_socios')
-            .select('idsocio, nombre, cedula, whatsapp')
-            .in('idsocio', socioIds);
+        const socioIds = [...new Set(
+            [...creditosNormales, ...creditosEmergentes]
+                .map(c => c.id_socio)
+                .filter(Boolean)
+        )];
+        let socios = [];
+        if (socioIds.length > 0) {
+            const { data: sociosData, error: sociosError } = await supabase
+                .from('ic_socios')
+                .select('idsocio, nombre, cedula, whatsapp')
+                .in('idsocio', socioIds);
+            if (sociosError) throw sociosError;
+            socios = sociosData || [];
+        }
 
         // Mapear socios a créditos
-        creditosPendientes.forEach(credito => {
+        [...creditosNormales, ...creditosEmergentes].forEach(credito => {
             credito.socio = socios?.find(s => s.idsocio === credito.id_socio) || {};
         });
 
         section.classList.remove('hidden');
-        if (countBadge) countBadge.textContent = creditosPendientes.length;
+        if (countBadge) countBadge.textContent = creditosNormales.length + creditosEmergentes.length;
 
-        // Renderizar cards de desembolsos
-        container.innerHTML = creditosPendientes.map(credito => {
+        const normalesHtml = creditosNormales.map(credito => {
             const socio = credito.socio || {};
             const nombreCompleto = socio.nombre || 'Sin nombre';
             const capitalFormatted = parseFloat(credito.capital).toLocaleString('es-EC', { minimumFractionDigits: 2 });
@@ -2292,6 +2337,60 @@ async function loadDesembolsosPendientes() {
             `;
         }).join('');
 
+        const emergentesHtml = creditosEmergentes.map(credito => {
+            const socio = credito.socio || {};
+            const capital = Number(credito.monto_aprobado || credito.monto_solicitado || 0);
+            const total = Number(credito.monto_total || capital);
+            const unidad = credito.plazo_unidad === 'MESES' ? 'meses' : 'días';
+            const tasa = Number(credito.tasa_interes_porcentaje || 0).toLocaleString('es-EC', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+            return `
+                <div class="desembolso-card desembolso-card-emergente" data-id="${credito.id_emergente}">
+                    <div class="desembolso-header">
+                        <div class="desembolso-socio">
+                            <div class="desembolso-tipo"><i class="fas fa-bolt"></i> Emergente</div>
+                            <div class="desembolso-nombre">${socio.nombre || 'Sin nombre'}</div>
+                            <div class="desembolso-cedula">${socio.cedula || '-'} | ${credito.codigo_emergente}</div>
+                        </div>
+                        <div class="desembolso-monto">
+                            <div class="desembolso-monto-valor">$${capital.toLocaleString('es-EC', { minimumFractionDigits: 2 })}</div>
+                            <div class="desembolso-monto-label">A desembolsar</div>
+                        </div>
+                    </div>
+                    <div class="desembolso-info">
+                        <div class="desembolso-info-item">
+                            <span class="desembolso-info-label">Plazo</span>
+                            <span class="desembolso-info-value">${credito.plazo_valor} ${unidad}</span>
+                        </div>
+                        <div class="desembolso-info-item">
+                            <span class="desembolso-info-label">Total vence</span>
+                            <span class="desembolso-info-value">$${total.toLocaleString('es-EC', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div class="desembolso-info-item">
+                            <span class="desembolso-info-label">Tasa mensual</span>
+                            <span class="desembolso-info-value">${tasa}%</span>
+                        </div>
+                        <div class="desembolso-info-item">
+                            <span class="desembolso-info-label">Vencimiento</span>
+                            <span class="desembolso-info-value">${credito.fecha_vencimiento || 'Por definir'}</span>
+                        </div>
+                    </div>
+                    <div class="desembolso-actions">
+                        <button class="desembolso-btn desembolso-btn-docs" onclick="event.stopPropagation(); desembolsarCreditoEmergente('${credito.id_emergente}')">
+                            <i class="fas fa-file-signature"></i> Documentos
+                        </button>
+                        <button class="desembolso-btn desembolso-btn-desembolsar" onclick="event.stopPropagation(); desembolsarCreditoEmergente('${credito.id_emergente}')">
+                            <i class="fas fa-money-bill-transfer"></i> Desembolsar
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = normalesHtml + emergentesHtml;
         updatePriorityAlertsLayout();
 
     } catch (error) {
@@ -2686,7 +2785,7 @@ window.loadDesembolsosPendientes = loadDesembolsosPendientes;
  */
 const CHANGELOG_ACCEPTED_VERSION_KEY = 'inka_changelog_accepted_version';
 const CHANGELOG_CACHE_PREFIX = 'inka_changelog_cache_';
-const CHANGELOG_CACHE_RENDERER_VERSION = '4';
+const CHANGELOG_CACHE_RENDERER_VERSION = '5';
 
 function getChangelogCacheKey(version) {
     return `${CHANGELOG_CACHE_PREFIX}${CHANGELOG_CACHE_RENDERER_VERSION}_${version}`;
@@ -2719,21 +2818,22 @@ function getDefaultChangelogHtml(version) {
     return normalizeChangelogHtml(`
         <div style="text-align: left; font-size: 14px; line-height: 1.6;">
             <p>Hemos actualizado el sistema a la versión <b>v${version}</b>. Este despliegue incluye:</p>
-            <h4 style="color: #10b981; margin-top: 15px;">Pólizas</h4>
+            <h4 style="color: #10b981; margin-top: 15px;">Créditos Emergentes</h4>
             <ul style="padding-left: 20px;">
-                <li><b>Renovar con descuentos completos:</b> Al renovar puedes revisar créditos normales y preferenciales antes de crear la nueva inversión.</li>
-                <li><b>Ver el valor real:</b> El modal muestra el valor al vencimiento, los descuentos aplicados y el valor final a renovar.</li>
-                <li><b>Descargar detalle en PDF:</b> Desde el modal de renovación puedes descargar el resumen con pagos y comprobantes cuando correspondan.</li>
+                <li><b>Gestión completa:</b> Registra solicitudes, aprueba condiciones, coloca, desembolsa y controla el pago desde un solo módulo.</li>
+                <li><b>Cálculos antes de guardar:</b> Revisa interés, gastos administrativos y total al vencimiento directamente en el formulario.</li>
+                <li><b>Fechas y tasas claras:</b> Conserva la fecha de solicitud, calcula el vencimiento y muestra equivalencias de tasa.</li>
             </ul>
-            <h4 style="color: #10b981; margin-top: 15px;">Créditos Preferenciales</h4>
+            <h4 style="color: #10b981; margin-top: 15px;">Documentos y Desembolso</h4>
             <ul style="padding-left: 20px;">
-                <li><b>Registrar pagos:</b> En créditos desembolsados puedes registrar abonos o pago total directamente desde la tabla.</li>
-                <li><b>Ver saldo a hoy:</b> La tabla muestra el saldo actualizado considerando intereses y pagos realizados.</li>
-                <li><b>Archivar pendientes:</b> Los créditos pendientes que ya no se usarán quedan separados en la pestaña de archivados.</li>
+                <li><b>Documentos preparados:</b> Genera el acuerdo de préstamo y el pagaré según los datos y estado civil del socio.</li>
+                <li><b>Firmados obligatorios:</b> Carga ambos documentos firmados antes de habilitar el desembolso.</li>
+                <li><b>Control de Caja:</b> El sistema valida la caja abierta y registra el movimiento correspondiente.</li>
             </ul>
-            <h4 style="color: #10b981; margin-top: 15px;">Dashboard</h4>
+            <h4 style="color: #10b981; margin-top: 15px;">Dashboard y Móvil</h4>
             <ul style="padding-left: 20px;">
-                <li><b>Alertas urgentes:</b> Si hay pólizas vencidas pendientes de renovación, verás una alerta con acceso directo a Pólizas.</li>
+                <li><b>Pendientes desde el inicio:</b> Los créditos colocados aparecen en el dashboard y en el inicio móvil.</li>
+                <li><b>Proceso desde el celular:</b> Genera, carga y desembolsa desde un panel adaptado a móvil.</li>
             </ul>
             <p style="margin-top: 15px; font-style: italic; color: #888;">Gracias por confiar en INKA CORP y LP Solutions.</p>
         </div>

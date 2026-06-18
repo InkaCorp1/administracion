@@ -302,6 +302,71 @@ body.modal-open {
     gap: 1.25rem;
 }
 
+.caja-filter-switch {
+    min-height: 48px;
+    display: inline-grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 0.85rem;
+    background: var(--gray-900);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+}
+
+.caja-filter-switch input {
+    display: none;
+}
+
+.caja-filter-switch .switch-track {
+    width: 44px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--gray-700);
+    position: relative;
+    transition: background 0.2s ease;
+}
+
+.caja-filter-switch .switch-track::after {
+    content: '';
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--white);
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.2s ease;
+}
+
+.caja-filter-switch input:checked + .switch-track {
+    background: var(--primary-green);
+}
+
+.caja-filter-switch input:checked + .switch-track::after {
+    transform: translateX(20px);
+}
+
+.caja-filter-switch input:disabled + .switch-track {
+    opacity: 0.45;
+}
+
+.caja-filter-switch .switch-copy {
+    display: grid;
+    gap: 0.1rem;
+}
+
+.caja-filter-switch .switch-copy strong {
+    color: var(--white);
+    font-size: 0.8rem;
+}
+
+.caja-filter-switch .switch-copy small {
+    color: var(--gray-400);
+    font-size: 0.72rem;
+}
+
 .filter-item {
     display: flex;
     flex-direction: column;
@@ -336,6 +401,328 @@ body.modal-open {
     border-color: var(--gold) !important;
     background: var(--black) !important;
     box-shadow: 0 0 0 3px rgba(242, 187, 58, 0.1);
+}
+
+.input-v2.is-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* Aprobación de movimientos manuales */
+.caja-approval-card {
+    margin-bottom: 1.5rem;
+    padding: 0;
+    overflow: hidden;
+    border-color: rgba(242, 187, 58, 0.22) !important;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+.caja-approval-card .table-header {
+    align-items: center;
+    gap: 1rem;
+}
+
+.caja-approval-card .table-header p {
+    margin: 0.25rem 0 0;
+    color: var(--gray-400);
+    font-size: 0.82rem;
+}
+
+.approval-count {
+    border: 1px solid rgba(242, 187, 58, 0.35);
+    background: rgba(242, 187, 58, 0.12);
+    color: var(--gold);
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.approval-list {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1rem;
+}
+
+.approval-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.9rem;
+    padding: 1rem;
+}
+
+.approval-item.income {
+    border-left: 4px solid var(--success);
+}
+
+.approval-item.expense {
+    border-left: 4px solid var(--danger);
+}
+
+.approval-type span {
+    width: 42px;
+    height: 42px;
+    border-radius: 0.85rem;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--white);
+}
+
+.approval-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--white);
+}
+
+.approval-title-row strong {
+    letter-spacing: 0.04em;
+    font-size: 0.82rem;
+}
+
+.approval-title-row span {
+    color: var(--gold);
+    font-weight: 900;
+    font-size: 1.05rem;
+}
+
+.approval-main p {
+    margin: 0.35rem 0 0.6rem;
+    color: var(--gray-200);
+    font-weight: 600;
+}
+
+.approval-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem 1rem;
+    color: var(--gray-400);
+    font-size: 0.78rem;
+}
+
+.approval-meta i {
+    color: var(--gold);
+    margin-right: 0.25rem;
+}
+
+.approval-status {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    padding: 0.25rem 0.55rem;
+    font-weight: 800;
+}
+
+.approval-status.pending {
+    color: var(--gold);
+    background: rgba(242, 187, 58, 0.1);
+}
+
+.approval-status.approved {
+    color: #10f1ab;
+    background: rgba(16, 241, 171, 0.1);
+}
+
+.approval-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.approval-actions .btn-v2 {
+    padding: 0.55rem 0.8rem;
+    font-size: 0.78rem;
+}
+
+.approval-waiting {
+    color: var(--gray-300);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.approval-blocking-modal {
+    z-index: 12000;
+}
+
+.approval-blocking-modal .modal-backdrop {
+    cursor: not-allowed;
+    background: rgba(3, 7, 18, 0.82);
+    backdrop-filter: blur(8px);
+}
+
+.approval-blocking-modal .modal-card {
+    width: min(980px, calc(100vw - 2rem));
+    max-height: min(760px, calc(100vh - 2rem));
+    border: 1px solid rgba(242, 187, 58, 0.28);
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+}
+
+.approval-blocking-modal .modal-header {
+    border-bottom: 1px solid rgba(242, 187, 58, 0.18);
+}
+
+.approval-blocking-modal .modal-header h2 i {
+    color: var(--gold);
+}
+
+.approval-blocking-modal .modal-body {
+    overflow-y: auto;
+}
+
+.approval-blocking-copy {
+    color: var(--gray-300);
+    margin: 0 0 1rem;
+    font-weight: 600;
+}
+
+.approval-blocking-modal .approval-list {
+    padding: 0;
+}
+
+.manual-approval-note {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.85rem;
+    align-items: flex-start;
+    padding: 1rem;
+    border-radius: 0.9rem;
+    background: rgba(242, 187, 58, 0.08);
+    border: 1px solid rgba(242, 187, 58, 0.18);
+}
+
+.manual-approval-note i {
+    color: var(--gold);
+    font-size: 1.25rem;
+    margin-top: 0.1rem;
+}
+
+.manual-approval-note strong {
+    display: block;
+    color: var(--white);
+    margin-bottom: 0.2rem;
+}
+
+.manual-approval-note span {
+    color: var(--gray-300);
+    line-height: 1.45;
+    font-size: 0.88rem;
+}
+
+.caja-proof-upload-modal .modal-card {
+    max-width: 560px;
+}
+
+.proof-upload-copy {
+    color: var(--gray-300);
+    margin: 0 0 1rem;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.proof-dropzone {
+    min-height: 190px;
+    border: 2px dashed rgba(148, 163, 184, 0.45);
+    background: rgba(15, 23, 42, 0.55);
+    border-radius: 1rem;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.proof-dropzone:hover,
+.proof-dropzone.is-dragging {
+    border-color: var(--gold);
+    background: rgba(242, 187, 58, 0.08);
+    transform: translateY(-1px);
+}
+
+.proof-dropzone i {
+    color: var(--gold);
+    font-size: 2.4rem;
+    margin-bottom: 0.65rem;
+}
+
+.proof-dropzone strong {
+    color: var(--white);
+    font-size: 1rem;
+}
+
+.proof-dropzone span {
+    color: var(--gray-400);
+    font-size: 0.85rem;
+}
+
+.proof-preview {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.9rem;
+    padding: 0.8rem;
+}
+
+.proof-preview-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 0.85rem;
+    display: grid;
+    place-items: center;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10f1ab;
+    flex: 0 0 auto;
+}
+
+.proof-preview-icon.pdf {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ff6b6b;
+}
+
+.proof-preview strong,
+.proof-preview span {
+    display: block;
+}
+
+.proof-preview strong {
+    color: var(--white);
+    word-break: break-word;
+}
+
+.proof-preview span {
+    color: var(--gray-400);
+    font-size: 0.82rem;
+}
+
+.proof-compression-note {
+    margin-top: 0.8rem;
+    color: #b7c6d9;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.18);
+    border-radius: 0.85rem;
+    padding: 0.75rem;
+    font-size: 0.84rem;
+    font-weight: 650;
+}
+
+.proof-compression-note i {
+    color: #60a5fa;
+    margin-right: 0.35rem;
 }
 
 /* Mejora visibilidad icono calendario definitiva (Blanco Forzado) */
@@ -756,12 +1143,29 @@ textarea.input-v2 {
     }
     .filters-group { flex-wrap: wrap; }
     .actions-group { width: 100%; justify-content: flex-end; }
+    .approval-item {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+    .approval-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+    }
 }
 
 @media (max-width: 640px) {
     .caja-stats-grid { grid-template-columns: 1fr; }
     .actions-group { flex-direction: column; }
     .btn-v2 { width: 100%; justify-content: center; }
+    .approval-item {
+        grid-template-columns: 1fr;
+    }
+    .approval-type {
+        display: none;
+    }
+    .approval-title-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
 }
 
 /* Movimientos Dashboard Table Reset */

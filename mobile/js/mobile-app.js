@@ -227,7 +227,8 @@ async function loadModuleResources(moduleName) {
     if (loadedModules.has(moduleName)) return;
 
     // Intentar cargar CSS del módulo
-    const cssPath = `css/modules/${moduleName}.css`;
+    const moduleVersion = encodeURIComponent(window.APP_VERSION || '31.5.5');
+    const cssPath = `css/modules/${moduleName}.css?v=${moduleVersion}`;
     const cssPromise = new Promise((resolve) => {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -241,7 +242,7 @@ async function loadModuleResources(moduleName) {
     });
 
     // Intentar cargar JS del módulo
-    const jsPath = `js/modules/${moduleName}.js`;
+    const jsPath = `js/modules/${moduleName}.js?v=${moduleVersion}`;
     const jsPromise = new Promise((resolve) => {
         const script = document.createElement('script');
         script.src = jsPath;
@@ -449,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 const CHANGELOG_ACCEPTED_VERSION_KEY = 'inka_changelog_accepted_version';
 const CHANGELOG_CACHE_PREFIX = 'inka_changelog_cache_';
-const CHANGELOG_CACHE_RENDERER_VERSION = '4';
+const CHANGELOG_CACHE_RENDERER_VERSION = '5';
 
 function getChangelogCacheKey(version) {
     return `${CHANGELOG_CACHE_PREFIX}${CHANGELOG_CACHE_RENDERER_VERSION}_${version}`;
@@ -482,21 +483,22 @@ function getDefaultChangelogHtml(version) {
     return normalizeChangelogHtml(`
         <div style="text-align: left; font-size: 14px; line-height: 1.6;">
             <p>Hemos actualizado el sistema a la versión <b>v${version}</b>. Este despliegue incluye:</p>
-            <h4 style="color: #10b981; margin-top: 15px;">Pólizas</h4>
+            <h4 style="color: #10b981; margin-top: 15px;">Créditos Emergentes</h4>
             <ul style="padding-left: 20px;">
-                <li><b>Renovar con descuentos completos:</b> Al renovar puedes revisar créditos normales y preferenciales antes de crear la nueva inversión.</li>
-                <li><b>Ver el valor real:</b> El modal muestra el valor al vencimiento, los descuentos aplicados y el valor final a renovar.</li>
-                <li><b>Descargar detalle en PDF:</b> Desde el modal de renovación puedes descargar el resumen con pagos y comprobantes cuando correspondan.</li>
+                <li><b>Gestión completa:</b> Registra solicitudes, aprueba condiciones, coloca, desembolsa y controla el pago desde un solo módulo.</li>
+                <li><b>Cálculos antes de guardar:</b> Revisa interés, gastos administrativos y total al vencimiento directamente en el formulario.</li>
+                <li><b>Fechas y tasas claras:</b> Conserva la fecha de solicitud, calcula el vencimiento y muestra equivalencias de tasa.</li>
             </ul>
-            <h4 style="color: #10b981; margin-top: 15px;">Créditos Preferenciales</h4>
+            <h4 style="color: #10b981; margin-top: 15px;">Documentos y Desembolso</h4>
             <ul style="padding-left: 20px;">
-                <li><b>Registrar pagos:</b> En créditos desembolsados puedes registrar abonos o pago total directamente desde la tabla.</li>
-                <li><b>Ver saldo a hoy:</b> La tabla muestra el saldo actualizado considerando intereses y pagos realizados.</li>
-                <li><b>Archivar pendientes:</b> Los créditos pendientes que ya no se usarán quedan separados en la pestaña de archivados.</li>
+                <li><b>Documentos preparados:</b> Genera el acuerdo de préstamo y el pagaré según los datos y estado civil del socio.</li>
+                <li><b>Firmados obligatorios:</b> Carga ambos documentos firmados antes de habilitar el desembolso.</li>
+                <li><b>Control de Caja:</b> El sistema valida la caja abierta y registra el movimiento correspondiente.</li>
             </ul>
-            <h4 style="color: #10b981; margin-top: 15px;">Dashboard</h4>
+            <h4 style="color: #10b981; margin-top: 15px;">Dashboard y Móvil</h4>
             <ul style="padding-left: 20px;">
-                <li><b>Alertas urgentes:</b> Si hay pólizas vencidas pendientes de renovación, verás una alerta con acceso directo a Pólizas.</li>
+                <li><b>Pendientes desde el inicio:</b> Los créditos colocados aparecen en el dashboard y en el inicio móvil.</li>
+                <li><b>Proceso desde el celular:</b> Genera, carga y desembolsa desde un panel adaptado a móvil.</li>
             </ul>
             <p style="margin-top: 15px; font-style: italic; color: #888;">Gracias por confiar en INKA CORP y LP Solutions.</p>
         </div>

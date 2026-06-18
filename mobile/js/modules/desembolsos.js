@@ -6,6 +6,7 @@ let creditosData = [];
 let selectedFilesForDesembolsoMobile = {};
 let requiredSlotsForDesembolsoMobile = [];
 let solicitudDocsEnginePromise = null;
+let emergenteDocsEnginePromise = null;
 
 function ensureMobileDocGeneratorShims() {
     // En móvil auth.js expone getCurrentUser async; para el generador de documentos
@@ -342,6 +343,204 @@ async function ensureSolicitudDocsEngineMobile() {
     await solicitudDocsEnginePromise;
 }
 
+async function ensureEmergenteDocsEngineMobile() {
+    ensureMobileDocGeneratorShims();
+    await ensureAsesorProfileForDocsMobile();
+
+    const cssId = 'emergente-docs-css-mobile-bridge';
+    if (!document.getElementById(cssId)) {
+        const css = document.createElement('link');
+        css.id = cssId;
+        css.rel = 'stylesheet';
+        css.href = `../css/creditos_emergentes.css?v=${encodeURIComponent(window.APP_VERSION || '31.5.5')}`;
+        document.head.appendChild(css);
+    }
+
+    const bridgeId = 'emergente-docs-mobile-layout';
+    if (!document.getElementById(bridgeId)) {
+        const style = document.createElement('style');
+        style.id = bridgeId;
+        style.textContent = `
+            #modal-desembolso-emergente-docs.modal {
+                position: fixed;
+                inset: 0;
+                z-index: 2200;
+                display: flex;
+                align-items: stretch;
+                justify-content: stretch;
+                padding: 0;
+            }
+
+            #modal-desembolso-emergente-docs .modal-backdrop {
+                position: absolute;
+                inset: 0;
+                background: rgba(2, 6, 23, 0.9);
+            }
+
+            #modal-desembolso-emergente-docs .modal-card {
+                position: relative;
+                z-index: 1;
+                display: flex;
+                flex-direction: column;
+                width: 100vw;
+                height: 100dvh;
+                max-width: none;
+                max-height: none;
+                overflow: hidden;
+                border: 0;
+                border-radius: 0;
+                background: #172230;
+                color: #f8fafc;
+                box-shadow: none;
+            }
+
+            #modal-desembolso-emergente-docs .modal-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex: 0 0 auto;
+                min-height: 62px;
+                padding: calc(0.8rem + env(safe-area-inset-top)) 1rem 0.8rem;
+                border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+            }
+
+            #modal-desembolso-emergente-docs .modal-header h3 {
+                min-width: 0;
+                margin: 0;
+                padding-right: 0.75rem;
+                color: #f8fafc;
+                font-size: 1.02rem;
+                line-height: 1.25;
+            }
+
+            #modal-desembolso-emergente-docs .modal-close {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex: 0 0 40px;
+                width: 40px;
+                height: 40px;
+                border: 1px solid rgba(148, 163, 184, 0.25);
+                border-radius: 10px;
+                background: rgba(15, 23, 42, 0.55);
+                color: #e2e8f0;
+            }
+
+            #modal-desembolso-emergente-docs .modal-body {
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                padding: 1rem;
+                padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+            }
+
+            #modal-desembolso-emergente-docs .emergente-docs-summary,
+            #modal-desembolso-emergente-docs .emergente-docs-controls,
+            #modal-desembolso-emergente-docs .emergente-docs-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #modal-desembolso-emergente-docs .emergente-doc-slot {
+                padding: 0.9rem;
+                border-radius: 12px;
+                background: #101a28;
+            }
+
+            #modal-desembolso-emergente-docs .emergente-doc-actions {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+
+            #modal-desembolso-emergente-docs .emergente-action-btn,
+            #modal-desembolso-emergente-docs .emergente-upload-btn {
+                width: 100%;
+                min-height: 46px;
+                border-radius: 10px;
+                font-size: 0.82rem;
+            }
+
+            #modal-desembolso-emergente-docs .modal-actions {
+                position: sticky;
+                bottom: -1rem;
+                z-index: 2;
+                display: grid;
+                grid-template-columns: minmax(92px, 0.7fr) minmax(0, 1.5fr);
+                gap: 0.65rem;
+                margin: 0 -1rem -1rem;
+                padding: 0.9rem 1rem calc(0.9rem + env(safe-area-inset-bottom));
+                border-top: 1px solid rgba(148, 163, 184, 0.22);
+                background: #172230;
+            }
+
+            #modal-desembolso-emergente-docs .modal-actions .btn {
+                min-height: 50px;
+                border: 0;
+                border-radius: 11px;
+                font-weight: 800;
+            }
+
+            #modal-desembolso-emergente-docs .modal-actions .btn-secondary {
+                background: #334155;
+                color: #f8fafc;
+            }
+
+            #modal-desembolso-emergente-docs .modal-actions .btn-primary {
+                background: #0b6b42;
+                color: #fff;
+            }
+
+            #modal-desembolso-emergente-docs .modal-actions .btn-primary:disabled {
+                background: #334155;
+                color: #94a3b8;
+                opacity: 0.72;
+            }
+
+            @media (max-width: 390px) {
+                #modal-desembolso-emergente-docs .emergente-doc-actions {
+                    grid-template-columns: 1fr;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    if (typeof window.desembolsarCreditoEmergente === 'function') return;
+
+    if (!emergenteDocsEnginePromise) {
+        emergenteDocsEnginePromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = `../js/modules/creditos_emergentes.js?v=${encodeURIComponent(window.APP_VERSION || '31.5.5')}`;
+            script.onload = () => {
+                if (typeof window.desembolsarCreditoEmergente === 'function') {
+                    resolve();
+                } else {
+                    reject(new Error('No se pudo inicializar el flujo de créditos emergentes.'));
+                }
+            };
+            script.onerror = () => reject(new Error('No se pudo cargar el módulo de créditos emergentes.'));
+            document.body.appendChild(script);
+        });
+    }
+
+    await emergenteDocsEnginePromise;
+}
+
+async function abrirDocumentosEmergenteMobile(idEmergente) {
+    try {
+        await ensureEmergenteDocsEngineMobile();
+        await window.desembolsarCreditoEmergente(idEmergente);
+    } catch (error) {
+        console.error('Error abriendo documentos emergentes en móvil:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'No se pudo abrir',
+            text: error.message || 'No se pudo cargar el flujo de documentos.',
+            confirmButtonColor: '#0B4E32'
+        });
+    }
+}
+
 async function initDesembolsosModule() {
     // Si no se ha verificado el estado de la caja, intentamos hacerlo rápido
     // O si ya está verificado, forzamos la actualización de la UI del alert inyectado
@@ -371,7 +570,11 @@ async function loadDesembolsosPendientes() {
 
     try {
         const supabase = window.getSupabaseClient();
-        const [{ data: creditosPendientes, error }, polizasPendientes] = await Promise.all([
+        const [
+            { data: creditosPendientes, error },
+            { data: emergentesPendientes, error: emergentesError },
+            polizasPendientes
+        ] = await Promise.all([
             supabase
             .from('ic_creditos')
             .select(`
@@ -387,12 +590,34 @@ async function loadDesembolsosPendientes() {
             `)
             .eq('estado_credito', 'PENDIENTE')
                 .order('created_at', { ascending: false }),
+            supabase
+                .from('ic_creditos_emergentes')
+                .select(`
+                    id_emergente,
+                    codigo_emergente,
+                    id_socio,
+                    monto_solicitado,
+                    monto_aprobado,
+                    monto_total,
+                    plazo_valor,
+                    plazo_unidad,
+                    tasa_interes_porcentaje,
+                    fecha_vencimiento,
+                    created_at
+                `)
+                .eq('estado', 'COLOCADO')
+                .order('created_at', { ascending: false }),
             loadPolizasPendientesMobile()
         ]);
 
         if (error) throw error;
+        if (emergentesError) throw emergentesError;
 
-        if (!creditosPendientes || creditosPendientes.length === 0) {
+        const creditosNormales = creditosPendientes || [];
+        const creditosEmergentes = emergentesPendientes || [];
+        const desembolsosTotal = creditosNormales.length + creditosEmergentes.length;
+
+        if (desembolsosTotal === 0) {
             container.innerHTML = '';
             desembolsosSection?.classList.add('hidden');
             if (desembolsosSection) desembolsosSection.style.display = 'none';
@@ -405,28 +630,37 @@ async function loadDesembolsosPendientes() {
             desembolsosSection?.classList.remove('hidden');
             if (desembolsosSection) desembolsosSection.style.display = '';
             if (countBadge) {
-                countBadge.textContent = creditosPendientes.length;
+                countBadge.textContent = desembolsosTotal;
                 countBadge.classList.remove('hidden');
                 countBadge.style.display = '';
 
                 const alertBadge = document.querySelector('.mobile-caja-status-alert .alert-badge');
-                if (alertBadge) alertBadge.textContent = creditosPendientes.length;
+                if (alertBadge) alertBadge.textContent = desembolsosTotal;
             }
 
-            const socioIds = [...new Set(creditosPendientes.map(c => c.id_socio))];
-            const { data: socios } = await supabase
-                .from('ic_socios')
-                .select('idsocio, nombre, cedula, whatsapp')
-                .in('idsocio', socioIds);
+            const socioIds = [...new Set(
+                [...creditosNormales, ...creditosEmergentes]
+                    .map(c => c.id_socio)
+                    .filter(Boolean)
+            )];
+            let socios = [];
+            if (socioIds.length > 0) {
+                const { data: sociosData, error: sociosError } = await supabase
+                    .from('ic_socios')
+                    .select('idsocio, nombre, cedula, whatsapp')
+                    .in('idsocio', socioIds);
+                if (sociosError) throw sociosError;
+                socios = sociosData || [];
+            }
 
-            creditosPendientes.forEach(credito => {
+            [...creditosNormales, ...creditosEmergentes].forEach(credito => {
                 credito.socio = socios?.find(s => s.idsocio === credito.id_socio) || {};
             });
 
-            creditosData = creditosPendientes;
-            if (countBadge) countBadge.textContent = creditosPendientes.length;
+            creditosData = creditosNormales;
+            if (countBadge) countBadge.textContent = desembolsosTotal;
 
-            container.innerHTML = creditosPendientes.map(credito => {
+            const normalesHtml = creditosNormales.map(credito => {
                 const socio = credito.socio || {};
                 const nombreCompleto = socio.nombre || 'Sin nombre';
                 const capitalFormatted = parseFloat(credito.capital).toLocaleString('es-EC', { minimumFractionDigits: 2 });
@@ -473,11 +707,62 @@ async function loadDesembolsosPendientes() {
                     </div>
                 `;
             }).join('');
+
+            const emergentesHtml = creditosEmergentes.map(credito => {
+                const socio = credito.socio || {};
+                const capital = Number(credito.monto_aprobado || credito.monto_solicitado || 0);
+                const total = Number(credito.monto_total || capital);
+                const unidad = credito.plazo_unidad === 'MESES' ? 'meses' : 'días';
+                const tasa = Number(credito.tasa_interes_porcentaje || 0).toLocaleString('es-EC', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+
+                return `
+                    <div class="desembolso-card desembolso-card-emergente" data-id="${credito.id_emergente}">
+                        <div class="desembolso-header">
+                            <div class="desembolso-socio">
+                                <div class="desembolso-tipo"><i class="fas fa-bolt"></i> Emergente</div>
+                                <div class="desembolso-nombre">${socio.nombre || 'Sin nombre'}</div>
+                                <div class="desembolso-cedula">${socio.cedula || '-'} | ${credito.codigo_emergente}</div>
+                            </div>
+                            <div class="desembolso-monto">
+                                <div class="desembolso-monto-valor">$${capital.toLocaleString('es-EC', { minimumFractionDigits: 2 })}</div>
+                                <div class="desembolso-monto-label">A desembolsar</div>
+                            </div>
+                        </div>
+                        <div class="desembolso-info">
+                            <div class="desembolso-info-item">
+                                <span class="desembolso-info-label">Plazo</span>
+                                <span class="desembolso-info-value">${credito.plazo_valor} ${unidad}</span>
+                            </div>
+                            <div class="desembolso-info-item">
+                                <span class="desembolso-info-label">Total vence</span>
+                                <span class="desembolso-info-value">$${total.toLocaleString('es-EC', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div class="desembolso-info-item">
+                                <span class="desembolso-info-label">Tasa mensual</span>
+                                <span class="desembolso-info-value">${tasa}%</span>
+                            </div>
+                            <div class="desembolso-info-item">
+                                <span class="desembolso-info-label">Vence</span>
+                                <span class="desembolso-info-value">${credito.fecha_vencimiento || 'Por definir'}</span>
+                            </div>
+                        </div>
+                        <div class="desembolso-actions">
+                            <button class="desembolso-btn desembolso-btn-action desembolso-btn-emergente" onclick="abrirDocumentosEmergenteMobile('${credito.id_emergente}')">
+                                <i class="fas fa-file-signature"></i> Generar, cargar y desembolsar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = normalesHtml + emergentesHtml;
         }
 
         renderPolizasPendientesMobile(polizasPendientes);
 
-        const desembolsosTotal = creditosPendientes?.length || 0;
         const polizasTotal = polizasPendientes?.length || 0;
         const totalPendientes = desembolsosTotal + polizasTotal;
 
@@ -1296,6 +1581,7 @@ window.removeFileFromSlotMobile = removeFileFromSlotMobile;
 window.ejecutarDesembolsoConArchivosMobile = ejecutarDesembolsoConArchivosMobile;
 window.generarDocumentosCreditoMobile = generarDocumentosCreditoMobile;
 window.desembolsarCreditoMobile = desembolsarCreditoMobile;
+window.abrirDocumentosEmergenteMobile = abrirDocumentosEmergenteMobile;
 window.loadDesembolsosPendientes = loadDesembolsosPendientes;
 window.openPolizaSignedUploadMobile = openPolizaSignedUploadMobile;
 window.closePolizaSignedUploadModalMobile = closePolizaSignedUploadModalMobile;

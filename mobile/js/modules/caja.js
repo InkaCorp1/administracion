@@ -6,6 +6,17 @@
 const CAJA_TABLE = 'ic_caja_aperturas';
 const MOVIMIENTOS_TABLE = 'ic_caja_movimientos';
 const TRANSFERENCIAS_TABLE = 'ic_caja_transferencias';
+const PENDING_MANUAL_MOVEMENTS_TABLE = 'ic_caja_movimientos_pendientes';
+const CAJA_DIRECT_URL = 'https://administracion.inkacorp.net/?view=caja';
+const TEXT_WEBHOOK_URL = 'https://lpn8nwebhook.luispintasolutions.com/webhook/mensajería_texto';
+const CAJA_PROOF_COMPRESSION = {
+    maxWidth: 1000,
+    maxHeight: 1000,
+    quality: 0.64,
+    minQuality: 0.4,
+    targetMaxBytes: 360 * 1024,
+    mimeType: 'image/webp'
+};
 
 let currentCajaSession = null;
 let currentBalance = 0;
@@ -13,6 +24,8 @@ let ingresosTurno = 0;
 let egresosTurno = 0;
 let transferPollingInterval = null;
 let currentPendingTransfer = null;
+let currentCajaProofSolicitudId = null;
+let currentCajaProofFile = null;
 
 /**
  * Inicialización del módulo - Requerido por mobile-app.js
@@ -23,6 +36,7 @@ async function initCajaModule() {
         setupDateFilters();
         await checkCajaStatus();
         await loadCajaData();
+        await loadCajaPendingManualRequestsMobile();
         
         // Iniciar polling de transferencias entrantes
         startTransferPolling();
@@ -161,6 +175,188 @@ async function loadCajaData() {
     } catch (error) {
         console.error("[MOBILE-CAJA] Error cargando movimientos:", error);
     }
+
+    await loadCajaPendingManualRequestsMobile();
+}
+
+function escapeCajaHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function delayCajaNotification(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function randomCajaDelay() {
+    return 5000 + Math.floor(Math.random() * 3001);
+}
+
+async function sendCajaTextNotificationMobile(whatsapp, message) {
+    const cleanWhatsapp = String(whatsapp || '').trim();
+    if (!cleanWhatsapp) return;
+
+    const response = await fetch(TEXT_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ whatsapp: cleanWhatsapp, message })
+    });
+
+    if (!response.ok) throw new Error(`Webhook respondió ${response.status}`);
+}
+
+async function notifyPrincipalUsersForManualMovementMobile(solicitud) {
+    const sb = getSupabaseClient();
+    if (!sb || !solicitud) return;
+
+    try {
+        const { data: principals, error } = await sb
+            .from('ic_caja_aprobadores_principales')
+            .select('id, nombre, whatsapp');
+
+        if (error) throw error;
+
+        const targets = (principals || []).filter(user => String(user.whatsapp || '').trim());
+        if (!targets.length) return;
+
+        const solicitante = window.currentUser?.nombre || window.currentUser?.email || 'Usuario del sistema';
+        const tipo = solicitud.tipo_movimiento === 'INGRESO' ? 'ingreso' : 'egreso';
+        const message = [
+            `INKA CORP - Solicitud de ${tipo} manual en caja`,
+            '',
+            `Solicitante: ${solicitante}`,
+            `Monto: ${formatCurrency(solicitud.monto)}`,
+            `Motivo: ${solicitud.descripcion || 'Sin motivo registrado'}`,
+            '',
+            'Por favor revisa y aprueba o rechaza esta solicitud antes de que afecte la caja.',
+            `Abrir caja: ${CAJA_DIRECT_URL}`
+        ].join('\n');
+
+        for (let i = 0; i < targets.length; i++) {
+            if (i > 0) await delayCajaNotification(randomCajaDelay());
+            try {
+                await sendCajaTextNotificationMobile(targets[i].whatsapp, message);
+            } catch (err) {
+                console.warn('[MOBILE-CAJA] No se pudo notificar al principal:', targets[i].id, err);
+            }
+        }
+
+        await sb
+            .from(PENDING_MANUAL_MOVEMENTS_TABLE)
+            .update({
+                webhook_notificado: true,
+                webhook_notificado_at: new Date().toISOString()
+            })
+            .eq('id_solicitud', solicitud.id_solicitud);
+    } catch (error) {
+        console.warn('[MOBILE-CAJA] Error notificando aprobación manual:', error);
+    }
+}
+
+async function loadCajaPendingManualRequestsMobile() {
+    const sb = getSupabaseClient();
+    const section = document.getElementById('caja-aprobaciones-mobile');
+    if (!sb || !section) return;
+
+    try {
+        const currentUser = window.currentUser || {};
+        const isPrincipal = currentUser.principal === true;
+        const { data: solicitudes, error } = await sb.rpc('fn_listar_solicitudes_manuales_caja');
+        if (error) throw error;
+
+        renderCajaPendingManualRequestsMobile(solicitudes || [], {}, isPrincipal);
+    } catch (error) {
+        console.error('[MOBILE-CAJA] Error cargando solicitudes pendientes:', error);
+    }
+}
+
+function renderCajaPendingManualRequestsMobile(solicitudes, usersMap, isPrincipal) {
+    const section = document.getElementById('caja-aprobaciones-mobile');
+    const list = document.getElementById('caja-aprobaciones-list-mobile');
+    const count = document.getElementById('caja-aprobaciones-count-mobile');
+    const modal = document.getElementById('modal-caja-aprobaciones-mobile');
+    const modalList = document.getElementById('caja-aprobaciones-modal-list-mobile');
+    if (!section || !list || !count) return;
+
+    if (!solicitudes.length) {
+        section.classList.add('hidden');
+        list.innerHTML = '';
+        count.textContent = '0';
+        if (modal) modal.classList.remove('active');
+        if (modalList) modalList.innerHTML = '';
+        releaseMobileCajaScrollIfSafe();
+        return;
+    }
+
+    section.classList.remove('hidden');
+    count.textContent = String(solicitudes.length);
+    list.innerHTML = renderCajaPendingManualRequestsListMobile(solicitudes, usersMap, isPrincipal, false);
+
+    const pendingForPrincipal = solicitudes.filter(item => item.estado === 'PENDIENTE');
+    if (isPrincipal && pendingForPrincipal.length && modal && modalList) {
+        modalList.innerHTML = renderCajaPendingManualRequestsListMobile(pendingForPrincipal, usersMap, isPrincipal, true);
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    } else if (modal) {
+        modal.classList.remove('active');
+        releaseMobileCajaScrollIfSafe();
+    }
+}
+
+function releaseMobileCajaScrollIfSafe() {
+    setTimeout(() => {
+        const hasActiveLiteModal = !!document.querySelector('.modal-overlay.active');
+        const hasActiveSwal = !!document.querySelector('.swal2-container.swal2-shown');
+        if (!hasActiveLiteModal && !hasActiveSwal) {
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.left = '';
+            document.body.style.width = '';
+        }
+    }, 60);
+}
+
+function renderCajaPendingManualRequestsListMobile(solicitudes, usersMap, isPrincipal, forceApprovalActions = false) {
+    return solicitudes.map(item => {
+        const user = usersMap[item.id_solicitante] || {};
+        const userName = escapeCajaHtml(item.solicitante_nombre || user.nombre || user.email || 'Usuario no identificado');
+        const isIngreso = item.tipo_movimiento === 'INGRESO';
+        const fecha = item.fecha_solicitud ? new Date(item.fecha_solicitud) : null;
+        const canApprove = isPrincipal && item.estado === 'PENDIENTE' && forceApprovalActions;
+        const canUploadProof = item.estado === 'APROBADO' && !item.id_movimiento && (item.id_solicitante === window.currentUser?.id || isPrincipal);
+        const statusLabel = item.estado === 'APROBADO' ? 'Aprobado, falta comprobante' : 'Pendiente de aprobación';
+
+        return `
+            <div class="mobile-approval-card ${isIngreso ? 'income' : 'expense'}">
+                <div class="approval-mobile-top">
+                    <span class="approval-mobile-type"><i class="fas ${isIngreso ? 'fa-arrow-down' : 'fa-arrow-up'}"></i> ${escapeCajaHtml(item.tipo_movimiento)}</span>
+                    <strong>${formatCurrency(item.monto)}</strong>
+                </div>
+                <p>${escapeCajaHtml(item.descripcion || 'Sin motivo registrado')}</p>
+                <div class="approval-mobile-meta">
+                    <span class="${item.estado === 'APROBADO' ? 'approved' : 'pending'}">${statusLabel}</span>
+                    <span>${userName}</span>
+                    <span>${fecha ? fecha.toLocaleString() : 'Sin fecha'}</span>
+                </div>
+                <div class="approval-mobile-actions">
+                    ${canApprove ? `
+                        <button class="lite-btn success" onclick="approveManualMovementRequestMobile('${item.id_solicitud}')"><i class="fas fa-check"></i> Aprobar</button>
+                        <button class="lite-btn danger" onclick="rejectManualMovementRequestMobile('${item.id_solicitud}')"><i class="fas fa-times"></i> Rechazar</button>
+                    ` : canUploadProof ? `
+                        <button class="lite-btn primary" onclick="uploadApprovedManualMovementProofMobile('${item.id_solicitud}')"><i class="fas fa-upload"></i> Subir comprobante</button>
+                    ` : `
+                        <span class="approval-mobile-waiting"><i class="fas fa-hourglass-half"></i> En revisión</span>
+                    `}
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function processMovimientos(movimientos) {
@@ -284,11 +480,7 @@ function showMovimientoManualModal(tipo) {
     if (title) title.innerHTML = tipo === 'INGRESO' 
         ? '<i class="fas fa-plus-circle text-success"></i> Nuevo Ingreso' 
         : '<i class="fas fa-minus-circle text-danger"></i> Nuevo Egreso';
-    
-    // Limpiar preview
-    document.getElementById('preview-box').classList.add('hidden');
-    document.getElementById('preview-img').src = '';
-    
+
     openLiteModal('modal-movimiento-manual');
 }
 
@@ -302,47 +494,220 @@ async function handleMovimientoManual(e) {
     const tipo = formData.get('tipo_movimiento');
     const desc = formData.get('descripcion');
     const metodo = formData.get('metodo_pago');
-    const cameraFile = document.getElementById('manual-comprobante-camera')?.files[0];
-    const galleryFile = document.getElementById('manual-comprobante-gallery')?.files[0];
-    const file = cameraFile || galleryFile;
 
     const { data: { session } } = await sb.auth.getSession();
 
     try {
-        let comprobanteUrl = null;
-        if (file) {
-            // Bucket unificado inkacorp y subcarpeta detallada
-            const uploadRes = await window.uploadFileToStorage(file, 'caja/movimientos', session.user.id, 'inkacorp');
-            
-            if (!uploadRes.success) {
-                throw new Error("No se pudo subir el comprobante: " + uploadRes.error);
-            }
-            
-            comprobanteUrl = uploadRes.url;
-        }
-
-        const { error } = await sb
-            .from(MOVIMIENTOS_TABLE)
+        const { data: solicitud, error } = await sb
+            .from(PENDING_MANUAL_MOVEMENTS_TABLE)
             .insert([{
-                id_apertura: currentCajaSession.id_apertura,
+                id_solicitante: session.user.id,
                 tipo_movimiento: tipo,
                 monto: monto,
                 descripcion: desc,
                 metodo_pago: metodo,
-                comprobante_url: comprobanteUrl,
-                categoria: tipo === 'INGRESO' ? 'INCREMENTO_EXTERNO' : 'RETIRO_EXTERNO',
-                id_usuario: session.user.id,
-                fecha_movimiento: new Date().toISOString()
-            }]);
+                categoria: tipo === 'INGRESO' ? 'INCREMENTO_EXTERNO' : 'RETIRO_EXTERNO'
+            }])
+            .select()
+            .single();
 
         if (error) throw error;
 
         closeLiteModal('modal-movimiento-manual');
         e.target.reset();
-        await loadCajaData();
-        if (window.Swal) Swal.fire("Registrado", `${tipo} guardado con éxito`, "success");
+        await loadCajaPendingManualRequestsMobile();
+        await notifyPrincipalUsersForManualMovementMobile(solicitud);
+        if (window.Swal) Swal.fire("Solicitud enviada", `${tipo} pendiente de aprobación principal`, "success");
     } catch (e) {
         if (window.Swal) Swal.fire("Error", e.message, "error");
+    }
+}
+
+async function resolveManualMovementRequestMobile(idSolicitud, approve, observacion = null) {
+    const sb = getSupabaseClient();
+    if (!sb || !idSolicitud) return;
+
+    try {
+        if (window.Swal) {
+            Swal.fire({
+                title: approve ? 'Aprobando...' : 'Rechazando...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
+        const { error } = await sb.rpc('fn_resolver_movimiento_manual_caja', {
+            p_id_solicitud: idSolicitud,
+            p_aprobar: approve,
+            p_observacion: observacion
+        });
+
+        if (error) throw error;
+
+        await loadCajaPendingManualRequestsMobile();
+        await loadCajaData();
+
+        if (window.Swal) {
+            await Swal.fire(
+                approve ? 'Movimiento aprobado' : 'Solicitud rechazada',
+                approve ? 'El solicitante ya puede subir el comprobante final.' : 'La solicitud quedó rechazada.',
+                'success'
+            );
+            releaseMobileCajaScrollIfSafe();
+        }
+    } catch (error) {
+        console.error('[MOBILE-CAJA] Error resolviendo solicitud:', error);
+        if (window.Swal) Swal.fire('No se pudo procesar', error.message || 'Intenta nuevamente.', 'error');
+    }
+}
+
+async function approveManualMovementRequestMobile(idSolicitud) {
+    const result = await Swal.fire({
+        icon: 'question',
+        title: 'Aprobar movimiento',
+        text: 'La caja se moverá recién cuando el solicitante suba el comprobante.',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, aprobar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+        await resolveManualMovementRequestMobile(idSolicitud, true, null);
+    }
+}
+
+async function rejectManualMovementRequestMobile(idSolicitud) {
+    const result = await Swal.fire({
+        icon: 'warning',
+        title: 'Rechazar solicitud',
+        input: 'textarea',
+        inputLabel: 'Motivo u observación',
+        inputPlaceholder: 'Indica brevemente por qué se rechaza...',
+        inputAttributes: { maxlength: 300 },
+        showCancelButton: true,
+        confirmButtonText: 'Rechazar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#334155'
+    });
+
+    if (result.isConfirmed) {
+        await resolveManualMovementRequestMobile(idSolicitud, false, result.value || null);
+    }
+}
+
+async function uploadApprovedManualMovementProofMobile(idSolicitud) {
+    currentCajaProofSolicitudId = idSolicitud;
+    currentCajaProofFile = null;
+
+    const preview = document.getElementById('caja-proof-preview-mobile');
+    const note = document.getElementById('caja-proof-compression-note-mobile');
+    const camera = document.getElementById('caja-proof-camera-mobile');
+    const gallery = document.getElementById('caja-proof-gallery-mobile');
+
+    if (camera) camera.value = '';
+    if (gallery) gallery.value = '';
+    if (preview) {
+        preview.innerHTML = '';
+        preview.classList.add('hidden');
+    }
+    if (note) {
+        note.innerHTML = '';
+        note.classList.add('hidden');
+    }
+    openLiteModal('modal-caja-proof-upload-mobile');
+}
+
+function closeCajaProofUploadModalMobile() {
+    closeLiteModal('modal-caja-proof-upload-mobile');
+    currentCajaProofSolicitudId = null;
+    currentCajaProofFile = null;
+    releaseMobileCajaScrollIfSafe();
+}
+
+function handleCajaProofFileSelectedMobile(event) {
+    const file = event.target.files?.[0];
+    if (file) setCajaProofFileMobile(file);
+}
+
+function formatCajaFileSizeMobile(bytes = 0) {
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+function setCajaProofFileMobile(file) {
+    currentCajaProofFile = file;
+    const preview = document.getElementById('caja-proof-preview-mobile');
+    const note = document.getElementById('caja-proof-compression-note-mobile');
+    if (!preview) return;
+
+    const ext = (file.name || '').split('.').pop()?.toLowerCase();
+    const isPdf = file.type === 'application/pdf' || ext === 'pdf';
+    const isHeic = ['heic', 'heif'].includes(ext) || ['image/heic', 'image/heif'].includes(file.type);
+
+    preview.classList.remove('hidden');
+    preview.innerHTML = `
+        <div class="proof-preview-icon-mobile ${isPdf ? 'pdf' : ''}">
+            <i class="fas ${isPdf ? 'fa-file-pdf' : 'fa-image'}"></i>
+        </div>
+        <div>
+            <strong>${escapeCajaHtml(file.name || 'comprobante')}</strong>
+            <span>${formatCajaFileSizeMobile(file.size)}</span>
+        </div>
+    `;
+
+    if (note) {
+        note.classList.remove('hidden');
+        note.innerHTML = isPdf
+            ? '<i class="fas fa-info-circle"></i> Los PDF se suben sin compresión. Para menor peso, toma una foto del comprobante.'
+            : `<i class="fas fa-compress-alt"></i> ${isHeic ? 'Archivo HEIC detectado: se intentará convertir y comprimir.' : 'La imagen se comprimirá antes de subir.'}`;
+    }
+}
+
+async function submitCajaProofUploadMobile() {
+    const sb = getSupabaseClient();
+    if (!sb || !currentCajaProofSolicitudId) return;
+
+    if (!currentCajaProofFile) {
+        Swal.fire('Selecciona un comprobante', 'Toma una foto o carga una imagen desde galería.', 'warning');
+        return;
+    }
+
+    try {
+        Swal.fire({
+            title: 'Registrando...',
+            text: 'Optimizando comprobante y actualizando caja.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const uploadRes = await window.uploadFileToStorage(
+            currentCajaProofFile,
+            'caja/manuales',
+            window.currentUser?.id || 'mobile',
+            'inkacorp',
+            CAJA_PROOF_COMPRESSION
+        );
+        if (!uploadRes.success) {
+            throw new Error(uploadRes.error || 'No se pudo subir el comprobante.');
+        }
+
+        const { error } = await sb.rpc('fn_registrar_movimiento_manual_aprobado', {
+            p_id_solicitud: currentCajaProofSolicitudId,
+            p_comprobante_url: uploadRes.url
+        });
+
+        if (error) throw error;
+
+        closeCajaProofUploadModalMobile();
+        await loadCajaPendingManualRequestsMobile();
+        await loadCajaData();
+
+        await Swal.fire('Movimiento registrado', 'La caja ya refleja el movimiento con su comprobante.', 'success');
+        releaseMobileCajaScrollIfSafe();
+    } catch (error) {
+        console.error('[MOBILE-CAJA] Error registrando comprobante:', error);
+        Swal.fire('No se pudo registrar', error.message || 'Intenta nuevamente.', 'error');
     }
 }
 
@@ -638,6 +1003,12 @@ window.showAperturaModal = showAperturaModal;
 window.handleAperturaCaja = handleAperturaCaja;
 window.showMovimientoManualModal = showMovimientoManualModal;
 window.handleMovimientoManual = handleMovimientoManual;
+window.approveManualMovementRequestMobile = approveManualMovementRequestMobile;
+window.rejectManualMovementRequestMobile = rejectManualMovementRequestMobile;
+window.uploadApprovedManualMovementProofMobile = uploadApprovedManualMovementProofMobile;
+window.closeCajaProofUploadModalMobile = closeCajaProofUploadModalMobile;
+window.handleCajaProofFileSelectedMobile = handleCajaProofFileSelectedMobile;
+window.submitCajaProofUploadMobile = submitCajaProofUploadMobile;
 window.showCierreModal = showCierreModal;
 window.handleCierreCaja = handleCierreCaja;
 window.previewMobileImage = previewMobileImage;
