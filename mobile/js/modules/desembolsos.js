@@ -3,10 +3,24 @@
  */
 
 let creditosData = [];
+let creditosPreferencialesData = [];
 let selectedFilesForDesembolsoMobile = {};
 let requiredSlotsForDesembolsoMobile = [];
 let solicitudDocsEnginePromise = null;
 let emergenteDocsEnginePromise = null;
+let selectedPreferentialDisbursementFileMobile = null;
+let currentPreferentialDisbursementMobile = null;
+
+const PREF_DISBURSEMENT_MEDIA_WEBHOOK_MOBILE = 'https://api.luispintasolutions.com/message/sendMedia/secreGladys';
+const PREF_DISBURSEMENT_API_KEY_MOBILE = 'ahsnjdhd4';
+const PREF_DISBURSEMENT_COMPRESSION_MOBILE = {
+    maxWidth: 1100,
+    maxHeight: 1100,
+    quality: 0.68,
+    minQuality: 0.42,
+    targetMaxBytes: 420 * 1024,
+    mimeType: 'image/webp'
+};
 
 function ensureMobileDocGeneratorShims() {
     // En móvil auth.js expone getCurrentUser async; para el generador de documentos
@@ -573,6 +587,7 @@ async function loadDesembolsosPendientes() {
         const [
             { data: creditosPendientes, error },
             { data: emergentesPendientes, error: emergentesError },
+            { data: preferencialesPendientes, error: preferencialesError },
             polizasPendientes
         ] = await Promise.all([
             supabase
@@ -607,15 +622,37 @@ async function loadDesembolsosPendientes() {
                 `)
                 .eq('estado', 'COLOCADO')
                 .order('created_at', { ascending: false }),
+            supabase
+                .from('ic_preferencial')
+                .select(`
+                    idcredito,
+                    idsocio,
+                    tipo,
+                    fechasolicitud,
+                    fechaaprobacion,
+                    porcentaje,
+                    motivo,
+                    monto,
+                    montofinal,
+                    nombrebeneficiario,
+                    whatsappbeneficiario,
+                    idmensajejose,
+                    idmensajehenry,
+                    created_at
+                `)
+                .ilike('estado', 'APROBADO')
+                .order('created_at', { ascending: false }),
             loadPolizasPendientesMobile()
         ]);
 
         if (error) throw error;
         if (emergentesError) throw emergentesError;
+        if (preferencialesError) throw preferencialesError;
 
         const creditosNormales = creditosPendientes || [];
         const creditosEmergentes = emergentesPendientes || [];
-        const desembolsosTotal = creditosNormales.length + creditosEmergentes.length;
+        const creditosPreferenciales = preferencialesPendientes || [];
+        const desembolsosTotal = creditosNormales.length + creditosEmergentes.length + creditosPreferenciales.length;
 
         if (desembolsosTotal === 0) {
             container.innerHTML = '';
@@ -639,8 +676,8 @@ async function loadDesembolsosPendientes() {
             }
 
             const socioIds = [...new Set(
-                [...creditosNormales, ...creditosEmergentes]
-                    .map(c => c.id_socio)
+                [...creditosNormales, ...creditosEmergentes, ...creditosPreferenciales]
+                    .map(c => c.id_socio || c.idsocio)
                     .filter(Boolean)
             )];
             let socios = [];
@@ -653,11 +690,12 @@ async function loadDesembolsosPendientes() {
                 socios = sociosData || [];
             }
 
-            [...creditosNormales, ...creditosEmergentes].forEach(credito => {
-                credito.socio = socios?.find(s => s.idsocio === credito.id_socio) || {};
+            [...creditosNormales, ...creditosEmergentes, ...creditosPreferenciales].forEach(credito => {
+                credito.socio = socios?.find(s => s.idsocio === (credito.id_socio || credito.idsocio)) || {};
             });
 
             creditosData = creditosNormales;
+            creditosPreferencialesData = creditosPreferenciales;
             if (countBadge) countBadge.textContent = desembolsosTotal;
 
             const normalesHtml = creditosNormales.map(credito => {
@@ -758,7 +796,9 @@ async function loadDesembolsosPendientes() {
                 `;
             }).join('');
 
-            container.innerHTML = normalesHtml + emergentesHtml;
+            const preferencialesHtml = creditosPreferenciales.map(credito => renderPreferencialPendienteMobileCard(credito)).join('');
+
+            container.innerHTML = normalesHtml + emergentesHtml + preferencialesHtml;
         }
 
         renderPolizasPendientesMobile(polizasPendientes);
@@ -840,6 +880,405 @@ function updateMobileHomeMainHeader({ mainHeader, mainIcon, mainTitle, total, de
 
     if (mainIcon) mainIcon.className = `fas ${icon}`;
     if (mainTitle) mainTitle.textContent = title;
+}
+
+function renderPreferencialPendienteMobileCard(credito) {
+    const socio = credito.socio || {};
+    const monto = parsePreferentialMobileMoney(credito.montofinal || credito.monto || 0);
+    const tasa = String(credito.porcentaje || '0').replace('%', '');
+    const whatsapp = formatPreferentialMobileWhatsapp(credito.whatsappbeneficiario);
+    const motivo = credito.motivo || '-';
+
+    return `
+        <div class="desembolso-card desembolso-card-preferencial" data-id="${credito.idcredito}">
+            <div class="desembolso-header">
+                <div class="desembolso-socio">
+                    <div class="desembolso-tipo desembolso-tipo-preferencial"><i class="fas fa-star"></i> Preferencial</div>
+                    <div class="desembolso-nombre">${credito.nombrebeneficiario || socio.nombre || 'Beneficiario'}</div>
+                    <div class="desembolso-cedula">${socio.cedula || credito.idsocio || '-'} | ${credito.idcredito}</div>
+                </div>
+                <div class="desembolso-monto">
+                    <div class="desembolso-monto-valor">$${monto.toLocaleString('es-EC', { minimumFractionDigits: 2 })}</div>
+                    <div class="desembolso-monto-label">A desembolsar</div>
+                </div>
+            </div>
+            <div class="desembolso-info desembolso-info-preferencial">
+                <div class="desembolso-info-item">
+                    <span class="desembolso-info-label">Tipo</span>
+                    <span class="desembolso-info-value">${credito.tipo || 'Preferencial'}</span>
+                </div>
+                <div class="desembolso-info-item">
+                    <span class="desembolso-info-label">Tasa</span>
+                    <span class="desembolso-info-value">${tasa}%</span>
+                </div>
+                <div class="desembolso-info-item">
+                    <span class="desembolso-info-label">WhatsApp</span>
+                    <span class="desembolso-info-value">${whatsapp}</span>
+                </div>
+                <div class="desembolso-info-item desembolso-info-motivo">
+                    <span class="desembolso-info-label">Motivo</span>
+                    <span class="desembolso-info-value">${motivo}</span>
+                </div>
+            </div>
+            <div class="desembolso-actions">
+                <button class="desembolso-btn desembolso-btn-action" onclick="openPreferentialDisbursementMobile('${credito.idcredito}')">
+                    <i class="fas fa-camera"></i> Desembolsar
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function formatPreferentialMobileWhatsapp(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '-';
+    const digits = raw.replace(/\D/g, '');
+    if (!digits) return raw.replace('@s.whatsapp.net', '');
+    if (digits.length <= 10) return digits;
+    return `+${digits.slice(0, 3)} ${digits.slice(3)}`;
+}
+
+function openPreferentialDisbursementMobile(idcredito) {
+    if (window.validateCajaBeforeAction && !window.validateCajaBeforeAction('desembolsar crédito preferencial')) return;
+
+    const credito = creditosPreferencialesData.find(c => c.idcredito === idcredito);
+    if (!credito) {
+        Swal.fire('No encontrado', 'No se encontró el crédito preferencial seleccionado.', 'warning');
+        return;
+    }
+
+    currentPreferentialDisbursementMobile = credito;
+    selectedPreferentialDisbursementFileMobile = null;
+    const originalAmount = parsePreferentialMobileMoney(credito.monto);
+    const existing = document.getElementById('mobile-pref-disbursement-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'mobile-pref-disbursement-modal';
+    modal.className = 'mobile-poliza-modal-overlay mobile-pref-disbursement-modal';
+    modal.innerHTML = `
+        <div class="mobile-poliza-modal-backdrop" onclick="closePreferentialDisbursementMobile()"></div>
+        <div class="mobile-poliza-modal-card">
+            <div class="mobile-poliza-modal-header">
+                <div>
+                    <h3><i class="fas fa-star"></i> Desembolsar preferencial</h3>
+                    <p>${credito.nombrebeneficiario || credito.socio?.nombre || 'Beneficiario'}</p>
+                </div>
+                <button type="button" class="mobile-poliza-modal-close" onclick="closePreferentialDisbursementMobile()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-poliza-modal-body">
+                <div class="mobile-pref-summary">
+                    <div><span>Código</span><strong>${credito.idcredito}</strong></div>
+                    <div><span>Monto aprobado</span><strong>$${originalAmount.toLocaleString('es-EC', { minimumFractionDigits: 2 })}</strong></div>
+                    <div><span>Tasa</span><strong>${String(credito.porcentaje || '0').replace('%', '')}%</strong></div>
+                    <div><span>Tipo</span><strong>${credito.tipo || 'Preferencial'}</strong></div>
+                </div>
+
+                <div class="mobile-pref-field">
+                    <label>¿Hubo recargo?</label>
+                    <div class="mobile-pref-toggle">
+                        <label><input type="radio" name="mobile-pref-surcharge" value="no" checked onchange="togglePreferentialMobileSurcharge(false)"><span>No</span></label>
+                        <label><input type="radio" name="mobile-pref-surcharge" value="yes" onchange="togglePreferentialMobileSurcharge(true)"><span>Sí</span></label>
+                    </div>
+                </div>
+
+                <div class="mobile-pref-field">
+                    <label>Monto desembolsado</label>
+                    <input id="mobile-pref-final-amount" type="number" step="0.01" min="0.01" value="${originalAmount.toFixed(2)}" disabled>
+                </div>
+
+                <div class="mobile-pref-field">
+                    <label>Motivo del recargo</label>
+                    <input id="mobile-pref-surcharge-reason" type="text" placeholder="Solo si hubo recargo" disabled>
+                </div>
+
+                <p class="mobile-poliza-modal-note">Toma una foto o carga el comprobante desde galería. Se comprimirá automáticamente antes de subir.</p>
+                <div class="mobile-poliza-upload-options">
+                    <button type="button" class="mobile-poliza-upload-option camera" onclick="document.getElementById('mobile-pref-camera').click()">
+                        <i class="fas fa-camera"></i>
+                        <span>Tomar foto</span>
+                    </button>
+                    <button type="button" class="mobile-poliza-upload-option file" onclick="document.getElementById('mobile-pref-gallery').click()">
+                        <i class="fas fa-image"></i>
+                        <span>Galería</span>
+                    </button>
+                </div>
+                <input id="mobile-pref-camera" type="file" accept="image/*,.heic,.heif" capture="environment" style="display:none" onchange="handlePreferentialDisbursementFileMobile(event)">
+                <input id="mobile-pref-gallery" type="file" accept="image/*,.heic,.heif" style="display:none" onchange="handlePreferentialDisbursementFileMobile(event)">
+                <div id="mobile-pref-file-preview" class="mobile-pref-file-preview hidden"></div>
+
+                <button type="button" class="desembolso-btn desembolso-btn-action mobile-pref-confirm" onclick="submitPreferentialDisbursementMobile('${credito.idcredito}')">
+                    <i class="fas fa-check"></i> Confirmar desembolso
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    requestAnimationFrame(() => modal.classList.add('active'));
+}
+
+function closePreferentialDisbursementMobile() {
+    const modal = document.getElementById('mobile-pref-disbursement-modal');
+    if (modal) modal.remove();
+    selectedPreferentialDisbursementFileMobile = null;
+    currentPreferentialDisbursementMobile = null;
+}
+
+function togglePreferentialMobileSurcharge(hasSurcharge) {
+    const credito = currentPreferentialDisbursementMobile;
+    const amountInput = document.getElementById('mobile-pref-final-amount');
+    const reasonInput = document.getElementById('mobile-pref-surcharge-reason');
+    if (amountInput) {
+        amountInput.disabled = !hasSurcharge;
+        if (!hasSurcharge && credito) amountInput.value = parsePreferentialMobileMoney(credito.monto).toFixed(2);
+    }
+    if (reasonInput) {
+        reasonInput.disabled = !hasSurcharge;
+        if (!hasSurcharge) reasonInput.value = '';
+    }
+}
+
+function handlePreferentialDisbursementFileMobile(event) {
+    const file = event.target?.files?.[0];
+    if (!file) return;
+    selectedPreferentialDisbursementFileMobile = file;
+    const preview = document.getElementById('mobile-pref-file-preview');
+    if (preview) {
+        preview.classList.remove('hidden');
+        preview.innerHTML = `
+            <i class="fas fa-file-image"></i>
+            <div>
+                <strong>${file.name || 'Comprobante seleccionado'}</strong>
+                <span>${formatPreferentialMobileFileSize(file.size)}</span>
+            </div>
+        `;
+    }
+}
+
+async function submitPreferentialDisbursementMobile(idcredito) {
+    const credito = creditosPreferencialesData.find(c => c.idcredito === idcredito);
+    if (!credito) {
+        Swal.fire('No encontrado', 'No se encontró el crédito preferencial seleccionado.', 'warning');
+        return;
+    }
+
+    if (window.validateCajaBeforeAction && !window.validateCajaBeforeAction('desembolsar crédito preferencial')) return;
+
+    const hasSurcharge = document.querySelector('input[name="mobile-pref-surcharge"]:checked')?.value === 'yes';
+    const originalAmount = parsePreferentialMobileMoney(credito.monto);
+    const finalAmount = parseFloat(document.getElementById('mobile-pref-final-amount')?.value || '0');
+    const surchargeReason = (document.getElementById('mobile-pref-surcharge-reason')?.value || '').trim();
+
+    if (!Number.isFinite(finalAmount) || finalAmount <= 0) {
+        Swal.fire('Monto inválido', 'Ingrese un monto desembolsado válido.', 'warning');
+        return;
+    }
+
+    if (hasSurcharge && finalAmount <= originalAmount) {
+        Swal.fire('Recargo inválido', 'Si existe recargo, el monto final debe ser mayor al aprobado.', 'warning');
+        return;
+    }
+
+    if (hasSurcharge && !surchargeReason) {
+        Swal.fire('Falta motivo', 'Ingrese el motivo del recargo.', 'warning');
+        return;
+    }
+
+    if (!selectedPreferentialDisbursementFileMobile) {
+        Swal.fire('Falta comprobante', 'Toma una foto o carga el comprobante del desembolso.', 'warning');
+        return;
+    }
+
+    const confirm = await Swal.fire({
+        title: 'Confirmar desembolso',
+        text: `Se desembolsará $${finalAmount.toLocaleString('es-EC', { minimumFractionDigits: 2 })}.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Desembolsar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0B4E32'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+        showPreferentialMobileProcess('Subiendo comprobante...');
+        const supabase = window.getSupabaseClient();
+        const upload = await uploadPreferentialDisbursementReceiptMobile(selectedPreferentialDisbursementFileMobile, credito, finalAmount);
+        if (!upload.success) throw new Error(upload.error || 'No se pudo subir el comprobante.');
+
+        updatePreferentialMobileProcess('Registrando desembolso...');
+        const { error } = await supabase
+            .from('ic_preferencial')
+            .update({
+                estado: 'DESEMBOLSADO',
+                montofinal: finalAmount.toFixed(2),
+                fotografia: upload.url,
+                motivorecargo: hasSurcharge ? surchargeReason : 'SIN RECARGO'
+            })
+            .eq('idcredito', idcredito)
+            .eq('estado', 'APROBADO');
+
+        if (error) throw error;
+
+        updatePreferentialMobileProcess('Enviando mensajes...');
+        const notification = await sendPreferentialMobileNotifications({
+            credito,
+            originalAmount,
+            finalAmount,
+            hasSurcharge,
+            surchargeReason,
+            comprobanteUrl: upload.url
+        });
+
+        updatePreferentialMobileProcess('Actualizando inicio...');
+        closePreferentialDisbursementMobile();
+        await loadDesembolsosPendientes();
+        hidePreferentialMobileProcess();
+
+        if (notification.failed > 0) {
+            Swal.fire('Desembolso registrado', `Se registró correctamente. ${notification.failed} mensaje(s) no pudieron enviarse.`, 'warning');
+        } else {
+            Swal.fire('Desembolso registrado', 'El crédito preferencial fue desembolsado correctamente.', 'success');
+        }
+    } catch (error) {
+        hidePreferentialMobileProcess();
+        console.error('Error desembolsando preferencial móvil:', error);
+        Swal.fire('Error', error.message || 'No se pudo completar el desembolso.', 'error');
+    }
+}
+
+async function uploadPreferentialDisbursementReceiptMobile(file, credito, finalAmount) {
+    if (window.uploadFileToStorage) {
+        return await window.uploadFileToStorage(
+            file,
+            'preferenciales/desembolsos',
+            `${slugMobilePoliza(credito.nombrebeneficiario || credito.idsocio)}_${slugMobilePoliza(credito.idcredito)}_${slugMobilePoliza(finalAmount.toFixed(2))}`,
+            'inkacorp',
+            PREF_DISBURSEMENT_COMPRESSION_MOBILE
+        );
+    }
+
+    return { success: false, error: 'Subida de archivos no disponible.' };
+}
+
+async function sendPreferentialMobileNotifications(payload) {
+    const recipients = [
+        { role: 'jose', label: 'José', number: '19175309618', quotedId: payload.credito.idmensajejose },
+        { role: 'henry', label: 'Henry', number: '593960618564', quotedId: payload.credito.idmensajehenry }
+    ];
+    const beneficiary = String(payload.credito.whatsappbeneficiario || '').replace(/\D/g, '');
+    if (beneficiary) recipients.push({ role: 'beneficiario', label: 'beneficiario', number: beneficiary });
+
+    let failed = 0;
+    for (let i = 0; i < recipients.length; i++) {
+        const recipient = recipients[i];
+        updatePreferentialMobileProcess(`Enviando mensaje a ${recipient.label} (${i + 1}/${recipients.length})...`);
+        if (i > 0) await sleepMobilePreferential(3000 + Math.floor(Math.random() * 5001));
+        try {
+            await sendPreferentialMobileMediaWithRetry({
+                number: recipient.number,
+                mediatype: 'image',
+                caption: buildPreferentialMobileCaption(payload, recipient.role),
+                media: payload.comprobanteUrl,
+                ...(recipient.quotedId ? { quoted: { key: { id: recipient.quotedId } } } : {})
+            });
+        } catch (error) {
+            failed += 1;
+            console.warn('No se pudo enviar mensaje preferencial móvil:', recipient, error);
+        }
+    }
+
+    return { total: recipients.length, failed };
+}
+
+async function sendPreferentialMobileMediaWithRetry(body, attempts = 3) {
+    let lastError = null;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        try {
+            const response = await fetch(PREF_DISBURSEMENT_MEDIA_WEBHOOK_MOBILE, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    apikey: PREF_DISBURSEMENT_API_KEY_MOBILE
+                },
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) throw new Error(`Webhook respondió ${response.status}`);
+            return true;
+        } catch (error) {
+            lastError = error;
+            if (attempt < attempts) await sleepMobilePreferential(5000);
+        }
+    }
+    throw lastError || new Error('No se pudo enviar el mensaje.');
+}
+
+function buildPreferentialMobileCaption({ credito, originalAmount, finalAmount, hasSurcharge, surchargeReason }, role) {
+    const lines = [
+        'INKA CORP - Crédito preferencial desembolsado',
+        '',
+        `Beneficiario: ${credito.nombrebeneficiario || credito.socio?.nombre || 'Beneficiario'}`,
+        `Código: ${credito.idcredito}`,
+        `Motivo: ${credito.motivo || 'No registrado'}`,
+        `Monto aprobado: $${originalAmount.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`,
+        `Monto desembolsado: $${finalAmount.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`,
+        `Tasa: ${String(credito.porcentaje || '0').replace('%', '')}%`
+    ];
+    if (hasSurcharge) {
+        lines.push(`Recargo: $${(finalAmount - originalAmount).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`);
+        lines.push(`Motivo del recargo: ${surchargeReason}`);
+    }
+    if (role === 'beneficiario') {
+        lines.push('');
+        lines.push('Adjuntamos el comprobante del desembolso realizado.');
+    }
+    return lines.join('\n');
+}
+
+function showPreferentialMobileProcess(message) {
+    Swal.fire({
+        title: 'Procesando desembolso',
+        html: `<div id="mobile-pref-process-message">${message}</div>`,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => Swal.showLoading()
+    });
+}
+
+function updatePreferentialMobileProcess(message) {
+    const el = document.getElementById('mobile-pref-process-message');
+    if (el) el.textContent = message;
+}
+
+function hidePreferentialMobileProcess() {
+    if (Swal.isVisible()) Swal.close();
+}
+
+function parsePreferentialMobileMoney(value) {
+    if (typeof value === 'number') return value;
+    let cleaned = String(value || '0').replace(/[^0-9,.-]/g, '');
+    const lastComma = cleaned.lastIndexOf(',');
+    const lastDot = cleaned.lastIndexOf('.');
+    if (lastComma !== -1 && lastDot !== -1) {
+        cleaned = lastComma > lastDot ? cleaned.replace(/\./g, '').replace(',', '.') : cleaned.replace(/,/g, '');
+    } else if (lastComma !== -1) {
+        cleaned = cleaned.replace(',', '.');
+    }
+    return parseFloat(cleaned) || 0;
+}
+
+function formatPreferentialMobileFileSize(bytes) {
+    if (!bytes) return 'Tamaño no disponible';
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function sleepMobilePreferential(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function loadPolizasPendientesMobile() {

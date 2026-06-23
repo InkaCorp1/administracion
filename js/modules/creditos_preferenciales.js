@@ -13,6 +13,27 @@ let currentViewPref = 'gallery'; // Por defecto galería
 let estadoSortEnabledPref = true;
 let currentSortPref = { field: 'fecha', direction: 'desc' };
 let currentViewingCreditoPref = null;
+let currentDisbursementCreditoPref = null;
+let currentDisbursementReceiptFile = null;
+
+const PREFERENTIAL_DISBURSEMENT_WEBHOOK_URL = 'https://api.luispintasolutions.com/message/sendMedia/secreGladys';
+const PREFERENTIAL_DISBURSEMENT_API_KEY = 'ahsnjdhd4';
+const PREFERENTIAL_DISBURSEMENT_RECEIPT_COMPRESSION = {
+    maxWidth: 1200,
+    maxHeight: 1200,
+    quality: 0.7,
+    minQuality: 0.42,
+    targetMaxBytes: 420 * 1024,
+    mimeType: 'image/webp'
+};
+
+const PREFERENTIAL_DISBURSEMENT_STEPS = [
+    { key: 'image', label: 'Preparando comprobante' },
+    { key: 'upload', label: 'Subiendo imagen' },
+    { key: 'register', label: 'Registrando desembolso' },
+    { key: 'messages', label: 'Enviando mensajes' },
+    { key: 'refresh', label: 'Actualizando vista' }
+];
 
 // ==========================================
 // INICIALIZACIÓN
@@ -34,6 +55,12 @@ function initCreditosPreferencialesModule() {
     window.viewCreditoPref = viewCreditoPref;
     window.archiveCreditoPref = archiveCreditoPref;
     window.archiveCreditoPrefFromModal = archiveCreditoPrefFromModal;
+    window.openPreferentialDisbursementModal = openPreferentialDisbursementModal;
+    window.openPreferentialDisbursementModalFromDetail = openPreferentialDisbursementModalFromDetail;
+    window.closePreferentialDisbursementModal = closePreferentialDisbursementModal;
+    window.togglePreferentialDisbursementSurcharge = togglePreferentialDisbursementSurcharge;
+    window.handlePreferentialDisbursementFile = handlePreferentialDisbursementFile;
+    window.submitPreferentialDisbursement = submitPreferentialDisbursement;
     window.toggleArchivedPrefSection = toggleArchivedPrefSection;
     window.openPreferentialCreditPaymentModal = openPreferentialCreditPaymentModal;
     window.openPreferentialCreditPaymentModalFromDetail = openPreferentialCreditPaymentModalFromDetail;
@@ -122,6 +149,31 @@ function setupCreditosPrefEventListeners() {
 
     // Modal close handlers
     setupCreditosPrefModalCloseHandlers('ver-credito-pref-modal');
+    setupCreditosPrefModalCloseHandlers('desembolsar-credito-pref-modal');
+
+    const disbursementFileInput = document.getElementById('pref-disbursement-file');
+    const disbursementDropzone = document.getElementById('pref-disbursement-dropzone');
+
+    if (disbursementFileInput) {
+        disbursementFileInput.addEventListener('change', handlePreferentialDisbursementFile);
+    }
+
+    if (disbursementDropzone) {
+        disbursementDropzone.addEventListener('click', () => disbursementFileInput?.click());
+        disbursementDropzone.addEventListener('dragover', event => {
+            event.preventDefault();
+            disbursementDropzone.classList.add('dragging');
+        });
+        disbursementDropzone.addEventListener('dragleave', () => {
+            disbursementDropzone.classList.remove('dragging');
+        });
+        disbursementDropzone.addEventListener('drop', event => {
+            event.preventDefault();
+            disbursementDropzone.classList.remove('dragging');
+            const file = event.dataTransfer?.files?.[0];
+            if (file) setPreferentialDisbursementFile(file);
+        });
+    }
 
     // Setup sticky headers con scroll listener
     setupStickyHeadersPref();
@@ -264,6 +316,7 @@ async function loadCreditosPreferenciales(forceRefresh = false) {
             renderMainContentPref();
 
             if (window.isCacheValid && window.isCacheValid('creditos_preferenciales')) {
+                openPendingPreferentialDisbursementIfNeeded();
                 return;
             }
         }
@@ -311,6 +364,7 @@ async function loadCreditosPreferenciales(forceRefresh = false) {
         updateStatsPref();
         applySortingPref();
         renderMainContentPref();
+        openPendingPreferentialDisbursementIfNeeded();
 
     } catch (error) {
         console.error('Error loading creditos preferenciales:', error);
@@ -875,6 +929,7 @@ function renderCreditoPrefRow(credito) {
     const isRechazado = credito.estado === 'RECHAZADO';
     const isArchivado = credito.estado === 'ARCHIVADO';
     const isPendiente = credito.estado === 'PENDIENTE';
+    const isAprobado = credito.estado === 'APROBADO';
     const canRegisterPayment = ['DESEMBOLSADO', 'ABONADO'].includes(credito.estado);
     const saldoCredito = credito.balance?.saldo ?? monto;
     const rowClass = isRechazado ? 'row-rechazado' : (isArchivado ? 'row-archivado' : '');
@@ -905,6 +960,11 @@ function renderCreditoPrefRow(credito) {
                     ${isPendiente ? `
                     <button class="btn-icon btn-archivar-pref" style="color: #94A3B8;" onclick="event.stopPropagation(); archiveCreditoPref('${credito.idcredito}')" title="Archivar pendiente">
                         <i class="fas fa-archive"></i>
+                    </button>
+                    ` : ''}
+                    ${isAprobado ? `
+                    <button class="btn-icon btn-desembolsar-pref" style="color: #FBBF24;" onclick="event.stopPropagation(); openPreferentialDisbursementModal('${credito.idcredito}')" title="Desembolsar y registrar en caja">
+                        <i class="fas fa-hand-holding-usd"></i>
                     </button>
                     ` : ''}
                     ${canRegisterPayment ? `
@@ -1002,6 +1062,11 @@ function viewCreditoPref(idcredito) {
         payButton.classList.toggle('hidden', !['DESEMBOLSADO', 'ABONADO'].includes(estado));
     }
 
+    const disburseButton = document.getElementById('btn-desembolsar-credito-pref');
+    if (disburseButton) {
+        disburseButton.classList.toggle('hidden', estado !== 'APROBADO');
+    }
+
     openCreditosPrefModal('ver-credito-pref-modal');
 }
 
@@ -1041,6 +1106,430 @@ function renderPreferentialPaymentsTable(credito) {
             </table>
         </div>
     `;
+}
+
+function openPreferentialDisbursementModalFromDetail() {
+    if (!currentViewingCreditoPref?.idcredito) {
+        showToast('No hay crédito preferencial seleccionado', 'error');
+        return;
+    }
+
+    openPreferentialDisbursementModal(currentViewingCreditoPref.idcredito);
+}
+
+function openPreferentialDisbursementModal(idcredito) {
+    const credito = allCreditosPref.find(c => c.idcredito === idcredito);
+    if (!credito) {
+        showToast('Crédito preferencial no encontrado', 'error');
+        return;
+    }
+
+    if ((credito.estado || '').toUpperCase() !== 'APROBADO') {
+        showToast('Solo se pueden desembolsar créditos aprobados.', 'warning');
+        return;
+    }
+
+    currentDisbursementCreditoPref = credito;
+    currentDisbursementReceiptFile = null;
+
+    const montoOriginal = parseMontoPref(credito.monto);
+    const finalInput = document.getElementById('pref-disbursement-final-amount');
+    const surchargeReason = document.getElementById('pref-disbursement-surcharge-reason');
+    const fileInput = document.getElementById('pref-disbursement-file');
+    const preview = document.getElementById('pref-disbursement-preview');
+    const note = document.getElementById('pref-disbursement-file-note');
+
+    document.getElementById('pref-disbursement-beneficiary').textContent = credito.nombrebeneficiario || credito.socio?.nombre || credito.idsocio || '-';
+    document.getElementById('pref-disbursement-code').textContent = credito.idcredito || '-';
+    document.getElementById('pref-disbursement-type').textContent = credito.tipo || '-';
+    document.getElementById('pref-disbursement-rate').textContent = formatPorcentajePref(credito.porcentaje);
+    document.getElementById('pref-disbursement-motive').textContent = credito.motivo || '-';
+    document.getElementById('pref-disbursement-original-amount').textContent = formatMoneyPref(montoOriginal);
+
+    if (finalInput) {
+        finalInput.value = montoOriginal.toFixed(2);
+        finalInput.disabled = true;
+    }
+    if (surchargeReason) {
+        surchargeReason.value = '';
+        surchargeReason.disabled = true;
+    }
+    if (fileInput) fileInput.value = '';
+    if (preview) preview.classList.add('hidden');
+    if (note) note.textContent = 'Se comprimirá a WebP antes de subir.';
+
+    document.querySelectorAll('input[name="pref-disbursement-surcharge"]').forEach(input => {
+        input.checked = input.value === 'no';
+    });
+
+    closeCreditosPrefModal('ver-credito-pref-modal');
+    openCreditosPrefModal('desembolsar-credito-pref-modal');
+}
+
+function closePreferentialDisbursementModal() {
+    currentDisbursementCreditoPref = null;
+    currentDisbursementReceiptFile = null;
+    closeCreditosPrefModal('desembolsar-credito-pref-modal');
+}
+
+function togglePreferentialDisbursementSurcharge(hasSurcharge) {
+    const credito = currentDisbursementCreditoPref;
+    const montoOriginal = parseMontoPref(credito?.monto || 0);
+    const finalInput = document.getElementById('pref-disbursement-final-amount');
+    const reasonInput = document.getElementById('pref-disbursement-surcharge-reason');
+
+    if (finalInput) {
+        finalInput.disabled = !hasSurcharge;
+        if (!hasSurcharge) finalInput.value = montoOriginal.toFixed(2);
+    }
+
+    if (reasonInput) {
+        reasonInput.disabled = !hasSurcharge;
+        if (!hasSurcharge) reasonInput.value = '';
+    }
+}
+
+function openPendingPreferentialDisbursementIfNeeded() {
+    const pendingId = sessionStorage.getItem('pendingPreferentialDisbursementId');
+    if (!pendingId) return;
+
+    sessionStorage.removeItem('pendingPreferentialDisbursementId');
+    setTimeout(() => {
+        const credito = allCreditosPref.find(c => c.idcredito === pendingId);
+        if (!credito) {
+            showToast('No se encontró el crédito preferencial seleccionado.', 'warning');
+            return;
+        }
+        openPreferentialDisbursementModal(pendingId);
+    }, 120);
+}
+
+function handlePreferentialDisbursementFile(event) {
+    const file = event.target?.files?.[0];
+    if (file) setPreferentialDisbursementFile(file);
+}
+
+function setPreferentialDisbursementFile(file) {
+    currentDisbursementReceiptFile = file;
+
+    const preview = document.getElementById('pref-disbursement-preview');
+    const note = document.getElementById('pref-disbursement-file-note');
+    const fileName = document.getElementById('pref-disbursement-file-name');
+    const fileSize = document.getElementById('pref-disbursement-file-size');
+    const image = document.getElementById('pref-disbursement-preview-image');
+
+    if (fileName) fileName.textContent = file.name || 'Comprobante seleccionado';
+    if (fileSize) fileSize.textContent = formatPreferentialFileSize(file.size);
+    if (note) note.textContent = 'Listo para comprimir y subir.';
+    if (preview) preview.classList.remove('hidden');
+
+    if (image && file.type?.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = event => {
+            image.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+async function submitPreferentialDisbursement(event) {
+    event?.preventDefault?.();
+
+    const credito = currentDisbursementCreditoPref;
+    if (!credito?.idcredito) {
+        showToast('No hay crédito seleccionado.', 'error');
+        return;
+    }
+
+    const hasSurcharge = document.querySelector('input[name="pref-disbursement-surcharge"]:checked')?.value === 'yes';
+    const originalAmount = parseMontoPref(credito.monto);
+    const finalAmount = parseFloat(document.getElementById('pref-disbursement-final-amount')?.value || '0');
+    const surchargeReason = (document.getElementById('pref-disbursement-surcharge-reason')?.value || '').trim();
+
+    if (!Number.isFinite(finalAmount) || finalAmount <= 0) {
+        showToast('Ingrese un monto desembolsado válido.', 'warning');
+        return;
+    }
+
+    if (hasSurcharge && finalAmount <= originalAmount) {
+        showToast('Si existe recargo, el monto final debe ser mayor al monto aprobado.', 'warning');
+        return;
+    }
+
+    if (hasSurcharge && !surchargeReason) {
+        showToast('Ingrese el motivo del recargo.', 'warning');
+        return;
+    }
+
+    if (!currentDisbursementReceiptFile) {
+        showToast('Debe adjuntar el comprobante del desembolso.', 'warning');
+        return;
+    }
+
+    const confirmed = await Swal.fire({
+        title: 'Confirmar desembolso',
+        html: `
+            <div style="text-align:left">
+                <p>Este movimiento descontará <b>${formatMoneyPref(finalAmount)}</b> de la caja abierta de tu usuario.</p>
+                <p style="color:#94a3b8;margin-top:.5rem;">Si no tienes caja abierta, el sistema bloqueará el registro.</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, desembolsar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#10B981'
+    });
+
+    if (!confirmed.isConfirmed) return;
+
+    try {
+        showPreferentialDisbursementBlocker('image', 'Preparando comprobante para subir...');
+        const supabase = window.getSupabaseClient();
+        if (!supabase) throw new Error('Cliente Supabase no disponible.');
+
+        updatePreferentialDisbursementBlocker('upload', 'Subiendo comprobante comprimido...');
+        const uploadResult = await uploadPreferentialDisbursementReceipt(currentDisbursementReceiptFile, credito, finalAmount);
+        if (!uploadResult.success) throw new Error(uploadResult.error || 'No se pudo subir el comprobante.');
+
+        const updatePayload = {
+            estado: 'DESEMBOLSADO',
+            montofinal: finalAmount.toFixed(2),
+            fotografia: uploadResult.url,
+            motivorecargo: hasSurcharge ? surchargeReason : 'SIN RECARGO'
+        };
+
+        updatePreferentialDisbursementBlocker('register', 'Registrando el desembolso en el sistema...');
+        const { error } = await supabase
+            .from('ic_preferencial')
+            .update(updatePayload)
+            .eq('idcredito', credito.idcredito)
+            .eq('estado', 'APROBADO');
+
+        if (error) throw error;
+
+        updatePreferentialDisbursementBlocker('messages', 'Preparando mensajes de confirmación...');
+        const notificationResult = await sendPreferentialDisbursementNotifications({
+            credito,
+            finalAmount,
+            originalAmount,
+            hasSurcharge,
+            surchargeReason,
+            comprobanteUrl: uploadResult.url
+        });
+
+        updatePreferentialDisbursementBlocker('refresh', 'Actualizando créditos preferenciales...');
+        closePreferentialDisbursementModal();
+        await loadCreditosPreferenciales(true);
+        hidePreferentialDisbursementBlocker();
+
+        if (notificationResult.failed > 0) {
+            Swal.fire('Desembolso registrado', `Se registró en caja. ${notificationResult.failed} notificación(es) no pudieron enviarse.`, 'warning');
+        } else {
+            Swal.fire('Desembolso registrado', 'El crédito fue desembolsado y descontado de caja correctamente.', 'success');
+        }
+    } catch (error) {
+        hidePreferentialDisbursementBlocker();
+        console.error('Error desembolsando crédito preferencial:', error);
+        await window.showFinancialError?.(error, 'No se pudo desembolsar el crédito preferencial.')
+            || Swal.fire('Error', error.message || 'No se pudo desembolsar el crédito preferencial.', 'error');
+    }
+}
+
+async function uploadPreferentialDisbursementReceipt(file, credito, finalAmount) {
+    try {
+        if (window.uploadFileToStorage) {
+            const beneficiary = slugPref(credito.nombrebeneficiario || credito.socio?.nombre || credito.idsocio || 'beneficiario');
+            return await window.uploadFileToStorage(
+                file,
+                'preferenciales/desembolsos',
+                `${beneficiary}_${slugPref(credito.idcredito)}_${slugPref(finalAmount.toFixed(2))}`,
+                'inkacorp',
+                PREFERENTIAL_DISBURSEMENT_RECEIPT_COMPRESSION
+            );
+        }
+
+        const supabase = window.getSupabaseClient();
+        if (!supabase) throw new Error('Cliente Supabase no disponible.');
+
+        const path = `preferenciales/desembolsos/${slugPref(credito.nombrebeneficiario || credito.idsocio || 'beneficiario')}_${Date.now()}.webp`;
+        const webpBlob = await compressPreferentialReceiptToWebp(file);
+        const { error } = await supabase.storage.from('inkacorp').upload(path, webpBlob, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: 'image/webp'
+        });
+        if (error) throw error;
+
+        const { data } = supabase.storage.from('inkacorp').getPublicUrl(path);
+        return { success: true, url: data.publicUrl, path };
+    } catch (error) {
+        console.error('Error subiendo comprobante de desembolso preferencial:', error);
+        return { success: false, error: error.message || 'Error al subir comprobante.' };
+    }
+}
+
+async function sendPreferentialDisbursementNotifications(payload) {
+    const recipients = buildPreferentialDisbursementRecipients(payload.credito);
+    let failed = 0;
+
+    for (let i = 0; i < recipients.length; i++) {
+        const current = recipients[i];
+        updatePreferentialDisbursementBlocker(
+            'messages',
+            `Enviando mensaje a ${getPreferentialRecipientLabel(current)} (${i + 1}/${recipients.length})...`
+        );
+
+        if (i > 0) await sleepPreferentialDisbursement(3000 + Math.floor(Math.random() * 5001));
+        try {
+            await sendPreferentialDisbursementMediaWithRetry({
+                number: current.number,
+                mediatype: 'image',
+                caption: buildPreferentialDisbursementCaption(payload, current.role),
+                media: payload.comprobanteUrl,
+                ...(current.quotedId ? { quoted: { key: { id: current.quotedId } } } : {})
+            });
+        } catch (error) {
+            failed += 1;
+            console.warn('No se pudo enviar notificación de desembolso preferencial:', current, error);
+        }
+    }
+
+    return { total: recipients.length, failed };
+}
+
+function buildPreferentialDisbursementRecipients(credito) {
+    const recipients = [
+        { role: 'jose', number: '19175309618', quotedId: credito.idmensajejose },
+        { role: 'henry', number: '593960618564', quotedId: credito.idmensajehenry }
+    ];
+
+    const beneficiaryWhatsapp = String(credito.whatsappbeneficiario || '').replace(/\D/g, '');
+    if (beneficiaryWhatsapp) {
+        recipients.push({ role: 'beneficiario', number: beneficiaryWhatsapp, quotedId: null });
+    }
+
+    return recipients.filter(recipient => recipient.number);
+}
+
+function getPreferentialRecipientLabel(recipient) {
+    if (recipient.role === 'jose') return 'José';
+    if (recipient.role === 'henry') return 'Henry';
+    if (recipient.role === 'beneficiario') return 'beneficiario';
+    return 'destinatario';
+}
+
+function showPreferentialDisbursementBlocker(stepKey, message) {
+    let blocker = document.getElementById('pref-disbursement-screenblocker');
+
+    if (!blocker) {
+        blocker = document.createElement('div');
+        blocker.id = 'pref-disbursement-screenblocker';
+        blocker.className = 'pref-disbursement-screenblocker';
+        blocker.innerHTML = `
+            <div class="pref-disbursement-blocker-card">
+                <div class="pref-disbursement-blocker-icon">
+                    <i class="fas fa-hand-holding-usd"></i>
+                </div>
+                <h3>Procesando desembolso</h3>
+                <p id="pref-disbursement-blocker-message">Preparando...</p>
+                <div class="pref-disbursement-blocker-steps">
+                    ${PREFERENTIAL_DISBURSEMENT_STEPS.map(step => `
+                        <div class="pref-disbursement-blocker-step" data-step="${step.key}">
+                            <span class="pref-disbursement-step-dot"><i class="fas fa-check"></i></span>
+                            <span>${step.label}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(blocker);
+    }
+
+    blocker.classList.add('active');
+    document.body.classList.add('pref-disbursement-blocked');
+    updatePreferentialDisbursementBlocker(stepKey, message);
+}
+
+function updatePreferentialDisbursementBlocker(stepKey, message) {
+    const blocker = document.getElementById('pref-disbursement-screenblocker');
+    if (!blocker) return;
+
+    const currentIndex = PREFERENTIAL_DISBURSEMENT_STEPS.findIndex(step => step.key === stepKey);
+    const messageEl = document.getElementById('pref-disbursement-blocker-message');
+    if (messageEl && message) messageEl.textContent = message;
+
+    blocker.querySelectorAll('.pref-disbursement-blocker-step').forEach(stepEl => {
+        const stepIndex = PREFERENTIAL_DISBURSEMENT_STEPS.findIndex(step => step.key === stepEl.dataset.step);
+        stepEl.classList.toggle('done', currentIndex >= 0 && stepIndex < currentIndex);
+        stepEl.classList.toggle('active', currentIndex >= 0 && stepIndex === currentIndex);
+    });
+}
+
+function hidePreferentialDisbursementBlocker() {
+    const blocker = document.getElementById('pref-disbursement-screenblocker');
+    if (blocker) blocker.classList.remove('active');
+    document.body.classList.remove('pref-disbursement-blocked');
+}
+
+function buildPreferentialDisbursementCaption({ credito, finalAmount, originalAmount, hasSurcharge, surchargeReason }, role) {
+    const beneficiary = credito.nombrebeneficiario || credito.socio?.nombre || 'Beneficiario';
+    const lines = [
+        'INKA CORP - Crédito preferencial desembolsado',
+        '',
+        `Beneficiario: ${beneficiary}`,
+        `Código: ${credito.idcredito}`,
+        `Motivo: ${credito.motivo || 'No registrado'}`,
+        `Monto aprobado: ${formatMoneyPref(originalAmount)}`,
+        `Monto desembolsado: ${formatMoneyPref(finalAmount)}`,
+        `Tasa: ${formatPorcentajePref(credito.porcentaje)}`
+    ];
+
+    if (hasSurcharge) {
+        lines.push(`Recargo: ${formatMoneyPref(finalAmount - originalAmount)}`);
+        lines.push(`Motivo del recargo: ${surchargeReason}`);
+    }
+
+    if (role === 'beneficiario') {
+        lines.push('');
+        lines.push('Adjuntamos el comprobante del desembolso realizado.');
+    }
+
+    return lines.join('\n');
+}
+
+async function sendPreferentialDisbursementMediaWithRetry(body, attempts = 3) {
+    let lastError = null;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        try {
+            const response = await fetch(PREFERENTIAL_DISBURSEMENT_WEBHOOK_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    apikey: PREFERENTIAL_DISBURSEMENT_API_KEY
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) throw new Error(`Webhook respondió ${response.status}`);
+            return true;
+        } catch (error) {
+            lastError = error;
+            if (attempt < attempts) await sleepPreferentialDisbursement(5000);
+        }
+    }
+
+    throw lastError || new Error('No se pudo enviar la notificación.');
+}
+
+function sleepPreferentialDisbursement(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function formatPreferentialFileSize(bytes) {
+    if (!bytes) return 'Tamaño no disponible';
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 async function archiveCreditoPrefFromModal() {
@@ -1680,10 +2169,18 @@ function parseMontoPref(monto) {
     if (monto === undefined || monto === null || monto === '') return 0;
     if (typeof monto === 'number') return monto;
 
-    // Si viene con coma como decimal y sin separador de miles
-    // O si viene con punto como decimal y sin separador de miles
-    // Normalizamos: reemplazamos coma por punto para parseFloat
-    let cleaned = monto.toString().replace(',', '.');
+    let cleaned = monto.toString().replace(/[^0-9,.-]/g, '').trim();
+    const lastComma = cleaned.lastIndexOf(',');
+    const lastDot = cleaned.lastIndexOf('.');
+
+    if (lastComma !== -1 && lastDot !== -1) {
+        cleaned = lastComma > lastDot
+            ? cleaned.replace(/\./g, '').replace(',', '.')
+            : cleaned.replace(/,/g, '');
+    } else if (lastComma !== -1) {
+        cleaned = cleaned.replace(',', '.');
+    }
+
     return parseFloat(cleaned) || 0;
 }
 

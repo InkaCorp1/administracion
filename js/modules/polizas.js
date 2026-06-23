@@ -10,6 +10,8 @@ let allPolizas = [];
 let filteredPolizas = [];
 let currentEstadoFilterPolizas = '';
 let currentSortPolizas = 'valor'; // Alineado con active en HTML
+let polizaVisibilityScope = 'owned';
+let currentPolizaDebtContext = null;
 
 const POLIZA_RENOVACION_DIAS_ANTES = 3;
 const POLIZA_RENOVACION_DIAS_DESPUES = 21;
@@ -23,6 +25,7 @@ let polizasCurrentStickyHeader = null;
 // INICIALIZACIÓN
 // ==========================================
 function initPolizasModule() {
+    applyPolizaVisibilityScopePreference(false);
     loadPolizas();
     setupPolizasEventListeners();
     setupPolizasStickyHeaders();
@@ -31,6 +34,42 @@ function initPolizasModule() {
     window.viewPoliza = viewPoliza;
     window.openPolizaModal = openPolizaModal;
     window.handleUploadPolizaSignedDocument = handleUploadPolizaSignedDocument;
+    window.openExportPolizasModal = openExportPolizasModal;
+}
+
+function applyPolizaVisibilityScopePreference(shouldRender = true) {
+    polizaVisibilityScope = window.shouldShowAllCreditsByDefault?.() ? 'all' : 'owned';
+    updatePolizaVisibilityScopeToggle();
+    if (shouldRender) renderPolizas();
+}
+
+function togglePolizaVisibilityScope() {
+    polizaVisibilityScope = polizaVisibilityScope === 'all' ? 'owned' : 'all';
+    updatePolizaVisibilityScopeToggle();
+    renderPolizas();
+}
+
+function updatePolizaVisibilityScopeToggle() {
+    const btn = document.getElementById('polizas-scope-toggle');
+    const separator = document.querySelector('.polizas-scope-separator');
+    const canToggle = window.canToggleAllCreditsScope?.() === true;
+
+    btn?.classList.toggle('hidden', !canToggle);
+    separator?.classList.toggle('hidden', !canToggle);
+    if (!btn || !canToggle) return;
+
+    const showingAll = polizaVisibilityScope === 'all';
+    btn.innerHTML = showingAll
+        ? '<i class="fas fa-user-check"></i><span>Ver solo mías</span>'
+        : '<i class="fas fa-users"></i><span>Mostrar todas</span>';
+    btn.title = showingAll ? 'Ver solo las pólizas creadas por mí' : 'Mostrar las pólizas de todos';
+}
+
+function getScopedPolizas() {
+    if (polizaVisibilityScope === 'all') return allPolizas;
+    const userId = window.getCurrentUser?.()?.id;
+    if (!userId) return [];
+    return allPolizas.filter(poliza => String(poliza.createdby || '') === String(userId));
 }
 
 function setupPolizasStickyHeaders() {
@@ -242,7 +281,7 @@ async function loadPolizas(forceRefresh = false) {
 function filterAndSortPolizas() {
     const search = document.getElementById('search-polizas')?.value.toLowerCase() || '';
 
-    filteredPolizas = allPolizas.filter(p => {
+    filteredPolizas = getScopedPolizas().filter(p => {
         const matchesEstado = !currentEstadoFilterPolizas || p.estado === currentEstadoFilterPolizas;
         const socioName = p.socio?.nombre || '';
         const cedula = p.socio?.cedula || '';
@@ -272,7 +311,8 @@ function polizaNeedsSignedDocument(poliza) {
 }
 
 function renderPolizasStats() {
-    const statsActivos = allPolizas.filter(p => p.estado === 'ACTIVO');
+    const scopedPolizas = getScopedPolizas();
+    const statsActivos = scopedPolizas.filter(p => p.estado === 'ACTIVO');
     const totalInvertido = statsActivos.reduce((sum, p) => sum + (parseFloat(p.valor) || 0), 0);
     const interesProyectado = statsActivos.reduce((sum, p) => sum + ((parseFloat(p.valor_final) || 0) - (parseFloat(p.valor) || 0)), 0);
 
@@ -309,10 +349,10 @@ function renderPolizasStats() {
     if (document.getElementById('stat-polizas-interes')) document.getElementById('stat-polizas-interes').textContent = formatMoney(interesProyectado);
 
     // Contadores de estado
-    if (document.getElementById('count-polizas-all')) document.getElementById('count-polizas-all').textContent = allPolizas.length;
+    if (document.getElementById('count-polizas-all')) document.getElementById('count-polizas-all').textContent = scopedPolizas.length;
     if (document.getElementById('count-polizas-activo')) document.getElementById('count-polizas-activo').textContent = statsActivos.length;
-    if (document.getElementById('count-polizas-pagado')) document.getElementById('count-polizas-pagado').textContent = allPolizas.filter(p => p.estado === 'PAGADO').length;
-    if (document.getElementById('count-polizas-capitalizado')) document.getElementById('count-polizas-capitalizado').textContent = allPolizas.filter(p => p.estado === 'CAPITALIZADO').length;
+    if (document.getElementById('count-polizas-pagado')) document.getElementById('count-polizas-pagado').textContent = scopedPolizas.filter(p => p.estado === 'PAGADO').length;
+    if (document.getElementById('count-polizas-capitalizado')) document.getElementById('count-polizas-capitalizado').textContent = scopedPolizas.filter(p => p.estado === 'CAPITALIZADO').length;
 }
 
 function renderPolizas() {
@@ -504,7 +544,293 @@ function filterPolizasByEstado(estado) {
     renderPolizas();
 }
 
+async function openExportPolizasModal() {
+    const canViewAll = window.canToggleAllCreditsScope?.() === true;
+    const defaultScope = canViewAll ? polizaVisibilityScope : 'owned';
+    const buttonGroup = (id, options, selected) => `
+        <div class="poliza-report-options" id="${id}">
+            ${options.map(option => `
+                <button type="button" class="poliza-report-option ${option.value === selected ? 'active' : ''}"
+                    data-value="${option.value}" ${option.disabled ? 'disabled' : ''}>
+                    ${option.icon ? `<i class="${option.icon}"></i>` : ''}
+                    <span>${option.label}</span>
+                </button>
+            `).join('')}
+        </div>
+    `;
+
+    const { value: filters } = await Swal.fire({
+        title: 'Informe de Pólizas',
+        width: '980px',
+        background: '#111827',
+        color: '#F8FAFC',
+        html: `
+            <div style="text-align:left;">
+                <p style="color:#94A3B8; margin:0 0 1rem;">Selecciona el alcance y los criterios del informe ejecutivo de inversiones.</p>
+                <div class="poliza-report-grid">
+                    <div class="poliza-report-field">
+                        <label>Alcance</label>
+                        ${buttonGroup('pol-report-scope', [
+                            { value: 'owned', label: 'Solo mías', icon: 'fas fa-user-check' },
+                            { value: 'all', label: 'De todos', icon: 'fas fa-users', disabled: !canViewAll }
+                        ], defaultScope)}
+                    </div>
+                    <div class="poliza-report-field">
+                        <label>Estado</label>
+                        ${buttonGroup('pol-report-status', [
+                            { value: 'all', label: 'Todos' },
+                            { value: 'ACTIVO', label: 'Activas' },
+                            { value: 'PENDIENTE', label: 'Pendientes' },
+                            { value: 'PAGADO', label: 'Pagadas' },
+                            { value: 'CAPITALIZADO', label: 'Capitalizadas' }
+                        ], 'all')}
+                    </div>
+                    <div class="poliza-report-field">
+                        <label>Situación de vencimiento</label>
+                        ${buttonGroup('pol-report-maturity', [
+                            { value: 'all', label: 'Todas' },
+                            { value: 'expired', label: 'Vencidas' },
+                            { value: 'window', label: 'Renovación' },
+                            { value: 'next30', label: 'Próx. 30 días' },
+                            { value: 'future', label: 'Futuras' }
+                        ], 'all')}
+                    </div>
+                    <div class="poliza-report-field">
+                        <label>Documento firmado</label>
+                        ${buttonGroup('pol-report-document', [
+                            { value: 'all', label: 'Todos' },
+                            { value: 'signed', label: 'Firmado', icon: 'fas fa-file-signature' },
+                            { value: 'pending', label: 'Pendiente', icon: 'fas fa-clock' }
+                        ], 'all')}
+                    </div>
+                    <div class="poliza-report-field">
+                        <label>Inicio desde</label>
+                        <input type="date" id="pol-report-from">
+                    </div>
+                    <div class="poliza-report-field">
+                        <label>Inicio hasta</label>
+                        <input type="date" id="pol-report-to">
+                    </div>
+                    <div class="poliza-report-field">
+                        <label>Capital mínimo</label>
+                        <input type="number" id="pol-report-min" min="0" step="0.01" placeholder="Sin mínimo">
+                    </div>
+                    <div class="poliza-report-field">
+                        <label>Capital máximo</label>
+                        <input type="number" id="pol-report-max" min="0" step="0.01" placeholder="Sin máximo">
+                    </div>
+                    <div class="poliza-report-field">
+                        <label>Tasa mínima (%)</label>
+                        <input type="number" id="pol-report-rate-min" min="0" step="0.01" placeholder="Sin mínimo">
+                    </div>
+                    <div class="poliza-report-field">
+                        <label>Tasa máxima (%)</label>
+                        <input type="number" id="pol-report-rate-max" min="0" step="0.01" placeholder="Sin máximo">
+                    </div>
+                    <div class="poliza-report-field" style="grid-column:1 / -1;">
+                        <label>Orden del informe</label>
+                        ${buttonGroup('pol-report-order', [
+                            { value: 'maturity', label: 'Vencimiento', icon: 'fas fa-calendar-day' },
+                            { value: 'capital', label: 'Mayor capital', icon: 'fas fa-dollar-sign' },
+                            { value: 'socio', label: 'Socio A–Z', icon: 'fas fa-sort-alpha-down' },
+                            { value: 'status', label: 'Estado', icon: 'fas fa-layer-group' },
+                            { value: 'created', label: 'Más recientes', icon: 'fas fa-clock' }
+                        ], 'maturity')}
+                    </div>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-file-pdf"></i> Generar PDF',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0B4E32',
+        cancelButtonColor: '#475569',
+        didOpen: () => {
+            document.querySelectorAll('.poliza-report-options').forEach(group => {
+                group.querySelectorAll('.poliza-report-option:not(:disabled)').forEach(button => {
+                    button.addEventListener('click', () => {
+                        group.querySelectorAll('.poliza-report-option').forEach(item => item.classList.remove('active'));
+                        button.classList.add('active');
+                    });
+                });
+            });
+        },
+        preConfirm: () => {
+            const numberOrNull = id => {
+                const raw = document.getElementById(id)?.value;
+                return raw === '' ? null : parseFloat(raw);
+            };
+            const selectedValue = id =>
+                document.querySelector(`#${id} .poliza-report-option.active`)?.dataset.value;
+            const result = {
+                scope: selectedValue('pol-report-scope') || 'owned',
+                status: selectedValue('pol-report-status') || 'all',
+                maturity: selectedValue('pol-report-maturity') || 'all',
+                document: selectedValue('pol-report-document') || 'all',
+                from: document.getElementById('pol-report-from')?.value || '',
+                to: document.getElementById('pol-report-to')?.value || '',
+                min: numberOrNull('pol-report-min'),
+                max: numberOrNull('pol-report-max'),
+                rateMin: numberOrNull('pol-report-rate-min'),
+                rateMax: numberOrNull('pol-report-rate-max'),
+                order: selectedValue('pol-report-order') || 'maturity'
+            };
+
+            if (result.from && result.to && result.from > result.to) {
+                Swal.showValidationMessage('La fecha inicial no puede ser posterior a la fecha final.');
+                return false;
+            }
+            if (result.min !== null && result.max !== null && result.min > result.max) {
+                Swal.showValidationMessage('El capital mínimo no puede superar al máximo.');
+                return false;
+            }
+            if (result.rateMin !== null && result.rateMax !== null && result.rateMin > result.rateMax) {
+                Swal.showValidationMessage('La tasa mínima no puede superar a la máxima.');
+                return false;
+            }
+            return result;
+        }
+    });
+
+    if (!filters) return;
+    const reportData = filterPolizasForReport(filters);
+    if (!reportData.length) {
+        Swal.fire('Sin resultados', 'No existen pólizas que coincidan con los filtros seleccionados.', 'info');
+        return;
+    }
+    await generatePolizasReportPDF(reportData, filters);
+}
+
+function filterPolizasForReport(filters) {
+    const userId = window.getCurrentUser?.()?.id;
+    let data = filters.scope === 'all'
+        ? [...allPolizas]
+        : allPolizas.filter(p => String(p.createdby || '') === String(userId || ''));
+
+    data = data.filter(poliza => {
+        if (filters.status !== 'all' && poliza.estado !== filters.status) return false;
+        if (filters.document === 'signed' && polizaNeedsSignedDocument(poliza)) return false;
+        if (filters.document === 'pending' && !polizaNeedsSignedDocument(poliza)) return false;
+        if (filters.from && String(poliza.fecha || '') < filters.from) return false;
+        if (filters.to && String(poliza.fecha || '') > filters.to) return false;
+
+        const capital = parsePolizaMoney(poliza.valor);
+        const rate = parsePolizaMoney(poliza.interes);
+        if (filters.min !== null && capital < filters.min) return false;
+        if (filters.max !== null && capital > filters.max) return false;
+        if (filters.rateMin !== null && rate < filters.rateMin) return false;
+        if (filters.rateMax !== null && rate > filters.rateMax) return false;
+
+        const days = getDaysRemaining(poliza.fecha_vencimiento);
+        if (filters.maturity === 'expired' && days >= 0) return false;
+        if (filters.maturity === 'window' && !isWithinPolizaRenewalWindow(days)) return false;
+        if (filters.maturity === 'next30' && !(days >= 0 && days <= 30)) return false;
+        if (filters.maturity === 'future' && days < 0) return false;
+        return true;
+    });
+
+    const statusOrder = { PENDIENTE: 1, ACTIVO: 2, CAPITALIZADO: 3, PAGADO: 4 };
+    data.sort((a, b) => {
+        if (filters.order === 'capital') return parsePolizaMoney(b.valor) - parsePolizaMoney(a.valor);
+        if (filters.order === 'socio') return String(a.socio?.nombre || '').localeCompare(String(b.socio?.nombre || ''));
+        if (filters.order === 'status') return (statusOrder[a.estado] || 99) - (statusOrder[b.estado] || 99);
+        if (filters.order === 'created') return String(b.created_at || '').localeCompare(String(a.created_at || ''));
+        return parseDate(a.fecha_vencimiento) - parseDate(b.fecha_vencimiento);
+    });
+    return data;
+}
+
+async function generatePolizasReportPDF(data, filters) {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a4');
+        const now = new Date();
+        const totalCapital = data.reduce((sum, p) => sum + parsePolizaMoney(p.valor), 0);
+        const totalFinal = data.reduce((sum, p) => sum + parsePolizaMoney(p.valor_final), 0);
+        const retorno = totalFinal - totalCapital;
+        const scopeLabel = filters.scope === 'all' ? 'TODAS LAS PÓLIZAS' : 'SOLO MIS PÓLIZAS';
+
+        doc.setFillColor(11, 78, 50);
+        doc.rect(0, 0, 297, 32, 'F');
+        doc.setTextColor(242, 187, 58);
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.text('INKA CORP', 14, 14);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(11);
+        doc.text('INFORME EJECUTIVO DE PÓLIZAS E INVERSIONES', 14, 22);
+        doc.setFontSize(8);
+        doc.text(`Generado: ${now.toLocaleString('es-EC')} | Alcance: ${scopeLabel}`, 190, 14);
+        doc.text(`Registros: ${data.length}`, 190, 21);
+
+        const cards = [
+            ['CAPITAL INVERTIDO', formatMoney(totalCapital)],
+            ['VALOR PROYECTADO', formatMoney(totalFinal)],
+            ['RETORNO PROYECTADO', formatMoney(retorno)],
+            ['PÓLIZAS ACTIVAS', String(data.filter(p => p.estado === 'ACTIVO').length)]
+        ];
+        cards.forEach((card, index) => {
+            const x = 14 + (index * 69);
+            doc.setFillColor(245, 247, 250);
+            doc.roundedRect(x, 38, 63, 18, 2, 2, 'F');
+            doc.setTextColor(100, 116, 139);
+            doc.setFontSize(7);
+            doc.text(card[0], x + 4, 44);
+            doc.setTextColor(11, 78, 50);
+            doc.setFontSize(12);
+            doc.text(card[1], x + 4, 52);
+        });
+
+        const rows = data.map((p, index) => [
+            index + 1,
+            String(p.socio?.nombre || 'N/A').toUpperCase(),
+            formatDate(p.fecha),
+            formatMoney(p.valor),
+            `${parsePolizaMoney(p.interes).toFixed(2)}%`,
+            formatDate(p.fecha_vencimiento),
+            formatMoney(p.valor_final),
+            p.estado || '-',
+            polizaNeedsSignedDocument(p) ? 'PENDIENTE' : 'FIRMADO'
+        ]);
+
+        doc.autoTable({
+            startY: 62,
+            head: [['#', 'SOCIO / INVERSIONISTA', 'INICIO', 'CAPITAL', 'TASA', 'VENCIMIENTO', 'VALOR FINAL', 'ESTADO', 'DOCUMENTO']],
+            body: rows,
+            theme: 'striped',
+            styles: { fontSize: 7, cellPadding: 2, valign: 'middle' },
+            headStyles: { fillColor: [11, 78, 50], textColor: [242, 187, 58], fontStyle: 'bold' },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 8 },
+                1: { cellWidth: 55 },
+                2: { halign: 'center', cellWidth: 24 },
+                3: { halign: 'right', cellWidth: 25 },
+                4: { halign: 'center', cellWidth: 16 },
+                5: { halign: 'center', cellWidth: 27 },
+                6: { halign: 'right', cellWidth: 27 },
+                7: { halign: 'center', cellWidth: 25 },
+                8: { halign: 'center', cellWidth: 25 }
+            },
+            margin: { left: 14, right: 14 },
+            didDrawPage: () => {
+                const height = doc.internal.pageSize.getHeight();
+                doc.setFontSize(7);
+                doc.setTextColor(148, 163, 184);
+                doc.text(`Página ${doc.internal.getNumberOfPages()}`, 14, height - 7);
+                doc.text('Sistema Administrativo INKA CORP', 236, height - 7);
+            }
+        });
+
+        doc.save(`Informe_Polizas_INKA_${now.getTime()}.pdf`);
+        window.showToast?.('Informe de pólizas generado', 'success');
+    } catch (error) {
+        console.error('Error generando informe de pólizas:', error);
+        Swal.fire('Error', 'No se pudo generar el informe PDF de pólizas.', 'error');
+    }
+}
+
 function setupPolizasEventListeners() {
+    document.getElementById('polizas-scope-toggle')?.addEventListener('click', togglePolizaVisibilityScope);
 
     // Búsqueda
     const searchInput = document.getElementById('search-polizas');
@@ -603,23 +929,13 @@ function setupPolizasEventListeners() {
     });
 
     // Botones de Liquidación y Renovación
-    document.getElementById('btn-pagar-poliza')?.addEventListener('click', () => {
-        // Validar caja antes de acción financiera
-        if (typeof window.validateCajaBeforeAction === 'function') {
-            if (!window.validateCajaBeforeAction('LIQUIDACIÓN DE PÓLIZA')) return;
-        }
-
+    document.getElementById('btn-pagar-poliza')?.addEventListener('click', async () => {
         const id = document.getElementById('poliza-id').value;
         const poliza = allPolizas.find(p => p.id_poliza === id);
-        if (poliza) handlePagarPoliza(poliza);
+        if (poliza) await handlePolizaPrimaryAction(poliza);
     });
 
     document.getElementById('btn-renovar-poliza')?.addEventListener('click', () => {
-        // Validar caja antes de acción financiera
-        if (typeof window.validateCajaBeforeAction === 'function') {
-            if (!window.validateCajaBeforeAction('RENOVACIÓN DE PÓLIZA')) return;
-        }
-
         const id = document.getElementById('poliza-id').value;
         const poliza = allPolizas.find(p => p.id_poliza === id);
         if (poliza) handleRenovarPoliza(poliza);
@@ -708,6 +1024,8 @@ function openPolizaModal(poliza = null) {
     document.getElementById('display-valor-final').textContent = '$0.00';
     setPolizaSocioAvatar(null);
     if (actionsContainer) actionsContainer.classList.add('hidden');
+    document.getElementById('btn-pagar-poliza')?.classList.remove('hidden');
+    document.getElementById('btn-renovar-poliza')?.classList.remove('hidden');
     if (estadoField) estadoField.classList.remove('hidden');
     if (certificadoField) certificadoField.classList.remove('hidden');
 
@@ -722,6 +1040,7 @@ function openPolizaModal(poliza = null) {
     const infoElements = form.querySelectorAll('.mode-info');
 
     if (poliza) {
+        currentPolizaDebtContext = null;
         // MODO INFORMACIÓN
         if (modalTitle) modalTitle.textContent = 'Reporte de Inversión';
         if (btnGuardar) btnGuardar.classList.add('hidden');
@@ -771,6 +1090,7 @@ function openPolizaModal(poliza = null) {
             if (actionsContainer && isWithinPolizaRenewalWindow(diasParaVencer)) {
                 actionsContainer.classList.remove('hidden');
                 actionsContainer.style.display = 'flex';
+                configurePolizaFinancialActions(poliza);
             }
         } else {
             if (devengadoContainer) devengadoContainer.classList.add('hidden');
@@ -899,6 +1219,324 @@ async function handlePagarPoliza(poliza) {
             endLoading();
         }
     }
+}
+
+async function handleCancelarPolizaConContrapoliza(poliza, context) {
+    const valorPoliza = parseFloat(parsePolizaMoney(context.available).toFixed(2));
+    const deudaTotal = parseFloat(parsePolizaMoney(context.debts?.total).toFixed(2));
+    const saldoDeuda = parseFloat(Math.max(0, deudaTotal - valorPoliza).toFixed(2));
+    const allocationPlan = buildCounterpolicyAllocationPlan(context.debts, valorPoliza);
+
+    const { isConfirmed } = await Swal.fire({
+        title: 'Cancelar con Contrapóliza',
+        width: '940px',
+        background: '#111827',
+        color: '#F8FAFC',
+        html: `
+            <div style="text-align:left; background:#172033; color:#f8fafc; padding:1.25rem; border:1px solid #334155; border-radius:1rem;">
+                <p style="margin:0 0 1rem;">La póliza se aplicará directamente a las obligaciones del socio. <b>No ingresará ni saldrá dinero de caja.</b></p>
+                <div style="display:grid; gap:0.65rem;">
+                    <div style="display:flex; justify-content:space-between;"><span>Valor disponible de la póliza:</span><b>${formatMoney(valorPoliza)}</b></div>
+                    <div style="display:flex; justify-content:space-between;"><span>Deudas registradas:</span><b>${formatMoney(deudaTotal)}</b></div>
+                    <div style="display:flex; justify-content:space-between; padding-top:0.65rem; border-top:1px solid #475569; color:#FCA5A5;"><span>Saldo que continuará pendiente:</span><b>${formatMoney(saldoDeuda)}</b></div>
+                </div>
+                <div style="margin-top:1rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.55rem;">
+                        <b style="color:#F2BB3A;">Cuotas y obligaciones seleccionadas</b>
+                        <span style="font-size:0.78rem; color:#94A3B8;">Ordenadas globalmente desde la más vencida</span>
+                    </div>
+                    ${renderCounterpolicyAllocationPlan(allocationPlan)}
+                </div>
+                <p style="margin:1rem 0 0; font-size:0.85rem; color:#94A3B8;">Los pagos quedarán registrados con método <b>CONTRAPOLIZA</b> y referencia <b>${escapePolizaHtml(poliza.id_poliza)}</b>.</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, aplicar contrapóliza',
+        cancelButtonText: 'Volver',
+        confirmButtonColor: '#b45309'
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+        beginLoading('Aplicando contrapóliza...');
+        const supabase = getSupabaseClient();
+        const result = await applyCounterpolicyToCreditDebts(
+            supabase,
+            poliza,
+            context.debts,
+            valorPoliza,
+            allocationPlan
+        );
+
+        const notasPrevias = String(poliza.notas || '').trim();
+        const notaContrapoliza = `Contrapóliza aplicada por ${formatMoney(result.applied)}. Referencia: ${poliza.id_poliza}. Saldo de obligaciones pendiente: ${formatMoney(Math.max(0, deudaTotal - result.applied))}.`;
+
+        const { error: policyError } = await supabase
+            .from('ic_polizas')
+            .update({
+                estado: 'PAGADO',
+                notas: [notasPrevias, notaContrapoliza].filter(Boolean).join(' | '),
+                updated_at: new Date().toISOString()
+            })
+            .eq('id_poliza', poliza.id_poliza);
+        if (policyError) throw policyError;
+
+        const { error: auditError } = await supabase
+            .from('ic_polizas_pagos')
+            .insert([{
+                id_poliza: poliza.id_poliza,
+                id_socio: poliza.id_socio,
+                monto_total_pagado: result.applied,
+                monto_capital: result.applied,
+                monto_interes: 0,
+                tipo_pago: 'COMPENSACION_CREDITO',
+                metodo_pago: 'CONTRAPOLIZA',
+                notas: notaContrapoliza
+            }]);
+        if (auditError) throw auditError;
+
+        await Swal.fire(
+            'Contrapóliza aplicada',
+            `Se registraron ${formatMoney(result.applied)} en pagos de créditos sin afectar caja.`,
+            'success'
+        );
+
+        const modal = document.getElementById('poliza-modal');
+        modal?.classList.add('hidden');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+        currentPolizaDebtContext = null;
+        await loadPolizas(true);
+    } catch (error) {
+        console.error('Error aplicando contrapóliza:', error);
+        await window.showFinancialError?.(error, 'No se pudo aplicar la contrapóliza.')
+            || Swal.fire('Error', error.message || 'No se pudo aplicar la contrapóliza.', 'error');
+    } finally {
+        endLoading();
+    }
+}
+
+function buildCounterpolicyAllocationPlan(debts, availableAmount) {
+    const today = todayISODate();
+    const obligations = [];
+
+    (debts?.creditosNormales || []).forEach(credito => {
+        (credito.cuotas || []).forEach(cuota => {
+            const amount = parsePolizaMoney(cuota.saldo);
+            if (amount <= 0) return;
+            obligations.push({
+                type: 'NORMAL',
+                creditId: credito.id,
+                creditLabel: credito.label,
+                credit: credito,
+                installment: cuota,
+                installmentNumber: cuota.numero_cuota,
+                dueDate: cuota.fecha_vencimiento || '9999-12-31',
+                overdue: Boolean(cuota.fecha_vencimiento && cuota.fecha_vencimiento < today),
+                daysOverdue: cuota.diasMora || 0,
+                priority: cuota.fecha_vencimiento && cuota.fecha_vencimiento < today ? 0 : 2,
+                balance: amount
+            });
+        });
+    });
+
+    (debts?.creditosPreferenciales || []).forEach(credito => {
+        const amount = parsePolizaMoney(credito.total);
+        if (amount <= 0) return;
+        const preferentialDate = parsePolizaPreferentialDate(credito.fechaInicio);
+        const dueDate = preferentialDate ? toISODate(preferentialDate) : today;
+        obligations.push({
+            type: 'PREFERENCIAL',
+            creditId: credito.id,
+            creditLabel: credito.label,
+            credit: credito,
+            installment: null,
+            installmentNumber: null,
+            dueDate,
+            overdue: dueDate < today,
+            daysOverdue: Math.max(0, Math.floor((parseDate(today) - parseDate(dueDate)) / 86400000)),
+            priority: 1,
+            balance: amount
+        });
+    });
+
+    obligations.sort((a, b) => {
+        if (a.priority !== b.priority) return a.priority - b.priority;
+        const dateCompare = String(a.dueDate).localeCompare(String(b.dueDate));
+        if (dateCompare !== 0) return dateCompare;
+        const installmentCompare = (a.installmentNumber || 0) - (b.installmentNumber || 0);
+        if (installmentCompare !== 0) return installmentCompare;
+        return String(a.creditLabel).localeCompare(String(b.creditLabel));
+    });
+
+    let remaining = parseFloat(parsePolizaMoney(availableAmount).toFixed(2));
+    const allocations = [];
+    for (const obligation of obligations) {
+        if (remaining <= 0.009) break;
+        const amount = parseFloat(Math.min(remaining, obligation.balance).toFixed(2));
+        if (amount <= 0) continue;
+        allocations.push({
+            ...obligation,
+            amount,
+            full: amount >= obligation.balance - 0.009
+        });
+        remaining = parseFloat(Math.max(0, remaining - amount).toFixed(2));
+    }
+
+    return {
+        allocations,
+        totalApplied: parseFloat((parsePolizaMoney(availableAmount) - remaining).toFixed(2)),
+        remaining
+    };
+}
+
+function renderCounterpolicyAllocationPlan(plan) {
+    if (!plan?.allocations?.length) {
+        return '<div style="padding:0.9rem; background:#0F172A; border-radius:0.7rem; color:#FCA5A5;">No se encontraron obligaciones aplicables.</div>';
+    }
+
+    return `
+        <div style="max-height:300px; overflow:auto; border:1px solid #334155; border-radius:0.75rem;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.78rem;">
+                <thead style="position:sticky; top:0; background:#0F172A; color:#94A3B8;">
+                    <tr>
+                        <th style="padding:0.65rem; text-align:left;">Crédito</th>
+                        <th style="padding:0.65rem; text-align:center;">Obligación</th>
+                        <th style="padding:0.65rem; text-align:center;">Vencimiento</th>
+                        <th style="padding:0.65rem; text-align:right;">Aplicación</th>
+                        <th style="padding:0.65rem; text-align:center;">Resultado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${plan.allocations.map(item => `
+                        <tr style="border-top:1px solid #273449;">
+                            <td style="padding:0.65rem;">${escapePolizaHtml(item.creditLabel)}</td>
+                            <td style="padding:0.65rem; text-align:center;">${item.type === 'NORMAL' ? `Cuota #${item.installmentNumber}` : 'Saldo preferencial'}</td>
+                            <td style="padding:0.65rem; text-align:center;">
+                                ${formatDate(item.dueDate)}
+                                ${item.overdue ? `<div style="color:#FCA5A5; font-size:0.68rem;">${item.daysOverdue} días vencida</div>` : ''}
+                            </td>
+                            <td style="padding:0.65rem; text-align:right; font-weight:800;">${formatMoney(item.amount)}</td>
+                            <td style="padding:0.65rem; text-align:center;">
+                                <span style="display:inline-block; padding:0.2rem 0.5rem; border-radius:999px; background:${item.full ? 'rgba(16,185,129,.16)' : 'rgba(245,158,11,.16)'}; color:${item.full ? '#6EE7B7' : '#FCD34D'};">
+                                    ${item.full ? 'PAGADA' : 'PARCIAL'}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function applyCounterpolicyToCreditDebts(supabase, poliza, debts, availableAmount, preparedPlan = null) {
+    const plan = preparedPlan || buildCounterpolicyAllocationPlan(debts, availableAmount);
+    let applied = 0;
+    const user = window.getCurrentUser?.() || window.currentUser || null;
+    const fechaPago = todayISODate();
+    const normalStats = new Map();
+
+    for (const allocation of plan.allocations) {
+        if (allocation.type === 'NORMAL') {
+            const cuota = allocation.installment;
+            const credito = allocation.credit;
+            const { error: paymentError } = await supabase.from('ic_creditos_pagos').insert({
+                id_detalle: cuota.id_detalle,
+                id_credito: credito.id,
+                fecha_pago: fechaPago,
+                monto_pagado: allocation.amount,
+                metodo_pago: 'CONTRAPOLIZA',
+                referencia_pago: poliza.id_poliza,
+                observaciones: `[CONTRAPOLIZA] Póliza ${poliza.id_poliza}. ${credito.label}, cuota ${cuota.numero_cuota}. Priorizada por vencimiento ${cuota.fecha_vencimiento}.`,
+                comprobante_url: POLIZA_RENOVACION_COMPROBANTE_URL,
+                cobrado_por: user?.id || null
+            });
+            if (paymentError) throw paymentError;
+
+            const { error: installmentError } = await supabase
+                .from('ic_creditos_amortizacion')
+                .update({
+                    estado_cuota: allocation.full ? 'PAGADO' : 'PARCIAL',
+                    requiere_cobro: !allocation.full,
+                    recordatorio_enviado: false,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id_detalle', cuota.id_detalle);
+            if (installmentError) throw installmentError;
+
+            if (!normalStats.has(credito.id)) {
+                normalStats.set(credito.id, { credito, full: 0, overdue: 0 });
+            }
+            const stat = normalStats.get(credito.id);
+            if (allocation.full) {
+                stat.full += 1;
+                if (cuota.estaEnMora) stat.overdue += 1;
+                const { error: savingError } = await supabase
+                    .from('ic_creditos_ahorro')
+                    .update({ estado: 'ACUMULADO', updated_at: new Date().toISOString() })
+                    .eq('id_credito', credito.id)
+                    .eq('numero_cuota', cuota.numero_cuota);
+                if (savingError) console.error('Error actualizando ahorro por contrapóliza:', savingError);
+            }
+            applied = parseFloat((applied + allocation.amount).toFixed(2));
+            continue;
+        }
+
+        const credito = allocation.credit;
+        const monto = allocation.amount;
+        const aplicadoInteres = Math.min(parsePolizaMoney(credito.interes), monto);
+        const aplicadoCapital = Math.max(0, monto - aplicadoInteres);
+        const interesPendiente = Math.max(0, parsePolizaMoney(credito.interes) - aplicadoInteres);
+        const capitalPendiente = Math.max(0, parsePolizaMoney(credito.capital) - aplicadoCapital);
+        const saldoPendiente = parseFloat((interesPendiente + capitalPendiente).toFixed(2));
+
+        const { error: paymentError } = await supabase.from('ic_preferencial_pagos').insert([{
+            id_credito: credito.id,
+            id_socio: poliza.id_socio,
+            monto_abonado: monto,
+            fecha_pago: fechaPago,
+            comprobante_url: POLIZA_RENOVACION_COMPROBANTE_URL,
+            tipo_pago: saldoPendiente <= 0.01 ? 'PAGO_TOTAL' : 'ABONO',
+            metodo_pago: 'CONTRAPOLIZA',
+            referencia_pago: poliza.id_poliza,
+            notas: `Pago aplicado mediante contrapóliza ${poliza.id_poliza}.`,
+            notas_admin: `[CONTRAPOLIZA] Póliza ${poliza.id_poliza}. ${credito.label}: ${formatMoney(monto)}`,
+            capital_pendiente_despues: capitalPendiente,
+            interes_pendiente_despues: interesPendiente,
+            saldo_pendiente_despues: saldoPendiente
+        }]);
+        if (paymentError) throw paymentError;
+
+        const { error: stateError } = await supabase
+            .from('ic_preferencial')
+            .update({ estado: saldoPendiente <= 0.01 ? 'PAGADO' : 'ABONADO' })
+            .eq('idcredito', credito.id);
+        if (stateError) throw stateError;
+        applied = parseFloat((applied + monto).toFixed(2));
+    }
+
+    for (const { credito, full, overdue } of normalStats.values()) {
+        const nuevasCuotasPagadas = (credito.cuotasPagadas || 0) + full;
+        const nuevasCuotasEnMora = Math.max(0, (credito.cuotasEnMora || 0) - overdue);
+        const estadoCredito = nuevasCuotasPagadas >= (credito.plazo || 0)
+            ? 'CANCELADO'
+            : (nuevasCuotasEnMora > 0 ? 'MOROSO' : 'ACTIVO');
+        const { error: creditError } = await supabase
+            .from('ic_creditos')
+            .update({
+                cuotas_pagadas: nuevasCuotasPagadas,
+                cuotas_en_mora: nuevasCuotasEnMora,
+                estado_credito: estadoCredito,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id_credito', credito.id);
+        if (creditError) throw creditError;
+    }
+
+    return { applied, remaining: plan.remaining };
 }
 
 /**
@@ -1146,6 +1784,13 @@ async function handleRenovarPoliza(poliza) {
 
     if (!confirmado) return;
 
+    if (!esCapitalMasInteres
+        && interesAlVencimiento > 0
+        && typeof window.validateCajaBeforeAction === 'function'
+        && !window.validateCajaBeforeAction('PAGO DE INTERÉS DE PÓLIZA')) {
+        return;
+    }
+
     try {
         beginLoading('Procesando renovación...');
         const supabase = getSupabaseClient();
@@ -1183,6 +1828,8 @@ async function handleRenovarPoliza(poliza) {
             fecha_vencimiento: nuevaFechaVenc,
             valor_final: currentNuevoValorFinal.toFixed(2),
             estado: 'ACTIVO',
+            metodo_captacion: 'CONTRAPOLIZA',
+            createdby: window.getCurrentUser?.()?.id || null,
             notas: `Renovación de póliza ${poliza.id_poliza.substring(0, 8)} | Valor tomado al vencimiento por ${diasPoliza} días. Descuentos aplicados: ${formatMoney(totalDescuentosRenovacion)}.`
         }]);
 
@@ -1394,6 +2041,7 @@ async function loadPreferentialCreditDeductionsForRenewal(supabase, idSocio) {
             total,
             capital: balance.capitalPendiente,
             interes: balance.interesPendiente,
+            fechaInicio: credito.fechaaprobacion || credito.fechasolicitud || todayISODate(),
             motivo: credito.motivo || '',
             comprobanteDesembolso: credito.fotografia || '',
             pagos: pagosCredito,
@@ -1494,7 +2142,7 @@ async function registerPolizaRenewalCreditPayments(supabase, poliza, resumenDesc
 
     const user = window.currentUser || (typeof getCurrentUser === 'function' ? getCurrentUser() : null);
     const fechaPago = todayISODate();
-    const referencia = `DESC-POL-${String(poliza.id_poliza || Date.now()).slice(0, 8).toUpperCase()}`;
+    const referencia = poliza.id_poliza;
     const socio = await getPolizaRenewalSocioInfo(supabase, poliza);
 
     for (const credito of creditosNormales) {
@@ -1521,8 +2169,8 @@ async function registerNormalCreditRenewalPayment(supabase, credito, poliza, soc
     const montoBase = parseFloat(cuotas.reduce((sum, cuota) => sum + parsePolizaMoney(cuota.montoBase), 0).toFixed(2));
     const totalMora = parseFloat(cuotas.reduce((sum, cuota) => sum + parsePolizaMoney(cuota.montoMora), 0).toFixed(2));
     const montoPagado = parseFloat((montoBase + totalMora).toFixed(2));
-    const metodoPago = 'OTRO';
-    const obsFinal = `[DESCUENTO POR RENOVACION DE POLIZA] Poliza ${String(poliza.id_poliza || '').slice(0, 8)}. Comprobante fijo: ${POLIZA_RENOVACION_COMPROBANTE_URL}${totalMora > 0 ? ` | MORA TOTAL: $${totalMora.toFixed(2)}` : ''}`;
+    const metodoPago = 'CONTRAPOLIZA';
+    const obsFinal = `[CONTRAPOLIZA POR RENOVACION] Póliza ${poliza.id_poliza}. Comprobante fijo: ${POLIZA_RENOVACION_COMPROBANTE_URL}${totalMora > 0 ? ` | MORA TOTAL: $${totalMora.toFixed(2)}` : ''}`;
 
     for (let i = 0; i < cuotas.length; i++) {
         const cuota = cuotas[i];
@@ -1589,18 +2237,20 @@ async function registerNormalCreditRenewalPayment(supabase, credito, poliza, soc
 
     if (errorCredito) throw errorCredito;
 
-    await notifyPolizaRenewalCreditPayment({
-        socio,
-        credito,
-        cuotas,
-        cantidadCuotas,
-        montoBase,
-        totalMora,
-        montoPagado,
-        fechaPago: options.fechaPago,
-        metodoPago,
-        nuevasCuotasPagadas
-    });
+    if (metodoPago !== 'CONTRAPOLIZA') {
+        await notifyPolizaRenewalCreditPayment({
+            socio,
+            credito,
+            cuotas,
+            cantidadCuotas,
+            montoBase,
+            totalMora,
+            montoPagado,
+            fechaPago: options.fechaPago,
+            metodoPago,
+            nuevasCuotasPagadas
+        });
+    }
 }
 
 async function registerPreferentialCreditRenewalPayment(supabase, poliza, creditosPreferenciales, options) {
@@ -1615,8 +2265,10 @@ async function registerPreferentialCreditRenewalPayment(supabase, poliza, credit
             fecha_pago: options.fechaPago,
             comprobante_url: POLIZA_RENOVACION_COMPROBANTE_URL,
             tipo_pago: 'PAGO_TOTAL',
-            notas: `Descuento automático por renovación de póliza ${String(poliza.id_poliza || '').slice(0, 8)}.`,
-            notas_admin: `[DESCUENTO POR RENOVACION DE POLIZA] ${options.referencia}. ${credito.label}: ${formatMoney(monto)}`,
+            metodo_pago: 'CONTRAPOLIZA',
+            referencia_pago: poliza.id_poliza,
+            notas: `Descuento automático por renovación de póliza ${poliza.id_poliza}.`,
+            notas_admin: `[CONTRAPOLIZA POR RENOVACION] ${options.referencia}. ${credito.label}: ${formatMoney(monto)}`,
             capital_pendiente_despues: 0,
             interes_pendiente_despues: 0,
             saldo_pendiente_despues: 0
@@ -2085,6 +2737,77 @@ function calculateFixed17Maturity(fechaInicioStr, plazoMeses) {
     return toISODate(target);
 }
 
+async function configurePolizaFinancialActions(poliza) {
+    const payButton = document.getElementById('btn-pagar-poliza');
+    const renewButton = document.getElementById('btn-renovar-poliza');
+    if (!payButton || !renewButton) return;
+
+    payButton.disabled = true;
+    renewButton.disabled = true;
+    payButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Revisando deudas';
+
+    try {
+        const debts = await loadPolizaRenewalDeductions(poliza.id_socio);
+        if (document.getElementById('poliza-id')?.value !== poliza.id_poliza) return;
+        const available = parsePolizaMoney(poliza.valor_final || poliza.valor);
+        const requiresCounterpolicy = parsePolizaMoney(debts.total) >= available && available > 0;
+
+        currentPolizaDebtContext = {
+            polizaId: poliza.id_poliza,
+            debts,
+            available,
+            requiresCounterpolicy
+        };
+
+        if (requiresCounterpolicy) {
+            payButton.innerHTML = '<i class="fas fa-file-invoice-dollar"></i> Cancelar con Contrapóliza';
+            payButton.title = 'Aplicar el valor de la póliza a las deudas sin movimiento de caja';
+            renewButton.classList.add('hidden');
+        } else {
+            payButton.innerHTML = '<i class="fas fa-check-double"></i> Pagar al Socio';
+            payButton.title = 'Liquidar la póliza y entregar el dinero al socio';
+            renewButton.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('No se pudieron revisar las deudas de la póliza:', error);
+        payButton.innerHTML = '<i class="fas fa-check-double"></i> Pagar al Socio';
+        renewButton.classList.remove('hidden');
+        currentPolizaDebtContext = null;
+    } finally {
+        payButton.disabled = false;
+        renewButton.disabled = false;
+    }
+}
+
+async function handlePolizaPrimaryAction(poliza) {
+    let context = currentPolizaDebtContext?.polizaId === poliza.id_poliza
+        ? currentPolizaDebtContext
+        : null;
+
+    if (!context) {
+        const debts = await loadPolizaRenewalDeductions(poliza.id_socio);
+        const available = parsePolizaMoney(poliza.valor_final || poliza.valor);
+        context = {
+            polizaId: poliza.id_poliza,
+            debts,
+            available,
+            requiresCounterpolicy: parsePolizaMoney(debts.total) >= available && available > 0
+        };
+    }
+
+    if (context.requiresCounterpolicy) {
+        await handleCancelarPolizaConContrapoliza(poliza, context);
+        return;
+    }
+
+    if (typeof window.validateCajaBeforeAction === 'function'
+        && !window.validateCajaBeforeAction('LIQUIDACIÓN DE PÓLIZA')) {
+        return;
+    }
+
+    await handlePagarPoliza(poliza);
+}
+
 async function confirmNewPolizaWithContract(data) {
     let contratoGenerado = false;
     const socio = getSelectedPolizaSocio() || { idsocio: data.id_socio };
@@ -2357,6 +3080,8 @@ async function savePoliza() {
     };
 
     if (isNewPoliza) {
+        data.createdby = window.getCurrentUser?.()?.id || null;
+        data.metodo_captacion = 'TRANSFERENCIA';
         const confirmed = await confirmNewPolizaWithContract(data);
         if (!confirmed) return;
     }

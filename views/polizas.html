@@ -65,6 +65,14 @@
         <!-- Separador -->
         <div class="toolbar-separator"></div>
 
+        <button id="polizas-scope-toggle" class="toolbar-btn polizas-scope-btn hidden"
+            title="Cambiar alcance de pólizas visibles">
+            <i class="fas fa-user-check"></i>
+            <span>Solo mías</span>
+        </button>
+
+        <div class="toolbar-separator polizas-scope-separator hidden"></div>
+
         <!-- Búsqueda -->
         <div class="toolbar-search">
             <i class="fas fa-search"></i>
@@ -100,6 +108,12 @@
             <span class="counter-label">CAPITALIZADO</span>
             <span class="counter-value" id="count-polizas-capitalizado">0</span>
         </div>
+
+        <button type="button" class="btn-reporte-polizas" onclick="openExportPolizasModal()"
+            title="Generar informe de pólizas">
+            <i class="fas fa-file-pdf"></i>
+            <span>Generar Informe</span>
+        </button>
     </div>
 
     <!-- Contenedor de Secciones dinámicas -->

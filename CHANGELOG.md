@@ -1,5 +1,19 @@
 # CHANGELOG - INKA CORP
 
+## [31.5.11] - 2026-06-23
+### Créditos Preferenciales
+- **Desembolso desde el sistema interno:** Los créditos preferenciales aprobados ahora pueden desembolsarse directamente desde INKA CORP, sin depender de una pantalla externa.
+- **Registro correcto en Caja:** Al confirmar el desembolso, el movimiento se descuenta de la caja abierta del usuario que realiza la operación.
+- **Comprobante obligatorio y optimizado:** El desembolso solicita foto o imagen del comprobante y la optimiza automáticamente para que sea más liviana.
+- **Recargos controlados:** Si el desembolso incluye un costo adicional, puedes indicar el nuevo valor y registrar el motivo antes de confirmar.
+- **Mensajes de confirmación:** Después de desembolsar, el sistema envía las notificaciones correspondientes junto con el comprobante.
+
+### Dashboard y Móvil
+- **Pendientes visibles en el inicio:** Los créditos preferenciales aprobados aparecen junto a los demás desembolsos pendientes en el dashboard de PC y en el inicio móvil.
+- **Desembolso rápido desde móvil:** En celular puedes tomar foto o cargar el comprobante desde galería, confirmar el desembolso y completar el proceso sin entrar al módulo completo.
+- **Proceso con bloqueo de pantalla:** Mientras se sube el comprobante, se registra el desembolso y se envían mensajes, el sistema muestra el avance para evitar dobles clics o cierres accidentales.
+- **Tarjetas móviles más claras:** Las tarjetas de preferenciales muestran mejor el valor a desembolsar, tipo, tasa, WhatsApp y motivo sin desbordes visuales.
+
 ## [31.5.5] - 2026-06-18
 ### Créditos Emergentes
 - **Nuevo módulo de créditos emergentes:** Ya puedes gestionar solicitudes especiales para socios desde un solo lugar, pasando por solicitud, aprobación, colocación, desembolso y pago.

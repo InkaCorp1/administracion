@@ -1005,3 +1005,177 @@
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+/* Tema oscuro y reportes de pólizas */
+#poliza-modal .modal-redesign {
+    background: linear-gradient(145deg, #111827 0%, #172033 100%) !important;
+    border: 1px solid rgba(148, 163, 184, 0.22) !important;
+    color: #F8FAFC !important;
+    box-shadow: 0 28px 70px rgba(2, 6, 23, 0.72) !important;
+}
+
+#poliza-modal #modal-poliza-title {
+    color: #34D399 !important;
+}
+
+#poliza-modal .modal-body-custom::-webkit-scrollbar-track {
+    background: #0F172A;
+}
+
+#poliza-modal .modal-body-custom::-webkit-scrollbar-thumb {
+    background: #475569;
+}
+
+#poliza-modal .section-label-v2 {
+    border-bottom-color: rgba(148, 163, 184, 0.18);
+}
+
+#poliza-modal .form-select-v2,
+#poliza-modal .form-control-v2 {
+    border-color: #334155;
+    background: #0F172A;
+    color: #F8FAFC;
+}
+
+#poliza-modal .info-value-v2,
+#poliza-modal .display-value-v2 {
+    color: #F1F5F9;
+}
+
+#poliza-modal #display-valor-inversion,
+#poliza-modal .display-value-v2.price {
+    color: #34D399 !important;
+}
+
+#poliza-modal .projection-box-v2 {
+    background: rgba(30, 64, 175, 0.16);
+    border-color: rgba(59, 130, 246, 0.28);
+}
+
+#poliza-modal #poliza-devengado-container {
+    background: rgba(180, 83, 9, 0.13) !important;
+    border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+#poliza-modal .extra-fields {
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 1rem;
+    padding: 1.25rem;
+}
+
+#poliza-modal .certificado-img-wrapper {
+    background: #0F172A !important;
+    border-color: #334155 !important;
+}
+
+#poliza-modal .btn-cancel-v2 {
+    background: #1E293B !important;
+    border-color: #475569 !important;
+    color: #CBD5E1 !important;
+}
+
+.btn-reporte-polizas {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 38px;
+    padding: 0.55rem 1rem;
+    border: 1px solid rgba(242, 187, 58, 0.42);
+    border-radius: 0.65rem;
+    background: linear-gradient(135deg, rgba(11, 78, 50, 0.95), rgba(5, 46, 28, 0.95));
+    color: #F2BB3A;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-reporte-polizas:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(11, 78, 50, 0.35);
+}
+
+.poliza-report-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.poliza-report-field {
+    padding: 0.9rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 0.8rem;
+    background: rgba(15, 23, 42, 0.58);
+}
+
+.poliza-report-field label {
+    display: block;
+    margin-bottom: 0.55rem;
+    color: #94A3B8;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.poliza-report-field input,
+.poliza-report-field select {
+    width: 100%;
+    min-height: 40px;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid #334155;
+    border-radius: 0.55rem;
+    background: #0F172A;
+    color: #F8FAFC;
+}
+
+.poliza-report-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.poliza-report-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 38px;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid #334155;
+    border-radius: 0.6rem;
+    background: #0F172A;
+    color: #CBD5E1;
+    font-size: 0.78rem;
+    font-weight: 750;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+
+.poliza-report-option:hover:not(:disabled) {
+    border-color: #10B981;
+    color: #F8FAFC;
+    transform: translateY(-1px);
+}
+
+.poliza-report-option.active {
+    border-color: #10B981;
+    background: linear-gradient(135deg, #0B4E32, #087044);
+    color: #FFFFFF;
+    box-shadow: 0 5px 14px rgba(16, 185, 129, 0.18);
+}
+
+.poliza-report-option:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+    .poliza-report-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-reporte-polizas {
+        width: 100%;
+        justify-content: center;
+    }
+}

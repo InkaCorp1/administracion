@@ -2030,11 +2030,6 @@ function updatePriorityAlertsLayout() {
         // Limpiar clases previas
         section.classList.remove('width-50', 'width-100');
 
-        if (section.classList.contains('critical-alert')) {
-            section.classList.add('width-100');
-            return;
-        }
-
         // Aplicar ancho según cantidad de elementos de SU categoría
         if (count === 1) {
             section.classList.add('width-50');
@@ -2067,28 +2062,51 @@ async function loadPolizasVencimientoDashboard() {
         const startStr = startDate.toISOString().split('T')[0];
         const endStr = endDate.toISOString().split('T')[0];
 
-        // NOTA: Columnas según schemas.txt (ic_polizas)
-        const { data: polizas, error } = await supabase
-            .from('ic_polizas')
-            .select(`
-                id_poliza,
-                valor,
-                valor_final,
-                interes,
-                fecha_vencimiento,
-                estado,
-                id_socio
-            `)
-            .eq('estado', 'ACTIVO')
-            .gte('fecha_vencimiento', startStr)
-            .lte('fecha_vencimiento', endStr)
-            .order('fecha_vencimiento', { ascending: true });
+        const polizaSelect = `
+            id_poliza,
+            valor,
+            valor_final,
+            interes,
+            fecha_vencimiento,
+            estado,
+            certificado_firmado,
+            created_at,
+            id_socio
+        `;
 
-        if (error) {
+        const [
+            { data: polizasRenovacion, error },
+            { data: polizasSinFirmadoRaw, error: firmadosError }
+        ] = await Promise.all([
+            supabase
+                .from('ic_polizas')
+                .select(polizaSelect)
+                .eq('estado', 'ACTIVO')
+                .gte('fecha_vencimiento', startStr)
+                .lte('fecha_vencimiento', endStr)
+                .order('fecha_vencimiento', { ascending: true }),
+            supabase
+                .from('ic_polizas')
+                .select(polizaSelect)
+                .in('estado', ['PENDIENTE', 'ACTIVO'])
+                .order('created_at', { ascending: false })
+        ]);
+
+        if (error || firmadosError) {
             console.error('Error cargando pólizas por vencer:', error);
             updatePriorityAlertsLayout();
             return;
         }
+
+        const polizasSinFirmado = (polizasSinFirmadoRaw || [])
+            .filter(poliza => !String(poliza.certificado_firmado || '').trim());
+
+        const polizas = [
+            ...polizasSinFirmado.map(poliza => ({ ...poliza, dashboardTipo: 'FIRMADO_PENDIENTE' })),
+            ...(polizasRenovacion || [])
+                .filter(poliza => !polizasSinFirmado.some(p => p.id_poliza === poliza.id_poliza))
+                .map(poliza => ({ ...poliza, dashboardTipo: 'RENOVACION' }))
+        ];
 
         if (!polizas || polizas.length === 0) {
             section.classList.add('hidden');
@@ -2110,21 +2128,39 @@ async function loadPolizasVencimientoDashboard() {
 
         const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const polizasConDias = polizas.map(poliza => {
-            const vencParts = poliza.fecha_vencimiento.split('-');
-            const fechaVenc = new Date(parseInt(vencParts[0], 10), parseInt(vencParts[1], 10) - 1, parseInt(vencParts[2], 10));
-            const diffTime = fechaVenc - todayMidnight;
+            const vencParts = String(poliza.fecha_vencimiento || '').split('-');
+            const fechaVenc = vencParts.length === 3
+                ? new Date(parseInt(vencParts[0], 10), parseInt(vencParts[1], 10) - 1, parseInt(vencParts[2], 10))
+                : null;
+            const diffTime = fechaVenc ? fechaVenc - todayMidnight : 0;
             return {
                 ...poliza,
-                diasParaVencer: Math.round(diffTime / (1000 * 60 * 60 * 24))
+                diasParaVencer: fechaVenc ? Math.round(diffTime / (1000 * 60 * 60 * 24)) : null
             };
         });
         const polizasVencidasPendientes = polizasConDias.filter(p => p.diasParaVencer < 0);
+        const polizasFirmadoPendiente = polizasConDias.filter(p => p.dashboardTipo === 'FIRMADO_PENDIENTE');
 
         section.classList.remove('hidden');
-        section.classList.toggle('critical-alert', polizasVencidasPendientes.length > 0);
+        section.classList.toggle('critical-alert', polizasVencidasPendientes.length > 0 || polizasFirmadoPendiente.length > 0);
         if (countBadge) countBadge.textContent = polizas.length;
 
         // Renderizar
+        const signedPendingAlertHtml = polizasFirmadoPendiente.length > 1 ? `
+            <div class="polizas-urgent-summary">
+                <div class="urgent-summary-icon">
+                    <i class="fas fa-file-signature"></i>
+                </div>
+                <div class="urgent-summary-copy">
+                    <strong>Tienes ${polizasFirmadoPendiente.length} póliza${polizasFirmadoPendiente.length === 1 ? '' : 's'} pendiente${polizasFirmadoPendiente.length === 1 ? '' : 's'} de subir documento firmado.</strong>
+                    <span>Completa el firmado para dejar la póliza actualizada.</span>
+                </div>
+                <button type="button" class="urgent-summary-btn" onclick="loadView('polizas')">
+                    <i class="fas fa-arrow-right"></i> Ir a Pólizas
+                </button>
+            </div>
+        ` : '';
+
         const urgentAlertHtml = polizasVencidasPendientes.length > 0 ? `
             <div class="polizas-urgent-summary">
                 <div class="urgent-summary-icon">
@@ -2140,17 +2176,21 @@ async function loadPolizasVencimientoDashboard() {
             </div>
         ` : '';
 
-        container.innerHTML = urgentAlertHtml + polizasConDias.map(poliza => {
+        container.innerHTML = signedPendingAlertHtml + urgentAlertHtml + polizasConDias.map(poliza => {
             const socio = poliza.socio || {};
             const montoFormatted = parseFloat(poliza.valor).toLocaleString('es-EC', { minimumFractionDigits: 2 });
             const interesCalculado = parseFloat(poliza.valor_final || 0) - parseFloat(poliza.valor || 0);
             const interesFormatted = (interesCalculado > 0 ? interesCalculado : 0).toLocaleString('es-EC', { minimumFractionDigits: 2 });
+            const isFirmadoPendiente = poliza.dashboardTipo === 'FIRMADO_PENDIENTE';
 
             let colorStyle = 'color: #ef4444; background: rgba(239, 68, 68, 0.1); font-weight: bold;'; // Danger por defecto
             let labelVence = 'Vence en';
             let textoDias = '';
 
-            if (poliza.diasParaVencer === 0) {
+            if (poliza.diasParaVencer === null) {
+                textoDias = 'Sin fecha';
+                colorStyle = 'color: #fbbf24; background: rgba(251, 191, 36, 0.12); font-weight: bold;';
+            } else if (poliza.diasParaVencer === 0) {
                 textoDias = 'HOY';
             } else if (poliza.diasParaVencer > 0) {
                 textoDias = `${poliza.diasParaVencer} ${poliza.diasParaVencer === 1 ? 'día' : 'días'}`;
@@ -2175,10 +2215,18 @@ async function loadPolizasVencimientoDashboard() {
                         </div>
                     </div>
                     <div class="desembolso-info">
+                        ${isFirmadoPendiente ? `
+                        <div class="desembolso-info-item">
+                            <span class="desembolso-info-label">Pendiente</span>
+                            <span class="desembolso-info-value" style="padding: 2px 8px; border-radius: 6px; color: #78350f; background: #fbbf24; font-weight: bold;">
+                                Subir firmado
+                            </span>
+                        </div>
+                        ` : ''}
                         <div class="desembolso-info-item">
                             <span class="desembolso-info-label">${labelVence}</span>
                             <span class="desembolso-info-value" style="padding: 2px 8px; border-radius: 6px; ${colorStyle}">
-                                ${textoDias} (${poliza.fecha_vencimiento})
+                                ${textoDias}${poliza.fecha_vencimiento ? ` (${poliza.fecha_vencimiento})` : ''}
                             </span>
                         </div>
                         <div class="desembolso-info-item">
@@ -2210,7 +2258,8 @@ async function loadDesembolsosPendientes() {
 
         const [
             { data: creditosPendientes, error: creditosError },
-            { data: emergentesPendientes, error: emergentesError }
+            { data: emergentesPendientes, error: emergentesError },
+            { data: preferencialesPendientes, error: preferencialesError }
         ] = await Promise.all([
             supabase
                 .from('ic_creditos')
@@ -2244,17 +2293,36 @@ async function loadDesembolsosPendientes() {
                     created_at
                 `)
                 .eq('estado', 'COLOCADO')
+                .order('created_at', { ascending: false }),
+            supabase
+                .from('ic_preferencial')
+                .select(`
+                    idcredito,
+                    idsocio,
+                    tipo,
+                    porcentaje,
+                    motivo,
+                    monto,
+                    montofinal,
+                    nombrebeneficiario,
+                    whatsappbeneficiario,
+                    fechaaprobacion,
+                    created_at
+                `)
+                .ilike('estado', 'APROBADO')
                 .order('created_at', { ascending: false })
         ]);
 
         if (creditosError) throw creditosError;
         if (emergentesError) throw emergentesError;
+        if (preferencialesError) throw preferencialesError;
 
         const creditosNormales = creditosPendientes || [];
         const creditosEmergentes = emergentesPendientes || [];
+        const creditosPreferenciales = preferencialesPendientes || [];
 
         // Mostrar u ocultar sección según haya datos
-        if (creditosNormales.length === 0 && creditosEmergentes.length === 0) {
+        if (creditosNormales.length === 0 && creditosEmergentes.length === 0 && creditosPreferenciales.length === 0) {
             section.classList.add('hidden');
             container.innerHTML = '';
             if (countBadge) countBadge.textContent = '0';
@@ -2264,8 +2332,8 @@ async function loadDesembolsosPendientes() {
 
         // Cargar datos de socios relacionados
         const socioIds = [...new Set(
-            [...creditosNormales, ...creditosEmergentes]
-                .map(c => c.id_socio)
+            [...creditosNormales, ...creditosEmergentes, ...creditosPreferenciales]
+                .map(c => c.id_socio || c.idsocio)
                 .filter(Boolean)
         )];
         let socios = [];
@@ -2279,12 +2347,12 @@ async function loadDesembolsosPendientes() {
         }
 
         // Mapear socios a créditos
-        [...creditosNormales, ...creditosEmergentes].forEach(credito => {
-            credito.socio = socios?.find(s => s.idsocio === credito.id_socio) || {};
+        [...creditosNormales, ...creditosEmergentes, ...creditosPreferenciales].forEach(credito => {
+            credito.socio = socios?.find(s => s.idsocio === (credito.id_socio || credito.idsocio)) || {};
         });
 
         section.classList.remove('hidden');
-        if (countBadge) countBadge.textContent = creditosNormales.length + creditosEmergentes.length;
+        if (countBadge) countBadge.textContent = creditosNormales.length + creditosEmergentes.length + creditosPreferenciales.length;
 
         const normalesHtml = creditosNormales.map(credito => {
             const socio = credito.socio || {};
@@ -2390,12 +2458,78 @@ async function loadDesembolsosPendientes() {
             `;
         }).join('');
 
-        container.innerHTML = normalesHtml + emergentesHtml;
+        const preferencialesHtml = creditosPreferenciales.map(credito => {
+            const socio = credito.socio || {};
+            const monto = parseDashboardMoney(credito.montofinal || credito.monto || 0);
+            const tasa = String(credito.porcentaje || '0').replace('%', '');
+
+            return `
+                <div class="desembolso-card desembolso-card-preferencial" data-id="${credito.idcredito}">
+                    <div class="desembolso-header">
+                        <div class="desembolso-socio">
+                            <div class="desembolso-tipo"><i class="fas fa-star"></i> Preferencial</div>
+                            <div class="desembolso-nombre">${credito.nombrebeneficiario || socio.nombre || 'Beneficiario'}</div>
+                            <div class="desembolso-cedula">${socio.cedula || credito.idsocio || '-'} | ${credito.idcredito}</div>
+                        </div>
+                        <div class="desembolso-monto">
+                            <div class="desembolso-monto-valor">$${monto.toLocaleString('es-EC', { minimumFractionDigits: 2 })}</div>
+                            <div class="desembolso-monto-label">A desembolsar</div>
+                        </div>
+                    </div>
+                    <div class="desembolso-info">
+                        <div class="desembolso-info-item">
+                            <span class="desembolso-info-label">Tipo</span>
+                            <span class="desembolso-info-value">${credito.tipo || 'Preferencial'}</span>
+                        </div>
+                        <div class="desembolso-info-item">
+                            <span class="desembolso-info-label">Tasa</span>
+                            <span class="desembolso-info-value">${tasa}%</span>
+                        </div>
+                        <div class="desembolso-info-item">
+                            <span class="desembolso-info-label">Beneficiario</span>
+                            <span class="desembolso-info-value">${credito.whatsappbeneficiario || '-'}</span>
+                        </div>
+                        <div class="desembolso-info-item">
+                            <span class="desembolso-info-label">Aprobación</span>
+                            <span class="desembolso-info-value">${credito.fechaaprobacion || 'Aprobado'}</span>
+                        </div>
+                    </div>
+                    <div class="desembolso-actions">
+                        <button class="desembolso-btn desembolso-btn-desembolsar" onclick="event.stopPropagation(); abrirDesembolsoPreferencialDashboard('${credito.idcredito}')">
+                            <i class="fas fa-hand-holding-usd"></i> Desembolsar
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = normalesHtml + emergentesHtml + preferencialesHtml;
         updatePriorityAlertsLayout();
 
     } catch (error) {
         console.error('Error loading desembolsos pendientes:', error);
     }
+}
+
+function abrirDesembolsoPreferencialDashboard(idcredito) {
+    if (!idcredito) return;
+    sessionStorage.setItem('pendingPreferentialDisbursementId', idcredito);
+    loadView('creditos_preferenciales');
+}
+
+window.abrirDesembolsoPreferencialDashboard = abrirDesembolsoPreferencialDashboard;
+
+function parseDashboardMoney(value) {
+    if (typeof value === 'number') return value;
+    let cleaned = String(value || '0').replace(/[^0-9,.-]/g, '');
+    const lastComma = cleaned.lastIndexOf(',');
+    const lastDot = cleaned.lastIndexOf('.');
+    if (lastComma !== -1 && lastDot !== -1) {
+        cleaned = lastComma > lastDot ? cleaned.replace(/\./g, '').replace(',', '.') : cleaned.replace(/,/g, '');
+    } else if (lastComma !== -1) {
+        cleaned = cleaned.replace(',', '.');
+    }
+    return parseFloat(cleaned) || 0;
 }
 
 // Función para renderizar morosos en el dashboard
