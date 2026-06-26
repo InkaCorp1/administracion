@@ -440,6 +440,18 @@
                         <p class="config-help">Ajuste en incrementos de 0.25% (0.5% - 10%).</p>
                     </div>
 
+                    <div class="config-gastos-admin">
+                        <label class="config-label" for="input-gastos-admin-porcentaje"><i class="fas fa-receipt"></i>
+                            Gastos Administrativos</label>
+                        <div class="gastos-admin-display">
+                            <input type="number" id="input-gastos-admin-porcentaje" class="gastos-admin-input"
+                                value="3.80" min="0" max="25" step="0.01"
+                                oninput="actualizarCalculosColocacion()">
+                            <span class="tasa-suffix">%</span>
+                        </div>
+                        <p class="config-help">Se sugiere por rango de monto, pero puede ajustarse antes de colocar.</p>
+                    </div>
+
                     <div class="fechas-resumen">
                         <div class="fecha-item">
                             <span class="f-label">Desembolso (Hoy)</span>
@@ -461,7 +473,10 @@
                         </div>
                         <div class="c-row">
                             <span>Gastos Administrativos</span>
-                            <span id="colocar-gastos-admin" class="c-val">$0.00</span>
+                            <span class="c-val">
+                                <small id="colocar-gastos-admin-rate">3.80%</small>
+                                <strong id="colocar-gastos-admin">$0.00</strong>
+                            </span>
                         </div>
                         <div class="c-row">
                             <span>Interés Total Estimado</span>

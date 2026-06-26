@@ -1318,6 +1318,15 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
+.config-gastos-admin {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
 .tasa-input-container {
     display: flex;
     align-items: center;
@@ -1339,6 +1348,24 @@
 }
 
 .tasa-display:focus-within {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(242, 187, 58, 0.2);
+}
+
+.gastos-admin-display {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 0.6rem 1.25rem;
+    min-width: 140px;
+    transition: all 0.2s ease;
+}
+
+.gastos-admin-display:focus-within {
     border-color: var(--gold);
     box-shadow: 0 0 0 3px rgba(242, 187, 58, 0.2);
 }
@@ -1384,6 +1411,23 @@
     text-align: center;
     outline: none;
     width: 60px;
+}
+
+.gastos-admin-input {
+    border: none;
+    background: transparent;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1e293b;
+    text-align: center;
+    outline: none;
+    width: 76px;
+}
+
+.gastos-admin-input::-webkit-inner-spin-button,
+.gastos-admin-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .tasa-input::-webkit-inner-spin-button,
@@ -1455,8 +1499,18 @@
 }
 
 .c-val {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.1rem;
     font-weight: 700;
     color: #1e293b;
+}
+
+.c-val small {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 700;
 }
 
 .total-row {
@@ -3322,10 +3376,12 @@
 .modal-card.modal-nueva-solicitud .form-control,
 .modal-card.modal-colocar-credito .garante-input,
 .modal-card.modal-colocar-credito .tasa-display,
+.modal-card.modal-colocar-credito .gastos-admin-display,
 .modal-card.modal-colocar-credito .fecha-item,
 .modal-card.modal-colocar-credito .cuota-card,
 .modal-card.modal-colocar-credito .config-pago,
 .modal-card.modal-colocar-credito .config-tasa,
+.modal-card.modal-colocar-credito .config-gastos-admin,
 .modal-card.modal-colocar-credito .calculos-detalle,
 .modal-card.modal-colocar-credito .info-socio-top,
 .modal-card.modal-colocar-credito .garante-section {
@@ -3364,7 +3420,8 @@
 
 .modal-card.modal-nueva-solicitud .form-control:focus,
 .modal-card.modal-colocar-credito .garante-input:focus,
-.modal-card.modal-colocar-credito .tasa-display:focus-within {
+.modal-card.modal-colocar-credito .tasa-display:focus-within,
+.modal-card.modal-colocar-credito .gastos-admin-display:focus-within {
     border-color: var(--gold);
     box-shadow: 0 0 0 3px rgba(242, 187, 58, 0.14);
 }
@@ -3395,6 +3452,7 @@
 .modal-card.modal-colocar-credito .q-value,
 .modal-card.modal-colocar-credito .info-socio-top .value,
 .modal-card.modal-colocar-credito .tasa-input,
+.modal-card.modal-colocar-credito .gastos-admin-input,
 .modal-card.modal-colocar-credito .toggle-label {
     color: #f4f8ff;
 }

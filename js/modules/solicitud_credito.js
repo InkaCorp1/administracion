@@ -1562,6 +1562,11 @@ async function colocarCredito() {
     const tasaInput = document.getElementById('input-tasa-interes');
     if (tasaInput) tasaInput.value = '2.00';
 
+    const gastosInput = document.getElementById('input-gastos-admin-porcentaje');
+    if (gastosInput) {
+        gastosInput.value = getPorcentajeGastosAdminSugerido(currentSolicitud.monto).toFixed(2);
+    }
+
     // Resetear sección de garante
     resetGaranteSection();
 
@@ -1666,6 +1671,38 @@ function ajustarTasa(delta) {
     actualizarCalculosColocacion();
 }
 
+function getPorcentajeGastosAdminSugerido(capital) {
+    const monto = parseFloat(capital || 0);
+    if (monto < 5000) return 3.8;
+    if (monto < 20000) return 2.3;
+    return 1.8;
+}
+
+function getPorcentajeGastosAdminColocacion() {
+    const capital = parseFloat(currentSolicitud?.monto || 0);
+    const input = document.getElementById('input-gastos-admin-porcentaje');
+    const sugerido = getPorcentajeGastosAdminSugerido(capital);
+    const valor = parseFloat(input?.value);
+    if (!Number.isFinite(valor)) return sugerido;
+    return Math.max(0, Math.min(25, valor));
+}
+
+function calcularGastosAdminCredito(capital, porcentaje) {
+    const monto = parseFloat(capital || 0);
+    const tasa = parseFloat(porcentaje || 0);
+    return Math.round((monto * (tasa / 100)) * 100) / 100;
+}
+
+function calcularPorcentajeGastosAdminUsado(credito) {
+    const valorGuardado = parseFloat(credito?.gastos_administrativos_porcentaje);
+    if (Number.isFinite(valorGuardado) && valorGuardado >= 0) return valorGuardado;
+
+    const capital = parseFloat(credito?.capital || 0);
+    const gastos = parseFloat(credito?.gastos_administrativos || 0);
+    if (!capital || !Number.isFinite(gastos)) return getPorcentajeGastosAdminSugerido(capital);
+    return (gastos / capital) * 100;
+}
+
 // Exponer funciones globalmente
 window.toggleGaranteSection = toggleGaranteSection;
 window.ajustarTasa = ajustarTasa;
@@ -1722,15 +1759,9 @@ function actualizarCalculosColocacion() {
     // 3. Calcular Días Totales para Interés
     let diasTotales = Math.round((fechaFinCredito.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-    // 4. Calcular Gastos Administrativos (según calculadora.html)
-    let gastosAdmin = 0;
-    if (capital < 5000) {
-        gastosAdmin = capital * 0.038;
-    } else if (capital < 20000) {
-        gastosAdmin = capital * 0.023;
-    } else {
-        gastosAdmin = capital * 0.018;
-    }
+    // 4. Calcular Gastos Administrativos con el porcentaje editable de colocación
+    const gastosAdminPorcentaje = getPorcentajeGastosAdminColocacion();
+    const gastosAdmin = calcularGastosAdminCredito(capital, gastosAdminPorcentaje);
 
     // 5. Calcular Interés Total (usando la tasa mensual del input)
     const tasaAnual = tasaMensual * 12;
@@ -1767,6 +1798,11 @@ function actualizarCalculosColocacion() {
         tasaDisplay.textContent = (tasaMensual * 100).toFixed(2) + '%';
     }
 
+    const gastosRateDisplay = document.getElementById('colocar-gastos-admin-rate');
+    if (gastosRateDisplay) {
+        gastosRateDisplay.textContent = gastosAdminPorcentaje.toFixed(2) + '%';
+    }
+
     document.getElementById('colocar-gastos-admin').textContent = formatter.format(gastosAdminRedondeado);
     document.getElementById('colocar-interes-total').textContent = formatter.format(interesTotal);
     document.getElementById('colocar-total-pagar').textContent = formatter.format(totalPagar);
@@ -1788,7 +1824,8 @@ function actualizarCalculosColocacion() {
         ahorroTotal,
         cuotaTotal,
         diaPago,
-        tasaMensual
+        tasaMensual,
+        gastosAdminPorcentaje
     };
 }
 
@@ -1821,7 +1858,8 @@ async function prepararSimulacionPDF() {
             ahorroTotal,
             cuotaTotal,
             diaPago,
-            tasaMensual
+            tasaMensual,
+            gastosAdminPorcentaje
         } = window.currentColocacionData;
 
         const capital = parseFloat(currentSolicitud.monto);
@@ -1840,6 +1878,7 @@ async function prepararSimulacionPDF() {
             codigo_credito: codigoCredito,
             capital: capital,
             gastos_administrativos: gastosAdmin,
+            gastos_administrativos_porcentaje: gastosAdminPorcentaje,
             tasa_interes_mensual: tasaMensual * 100,
             total_interes: interesTotal,
             total_dias: diasTotales,
@@ -2097,6 +2136,7 @@ async function generarPDFColocacion(datosSimulacion) {
         ['codigo_credito', creditoData.codigo_credito],
         ['capital', formatCurr(creditoData.capital)],
         ['gastos_administrativos', formatCurr(creditoData.gastos_administrativos)],
+        ['gastos_administrativos_porcentaje', `${parseFloat(creditoData.gastos_administrativos_porcentaje || 0).toFixed(2)}%`],
         ['tasa_interes_mensual', creditoData.tasa_interes_mensual + '%'],
         ['total_interes', formatCurr(creditoData.total_interes)],
         ['total_dias', creditoData.total_dias + ' días'],
@@ -2343,7 +2383,8 @@ async function confirmarColocacionCredito() {
         ahorroTotal,
         cuotaTotal,
         diaPago,
-        tasaMensual
+        tasaMensual,
+        gastosAdminPorcentaje
     } = window.currentColocacionData;
 
     const capital = parseFloat(currentSolicitud.monto);
@@ -2369,6 +2410,7 @@ async function confirmarColocacionCredito() {
             <p><strong>Plazo:</strong> ${plazo} meses</p>
             <p><strong>Cuota Total:</strong> $${fmtNum(cuotaTotal)}</p>
             <p><strong>Tasa:</strong> ${(tasaMensual * 100).toFixed(2)}% mensual</p>
+            <p><strong>Gastos admin.:</strong> ${gastosAdminPorcentaje.toFixed(2)}% ($${fmtNum(gastosAdmin)})</p>
             <p style="margin-top:12px;"><em>Esta acción creará el préstamo en la base de datos.</em></p>
         </div>`,
         '¿Colocar este Préstamo?',
@@ -2432,14 +2474,30 @@ async function confirmarColocacionCredito() {
             documentos_generados: false,
             garante: requiereGarante,
             creado_por: userId,
-            observaciones: `Préstamo colocado desde solicitud ${idSolicitud} por ${userName}`
+            observaciones: `Préstamo colocado desde solicitud ${idSolicitud} por ${userName}. Gastos administrativos aplicados: ${gastosAdminPorcentaje.toFixed(2)}%.`
         };
 
-        const { data: creditoInsertado, error: errorCredito } = await supabase
+        const creditoDataConPorcentaje = {
+            ...creditoData,
+            gastos_administrativos_porcentaje: parseFloat(gastosAdminPorcentaje.toFixed(4))
+        };
+
+        let { data: creditoInsertado, error: errorCredito } = await supabase
             .from('ic_creditos')
-            .insert(creditoData)
+            .insert(creditoDataConPorcentaje)
             .select('id_credito, codigo_credito')
             .single();
+
+        if (errorCredito && /gastos_administrativos_porcentaje/i.test(errorCredito.message || '')) {
+            console.warn('La columna gastos_administrativos_porcentaje no existe todavía; se coloca el préstamo con la estructura anterior.');
+            const retry = await supabase
+                .from('ic_creditos')
+                .insert(creditoData)
+                .select('id_credito, codigo_credito')
+                .single();
+            creditoInsertado = retry.data;
+            errorCredito = retry.error;
+        }
 
         if (errorCredito) {
             throw new Error(`Error al crear préstamo: ${errorCredito.message}`);
@@ -3037,10 +3095,7 @@ async function generarPDFSolicitud(solicitudData = null, buttonId = 'btn-generar
             const tasaMensual = 0.02; // 2% por defecto para simulación
 
             // Cálculos simplificados para la solicitud
-            let gastosAdmin = 0;
-            if (capital < 5000) gastosAdmin = capital * 0.038;
-            else if (capital < 20000) gastosAdmin = capital * 0.023;
-            else gastosAdmin = capital * 0.018;
+            const gastosAdmin = calcularGastosAdminCredito(capital, getPorcentajeGastosAdminSugerido(capital));
 
             const interesTotal = capital * tasaMensual * plazo;
             const totalPagar = capital + interesTotal + gastosAdmin;
@@ -3842,9 +3897,50 @@ async function generarDocumentoPagare(idCredito, fechaFirmaManual = null) {
     }
 }
 
+async function asegurarPerfilAsesorParaDocumentos() {
+    const user = (typeof window.getCurrentUser === 'function' ? window.getCurrentUser() : null) || window.currentUser || null;
+    if (!user?.id) return;
+
+    const tieneNombre = !!(user.nombre || user.full_name || user.user_metadata?.full_name);
+    const tieneCedula = !!user.cedula;
+    const tieneWhatsapp = !!(user.whatsapp || user.telefono || user.phone || user.user_metadata?.whatsapp);
+
+    if (tieneNombre && tieneCedula && tieneWhatsapp) return;
+
+    const supabase = typeof window.getSupabaseClient === 'function' ? window.getSupabaseClient() : null;
+    if (!supabase) return;
+
+    try {
+        const { data: profile, error } = await supabase
+            .from('ic_users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        if (error || !profile) return;
+
+        const mergedUser = {
+            ...user,
+            ...profile,
+            id: user.id,
+            nombre: user.nombre || profile.nombre || profile.full_name || user.full_name || user.user_metadata?.full_name || '',
+            cedula: user.cedula || profile.cedula || '',
+            whatsapp: user.whatsapp || profile.whatsapp || profile.telefono || user.phone || user.user_metadata?.whatsapp || '',
+            telefono: user.telefono || profile.whatsapp || profile.telefono || user.whatsapp || user.phone || ''
+        };
+
+        if (typeof currentUser !== 'undefined') currentUser = mergedUser;
+        window.currentUser = mergedUser;
+    } catch (err) {
+        console.warn('No se pudo hidratar el perfil del asesor para documentos:', err);
+    }
+}
+
 // ========== 2. GENERAR CONTRATO/ACUERDO DE PRÉSTAMO ==========
 async function generarDocumentoContrato(idCredito, fechaFirmaManual = null) {
     try {
+        await asegurarPerfilAsesorParaDocumentos();
+
         const credito = currentCreditoDocumentos || await cargarCreditoCompleto(idCredito);
         if (!credito) throw new Error('No se encontró el préstamo');
 
@@ -3866,13 +3962,16 @@ async function generarDocumentoContrato(idCredito, fechaFirmaManual = null) {
 
         const socio = credito.socio || {};
         const infoAcreedor = getDatosAcreedor();
+        const nombreAcreedor = (infoAcreedor.nombre || 'INKA CORP').toUpperCase();
+        const cedulaAcreedor = infoAcreedor.cedula || '0000000000';
+        const ciudadAcreedor = (infoAcreedor.ciudad || 'GUAYAQUIL').toUpperCase();
 
-        // Validar datos mandatorios del asesor para documentos legales
-        if (!infoAcreedor.nombre || !infoAcreedor.telefono || !infoAcreedor.cedula) {
+        // Se permite continuar con datos parciales para no bloquear el flujo de desembolso.
+        if (!nombreAcreedor || !cedulaAcreedor) {
             Swal.fire({
                 icon: 'error',
                 title: 'Perfil Incompleto',
-                text: 'Su usuario no tiene configurado el Nombre, Cédula o WhatsApp. No se puede generar documentos legales sin estos datos.',
+                text: 'No se pudo identificar el nombre o la cédula del asesor. Actualice el perfil y vuelva a intentar.',
                 confirmButtonColor: '#0E5936',
                 customClass: getSolicitudDarkSwalClass()
             });
@@ -3898,7 +3997,7 @@ async function generarDocumentoContrato(idCredito, fechaFirmaManual = null) {
         // Fecha arriba a la derecha
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text(`${infoAcreedor.ciudad.toUpperCase()}, ${formatearFecha(fechaFirma, 'completo').toUpperCase()}`, pageWidth - margin, 40, { align: 'right' });
+        doc.text(`${ciudadAcreedor}, ${formatearFecha(fechaFirma, 'completo').toUpperCase()}`, pageWidth - margin, 40, { align: 'right' });
 
         let y = 50;
 
@@ -3919,11 +4018,11 @@ async function generarDocumentoContrato(idCredito, fechaFirmaManual = null) {
         // Cuerpo del contrato
         doc.setFontSize(10);
         const parrafos = [
-            `Yo, **${nombreDeudor}** con Cédula de Identidad Ecuatoriana número **${socio.cedula}** haciendo pleno uso de mis facultades racionales y mentales solicito un préstamo a **${infoAcreedor.nombre.toUpperCase()}**.`,
+            `Yo, **${nombreDeudor}** con Cédula de Identidad Ecuatoriana número **${socio.cedula}** haciendo pleno uso de mis facultades racionales y mentales solicito un préstamo a **${nombreAcreedor}**.`,
 
             `Yo, **${nombreDeudor}** solicito un préstamo por **$${capital.toLocaleString('es-EC', { minimumFractionDigits: 2 })} (${numeroALetras(capital)})** y una vez que haya firmado este documento acepto que el dinero me fue entregado y así mismo acepto todas las cláusulas y condiciones del mismo.`,
 
-            `Yo, **${nombreDeudor}** estoy completamente de acuerdo en pagar a **${infoAcreedor.nombre.toUpperCase()}** el valor de **$${cuota.toLocaleString('es-EC', { minimumFractionDigits: 2 })} (${numeroALetras(cuota)})** mensualmente durante el plazo establecido.`,
+            `Yo, **${nombreDeudor}** estoy completamente de acuerdo en pagar a **${nombreAcreedor}** el valor de **$${cuota.toLocaleString('es-EC', { minimumFractionDigits: 2 })} (${numeroALetras(cuota)})** mensualmente durante el plazo establecido.`,
 
             `Yo, **${nombreDeudor}**, doy a conocer voluntariamente mis datos personales como respaldo de que cancelaré mi préstamo y bajo juramento declaro que TODOS los datos proporcionados son legítimos:`,
         ];
@@ -3936,11 +4035,11 @@ async function generarDocumentoContrato(idCredito, fechaFirmaManual = null) {
         // Declaraciones numeradas
         y += 3;
         const declaraciones = [
-            `1.- Vivo en **${(socio.domicilio || socio.direccion || 'DIRECCIÓN REGISTRADA').toUpperCase()}** y me comprometo a notificar a **${infoAcreedor.nombre.toUpperCase()}** si llegase a cambiar la dirección de mi domicilio.`,
+            `1.- Vivo en **${(socio.domicilio || socio.direccion || 'DIRECCIÓN REGISTRADA').toUpperCase()}** y me comprometo a notificar a **${nombreAcreedor}** si llegase a cambiar la dirección de mi domicilio.`,
 
             `2.- Como referencia pongo a **${(socio.nombrereferencia || 'PERSONA DE CONFIANZA').toUpperCase()}**, declaro que me conoce y puede preguntar por mí llamando al **${socio.whatsappreferencia || 'NÚMERO REGISTRADO'}**.`,
 
-            `3.- Mi número de contacto es el **${socio.whatsapp || 'NÚMERO REGISTRADO'}** mismo que tiene habilitado Whatsapp ya que tengo conocimiento de que cualquier recordatorio o cambio de datos de pago me serán notificados por este medio, así mismo si hubiese un cambio en este número de contacto me comprometo a notificar a **${infoAcreedor.nombre.toUpperCase()}** oportunamente.`
+            `3.- Mi número de contacto es el **${socio.whatsapp || 'NÚMERO REGISTRADO'}** mismo que tiene habilitado Whatsapp ya que tengo conocimiento de que cualquier recordatorio o cambio de datos de pago me serán notificados por este medio, así mismo si hubiese un cambio en este número de contacto me comprometo a notificar a **${nombreAcreedor}** oportunamente.`
         ];
 
         declaraciones.forEach(d => {
@@ -3954,7 +4053,7 @@ async function generarDocumentoContrato(idCredito, fechaFirmaManual = null) {
         const finales = [
             `Yo, **${nombreDeudor}**, declaro bajo juramento que destinaré los fondos que me entregaron mediante este préstamo a fines lícitos y fuera de todo tipo de actividades que sean ilegales.`,
 
-            `Yo, **${nombreDeudor}**, eximo a **${infoAcreedor.nombre.toUpperCase()}**, incluyendo a terceros sobre cualquier problema que se presente en case de que la información proporcionada por mi persona sea errónea.`
+            `Yo, **${nombreDeudor}**, eximo a **${nombreAcreedor}**, incluyendo a terceros sobre cualquier problema que se presente en case de que la información proporcionada por mi persona sea errónea.`
         ];
 
         finales.forEach(p => {
@@ -3989,7 +4088,7 @@ async function generarDocumentoContrato(idCredito, fechaFirmaManual = null) {
             firmas.push({ nombre: (garanteInfo.nombre_garante || 'GARANTE').toUpperCase(), cedula: garanteInfo.cedula_garante || '', label: '(GARANTE)' });
         }
 
-        firmas.push({ nombre: infoAcreedor.nombre.toUpperCase(), cedula: infoAcreedor.cedula || '', label: '(ACREEDOR)' });
+        firmas.push({ nombre: nombreAcreedor, cedula: cedulaAcreedor, label: '(ACREEDOR)' });
 
         // Dibujar firmas de 2 en 2
         const firmaWidth = (contentWidth / 2) - 20;
@@ -4103,6 +4202,7 @@ async function generarDocumentoTablaAmortizacion(idCredito, fechaFirmaManual = n
         const nombreDeudor = (socio.nombre || '').toUpperCase();
         const capital = parseFloat(credito.capital);
         const amortizacion = credito.amortizacion || [];
+        const gastosAdminPorcentaje = calcularPorcentajeGastosAdminUsado(credito);
 
         // Función para cargar imagen
         const loadImage = (url) => {
@@ -4204,7 +4304,7 @@ async function generarDocumentoTablaAmortizacion(idCredito, fechaFirmaManual = n
         const introText = [
             `Esta tabla muestra el plan de pagos para su préstamo realizado por la suma de **$${capital.toLocaleString('es-EC', { minimumFractionDigits: 2 })}** otorgado por **INKA CORP** en la fecha **${formatearFecha(credito.fecha_desembolso || fechaFirma, 'largo')}**.`,
             `El valor total a pagar por el socio comprende el **CAPITAL** más los **INTERESES** y **GASTOS ADMINISTRATIVOS** generados en el proceso de tramitación del préstamo.`,
-            `Desglose de **GASTOS ADMINISTRATIVOS** en porcentaje según el capital solicitado:\n- Menor a $5000: 0.16%\n- Menor a $20000 e igual o mayor a $5000: 0.12%\n- Igual o superior a $20000: 0.08%`,
+            `Los **GASTOS ADMINISTRATIVOS** de este préstamo fueron calculados con un porcentaje de **${gastosAdminPorcentaje.toFixed(2)} %** sobre el capital aprobado.`,
             `El préstamo tiene un plazo de **${credito.plazo} meses** con una tasa de interés porcentual del **${credito.tasa_interes_mensual} %**. La amortización es en cuotas niveladas mensuales.`,
             `El pago mensual es de **$${parseFloat(credito.cuota_con_ahorro).toLocaleString('es-EC', { minimumFractionDigits: 2 })} (${numeroALetras(parseFloat(credito.cuota_con_ahorro))})**. Este pago mensual se aplica primero a los intereses acumulados y el resto se aplica al capital del préstamo.`,
             `Los intereses se calculan sobre el saldo insoluto del préstamo al inicio de cada período. A medida que se van pagando las cuotas, una porción del pago se destina a cubrir los intereses y la otra parte reduce el capital, por lo que el saldo insoluto del préstamo va disminuyendo en cada período.`,
@@ -5542,6 +5642,7 @@ window.generarDocumentoSolicitud = generarDocumentoSolicitud;
 window.generarTodosDocumentos = generarTodosDocumentos;
 window.desembolsarCredito = desembolsarCredito;
 window.anularCreditoColocado = anularCreditoColocado;
+window.actualizarCalculosColocacion = actualizarCalculosColocacion;
 window.prepararSimulacionPDF = prepararSimulacionPDF;
 
 // Exponer función globalmente

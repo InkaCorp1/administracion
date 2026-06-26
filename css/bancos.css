@@ -211,6 +211,7 @@
     align-items: center;
     margin-bottom: 2rem;
     gap: 0.5rem; /* Reduce the gap between buttons */
+    flex-wrap: wrap;
 }
 
 .bancos-toolbar .toolbar-search {
@@ -219,6 +220,7 @@
 
 .bancos-toolbar button {
     margin: 0; /* Remove extra margins */
+    white-space: nowrap;
 }
 
 .btn-sync {

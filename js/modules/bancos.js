@@ -120,6 +120,29 @@ async function sendBancoNotificationWebhook(payload) {
     }
 }
 
+async function sendBancoPdfNotificationWebhook(payload) {
+    const WEBHOOK_URL_N8N = window.BANCO_PDF_WEBHOOK_URL || 'https://lpn8nwebhook.luispintasolutions.com/webhook/notificarpdf';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+        const response = await fetch(WEBHOOK_URL_N8N, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return { success: true };
+    } catch (error) {
+        console.error('Error enviando webhook PDF bancario:', error);
+        return { success: false, error: error.message };
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
 /**
  * Inicializa el módulo de Bancos
  */
@@ -195,6 +218,10 @@ function setupBancosEventListeners() {
     const btnReporteGeneral = document.getElementById('btn-reporte-general-bancos');
     if (btnReporteGeneral) {
         btnReporteGeneral.addEventListener('click', generateMonthlyPaymentsReport);
+    }
+    const btnEnviarPdfPagos = document.getElementById('btn-enviar-pdf-pagos-bancos');
+    if (btnEnviarPdfPagos) {
+        btnEnviarPdfPagos.addEventListener('click', enviarPdfPagosBancosAJose);
     }
 
     // Previews de imagen
@@ -857,6 +884,652 @@ async function checkMonthlyPayments(bancoId) {
 
     // Ya no lo ocultamos por defecto, el usuario puede querer ver reportes de meses anteriores
     btn.classList.remove('hidden');
+}
+
+function parseBancoLocalDate(value) {
+    if (!value) return null;
+    const raw = String(value).slice(0, 10);
+    const parts = raw.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+function formatBancoDateISO(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function getBancoMonthlyReportPeriod(baseDate = new Date()) {
+    const start = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+    const reportStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), 2);
+    const nextMonthFirst = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 1);
+
+    return {
+        start,
+        reportStart,
+        end: nextMonthFirst,
+        startISO: formatBancoDateISO(start),
+        reportStartISO: formatBancoDateISO(reportStart),
+        endISO: formatBancoDateISO(nextMonthFirst),
+        month: start.getMonth(),
+        year: start.getFullYear(),
+        monthName: start.toLocaleDateString('es-EC', { month: 'long' })
+    };
+}
+
+function resolveBancoPaymentStatus(pago, today = new Date()) {
+    const estado = String(pago.estado || '').toUpperCase();
+    if (estado === 'PAGADO') return 'PAGADO';
+
+    const dueDate = parseBancoLocalDate(pago.fecha_pago);
+    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (dueDate && dueDate < todayOnly) return 'MOROSO';
+
+    return 'PENDIENTE';
+}
+
+function normalizeBancoMonthlyPayment(pago, banco, today = new Date()) {
+    const estadoReporte = resolveBancoPaymentStatus(pago, today);
+
+    return {
+        ...pago,
+        estado_reporte: estadoReporte,
+        banco: banco?.nombre_banco || 'Banco',
+        logo_url: banco?.logo_banco || '',
+        a_nombre_de: banco?.a_nombre_de || 'N/A',
+        tipo_transaccion: banco?.tipo_transaccion || '',
+        fecha_obj: parseBancoLocalDate(pago.fecha_pago),
+        valor_num: Number(pago.valor || 0)
+    };
+}
+
+function buildBancoWeekendAnalysis(pagos) {
+    const weekend = [];
+    const monday = [];
+
+    pagos.forEach(pago => {
+        if (!pago.fecha_obj || pago.estado_reporte === 'PAGADO') return;
+        const day = pago.fecha_obj.getDay();
+        const dateText = pago.fecha_obj.toLocaleDateString('es-EC', {
+            weekday: 'long',
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        if (day === 0 || day === 6) {
+            weekend.push(`${pago.banco} - ${dateText}`);
+        } else if (day === 1) {
+            monday.push(`${pago.banco} - ${dateText}`);
+        }
+    });
+
+    if (!weekend.length && !monday.length) {
+        return 'Durante el periodo analizado no se registran obligaciones pendientes en sabado o domingo. Se recomienda mantener fondos disponibles y revisar feriados bancarios para evitar retrasos.';
+    }
+
+    const lines = [];
+    if (weekend.length) {
+        lines.push(`Pagos pendientes en fin de semana: ${weekend.join('; ')}. Se recomienda realizarlos el viernes anterior o el dia habil previo.`);
+    }
+    if (monday.length) {
+        lines.push(`Pagos pendientes en lunes: ${monday.join('; ')}. Conviene prever fondos desde el viernes anterior.`);
+    }
+
+    return lines.join(' ');
+}
+
+function calculateBancoPaymentSummary(pagos) {
+    return (pagos || []).reduce((summary, pago) => {
+        const value = Number(pago.valor_num || pago.valor || 0);
+        const status = pago.estado_reporte || resolveBancoPaymentStatus(pago);
+
+        summary.totalProgramado += value;
+        summary.counts[status] = (summary.counts[status] || 0) + 1;
+        summary.amounts[status] = (summary.amounts[status] || 0) + value;
+
+        if (status !== 'PAGADO') {
+            summary.totalNoPagado += value;
+        }
+
+        if (status === 'MOROSO') {
+            summary.totalPonerseAlDia += value;
+        }
+
+        return summary;
+    }, {
+        totalProgramado: 0,
+        totalNoPagado: 0,
+        totalPonerseAlDia: 0,
+        counts: { PAGADO: 0, PENDIENTE: 0, MOROSO: 0 },
+        amounts: { PAGADO: 0, PENDIENTE: 0, MOROSO: 0 }
+    });
+}
+
+function addBancoReportHeader(doc, period, summary, generatedAt, pdfImages = {}) {
+    doc.setFillColor(11, 78, 50);
+    doc.rect(0, 0, 210, 32, 'F');
+
+    addBancoPdfImage(doc, pdfImages.inkaLogo, 14, 7, 17, 17);
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.text('INKA CORP', 36, 15);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Pagos a bancos - ${period.monthName} ${period.year}`, 36, 22);
+    doc.text(`Generado: ${generatedAt}`, 132, 14);
+    doc.text(`Corte: ${period.reportStartISO} a ${period.endISO}`, 132, 21);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(14, 40, 182, 38, 3, 3, 'F');
+
+    const metricY = 49;
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('TOTAL PROGRAMADO', 20, metricY);
+    doc.text('PAGADO', 72, metricY);
+    doc.text('PENDIENTE', 112, metricY);
+    doc.text('MOROSO', 154, metricY);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(11, 78, 50);
+    doc.text(formatBancoMoney(summary.totalProgramado), 20, metricY + 8);
+    doc.setTextColor(22, 163, 74);
+    doc.text(formatBancoMoney(summary.amounts.PAGADO), 72, metricY + 8);
+    doc.setTextColor(217, 119, 6);
+    doc.text(formatBancoMoney(summary.amounts.PENDIENTE), 112, metricY + 8);
+    doc.setTextColor(185, 28, 28);
+    doc.text(formatBancoMoney(summary.amounts.MOROSO), 154, metricY + 8);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`${summary.counts.PAGADO || 0} pago(s)`, 72, metricY + 15);
+    doc.text(`${summary.counts.PENDIENTE || 0} pago(s)`, 112, metricY + 15);
+    doc.text(`${summary.counts.MOROSO || 0} pago(s)`, 154, metricY + 15);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(185, 28, 28);
+    doc.text(`Total para ponerse al dia: ${formatBancoMoney(summary.totalPonerseAlDia)}`, 20, metricY + 25);
+    doc.setTextColor(217, 119, 6);
+    doc.text(`Total no pagado: ${formatBancoMoney(summary.totalNoPagado)}`, 112, metricY + 25);
+}
+
+function addBancoStatusBadge(doc, status, x, y) {
+    const colors = {
+        PAGADO: [22, 163, 74],
+        PENDIENTE: [217, 119, 6],
+        MOROSO: [185, 28, 28]
+    };
+    const color = colors[status] || [71, 85, 105];
+    doc.setFillColor(color[0], color[1], color[2]);
+    doc.roundedRect(x, y - 4, 24, 6, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'bold');
+    doc.text(status, x + 12, y, { align: 'center' });
+}
+
+function getBancoPdfImageFormat(dataUrl) {
+    if (!dataUrl) return 'PNG';
+    if (dataUrl.startsWith('data:image/jpeg') || dataUrl.startsWith('data:image/jpg')) return 'JPEG';
+    if (dataUrl.startsWith('data:image/png')) return 'PNG';
+    if (dataUrl.startsWith('data:image/webp')) return 'WEBP';
+    return 'PNG';
+}
+
+function addBancoPdfImage(doc, dataUrl, x, y, w, h) {
+    if (!dataUrl) return false;
+
+    try {
+        doc.addImage(dataUrl, getBancoPdfImageFormat(dataUrl), x, y, w, h, undefined, 'FAST');
+        return true;
+    } catch (error) {
+        console.warn('No se pudo insertar imagen en PDF bancario:', error);
+        return false;
+    }
+}
+
+async function loadBancoPdfImages(pagos) {
+    const images = {
+        inkaLogo: null,
+        bankLogos: {}
+    };
+    const inkaLogoUrl = 'https://lh3.googleusercontent.com/d/15J6Aj6ZwkVrmDfs6uyVk-oG0Mqr-i9Jn=w2048';
+
+    images.inkaLogo = await fetchImageAsBase64(inkaLogoUrl);
+
+    const uniqueLogoUrls = [...new Set((pagos || []).map(pago => pago.logo_url).filter(Boolean))];
+    await Promise.all(uniqueLogoUrls.map(async (url) => {
+        images.bankLogos[url] = await fetchImageAsBase64(url);
+    }));
+
+    return images;
+}
+
+function addBancoPaymentsManualTable(doc, tableRows, startY, pdfImages = {}) {
+    const columns = [
+        { label: '', x: 14, width: 12 },
+        { label: 'Banco', x: 28, width: 45 },
+        { label: 'Titular', x: 75, width: 43 },
+        { label: 'Fecha', x: 120, width: 22 },
+        { label: 'Valor', x: 146, width: 24 },
+        { label: 'Estado', x: 172, width: 24 }
+    ];
+    let y = startY;
+
+    const drawHeader = () => {
+        if (y > 264) {
+            doc.addPage();
+            y = 18;
+        }
+
+        doc.setFillColor(11, 78, 50);
+        doc.roundedRect(14, y, 182, 8, 2, 2, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(255, 255, 255);
+
+        columns.forEach(col => {
+            if (!col.label) return;
+            const align = col.label === 'Valor' ? 'right' : col.label === 'Estado' ? 'center' : 'left';
+            const textX = align === 'right' ? col.x + col.width - 2 : align === 'center' ? col.x + col.width / 2 : col.x + 2;
+            doc.text(col.label, textX, y + 5.3, { align });
+        });
+        y += 10;
+    };
+
+    drawHeader();
+
+    tableRows.forEach((row, index) => {
+        const bancoLines = doc.splitTextToSize(String(row.banco || ''), columns[1].width - 4).slice(0, 2);
+        const titularLines = doc.splitTextToSize(String(row.titular || ''), columns[2].width - 4).slice(0, 2);
+        const rowHeight = Math.max(12, (Math.max(bancoLines.length, titularLines.length) * 4) + 5);
+
+        if (y + rowHeight > 282) {
+            doc.addPage();
+            y = 18;
+            drawHeader();
+        }
+
+        if (index % 2 === 0) {
+            doc.setFillColor(248, 250, 252);
+            doc.rect(14, y - 2, 182, rowHeight, 'F');
+        }
+
+        doc.setDrawColor(226, 232, 240);
+        doc.line(14, y + rowHeight - 2, 196, y + rowHeight - 2);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        const logo = pdfImages.bankLogos?.[row.logo_url];
+        if (logo) {
+            addBancoPdfImage(doc, logo, columns[0].x + 2, y + 1, 7, 7);
+        } else {
+            doc.setFillColor(226, 232, 240);
+            doc.circle(columns[0].x + 5.5, y + 5, 3, 'F');
+        }
+
+        doc.setTextColor(15, 23, 42);
+        doc.text(bancoLines, columns[1].x + 2, y + 3);
+        doc.setTextColor(71, 85, 105);
+        doc.text(titularLines, columns[2].x + 2, y + 3);
+
+        doc.setTextColor(15, 23, 42);
+        doc.text(String(row.fecha || ''), columns[3].x + columns[3].width / 2, y + 5, { align: 'center' });
+        doc.text(String(row.valor || ''), columns[4].x + columns[4].width - 2, y + 5, { align: 'right' });
+        addBancoStatusBadge(doc, row.estado, columns[5].x, y + 5);
+
+        y += rowHeight;
+    });
+
+    return y;
+}
+
+function inspectBancoPdfBase64(pdfBase64) {
+    const cleanBase64 = String(pdfBase64 || '').replace(/^data:application\/pdf;base64,/, '').trim();
+    if (!cleanBase64) {
+        return { valid: false, reason: 'No se genero contenido base64 para el PDF.', cleanBase64, sizeBytes: 0 };
+    }
+
+    if (!/^[A-Za-z0-9+/=]+$/.test(cleanBase64)) {
+        return { valid: false, reason: 'El contenido base64 contiene caracteres invalidos.', cleanBase64, sizeBytes: 0 };
+    }
+
+    let binary = '';
+    try {
+        binary = atob(cleanBase64);
+    } catch (error) {
+        return { valid: false, reason: 'El contenido base64 no se puede decodificar.', cleanBase64, sizeBytes: 0 };
+    }
+
+    const sizeBytes = binary.length;
+    const header = binary.slice(0, 5);
+    const tail = binary.slice(Math.max(0, sizeBytes - 2048));
+
+    if (sizeBytes < 5000) {
+        return { valid: false, reason: `El PDF generado pesa solo ${sizeBytes} bytes.`, cleanBase64, sizeBytes };
+    }
+
+    if (header !== '%PDF-') {
+        return { valid: false, reason: `El archivo generado no inicia como PDF valido (${header || 'sin cabecera'}).`, cleanBase64, sizeBytes };
+    }
+
+    if (!tail.includes('%%EOF')) {
+        return { valid: false, reason: 'El PDF generado no tiene cierre %%EOF.', cleanBase64, sizeBytes };
+    }
+
+    return { valid: true, reason: 'PDF valido.', cleanBase64, sizeBytes };
+}
+
+function addBancoCalendarPage(doc, pagos, period, pdfImages = {}) {
+    doc.addPage();
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(11, 78, 50);
+    doc.text('Calendario de pagos', 14, 18);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Incluye el mes actual y el dia 1 del mes siguiente.', 14, 25);
+
+    const calendarPayments = {};
+    pagos.forEach(pago => {
+        if (!pago.fecha_obj) return;
+        const key = formatBancoDateISO(pago.fecha_obj);
+        if (!calendarPayments[key]) calendarPayments[key] = [];
+        calendarPayments[key].push(pago);
+    });
+
+    const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    const startX = 14;
+    const startY = 38;
+    const cellW = 26;
+    const cellH = 24;
+    const gap = 1.6;
+
+    days.forEach((day, idx) => {
+        const x = startX + idx * (cellW + gap);
+        doc.setFillColor(243, 244, 246);
+        doc.rect(x, startY, cellW, 8, 'F');
+        doc.setTextColor(15, 23, 42);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text(day, x + cellW / 2, startY + 5.5, { align: 'center' });
+    });
+
+    const firstDay = new Date(period.year, period.month, 1).getDay();
+    const offset = firstDay === 0 ? 6 : firstDay - 1;
+    const daysInMonth = new Date(period.year, period.month + 1, 0).getDate();
+    const todayISO = formatBancoDateISO(new Date());
+
+    const renderCalendarCell = (index, date, dayLabel, pagosDia, isNextMonth = false) => {
+        const col = index % 7;
+        const row = Math.floor(index / 7);
+        const x = startX + col * (cellW + gap);
+        const y = startY + 10 + row * (cellH + gap);
+        const key = formatBancoDateISO(date);
+        const totalDia = pagosDia.reduce((sum, p) => sum + p.valor_num, 0);
+        const hasMoroso = pagosDia.some(p => p.estado_reporte === 'MOROSO');
+        const hasPendiente = pagosDia.some(p => p.estado_reporte === 'PENDIENTE');
+        const hasPagado = pagosDia.some(p => p.estado_reporte === 'PAGADO');
+
+        if (isNextMonth) doc.setFillColor(227, 242, 253);
+        else if (hasMoroso) doc.setFillColor(254, 226, 226);
+        else if (hasPendiente) doc.setFillColor(254, 243, 199);
+        else if (hasPagado) doc.setFillColor(220, 252, 231);
+        else doc.setFillColor(250, 250, 250);
+
+        if (isNextMonth) doc.setDrawColor(25, 118, 210);
+        else doc.setDrawColor(key === todayISO ? 11 : 226, key === todayISO ? 78 : 232, key === todayISO ? 50 : 240);
+        doc.rect(x, y, cellW, cellH, 'FD');
+
+        doc.setTextColor(isNextMonth ? 25 : 15, isNextMonth ? 118 : 23, isNextMonth ? 210 : 42);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text(String(dayLabel), x + 3, y + 5);
+
+        if (pagosDia.length) {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6.5);
+            doc.setTextColor(51, 65, 85);
+            doc.text(isNextMonth ? 'Proximo' : `${pagosDia.length} pagos`, x + 3, y + 10);
+            doc.text(formatBancoMoney(totalDia), x + 3, y + 14.5, { maxWidth: cellW - 5 });
+            const statusText = hasMoroso ? 'Mora' : hasPendiente ? 'Pend.' : 'Pagado';
+            doc.text(statusText, x + 3, y + 19);
+
+            pagosDia.slice(0, 3).forEach((pago, logoIndex) => {
+                const logo = pdfImages.bankLogos?.[pago.logo_url];
+                const logoX = x + cellW - 5 - (logoIndex * 5);
+                if (logo) {
+                    addBancoPdfImage(doc, logo, logoX, y + cellH - 6, 4, 4);
+                }
+            });
+        }
+    };
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(period.year, period.month, day);
+        const key = formatBancoDateISO(date);
+        renderCalendarCell(offset + day - 1, date, day, calendarPayments[key] || []);
+    }
+
+    const nextDate = new Date(period.year, period.month + 1, 1);
+    const nextKey = formatBancoDateISO(nextDate);
+    const nextPayments = calendarPayments[nextKey] || [];
+    if (nextPayments.length) {
+        renderCalendarCell(offset + daysInMonth, nextDate, '1+', nextPayments, true);
+    }
+
+    const legendY = 270;
+    [
+        ['Pagado', [220, 252, 231]],
+        ['Pendiente', [254, 243, 199]],
+        ['Moroso', [254, 226, 226]]
+    ].forEach((item, idx) => {
+        const x = 14 + idx * 52;
+        doc.setFillColor(item[1][0], item[1][1], item[1][2]);
+        doc.rect(x, legendY, 6, 6, 'F');
+        doc.setTextColor(71, 85, 105);
+        doc.setFontSize(8);
+        doc.text(item[0], x + 9, legendY + 5);
+    });
+}
+
+async function fetchBancoMonthlyReportData() {
+    const supabase = window.getSupabaseClient();
+    const period = getBancoMonthlyReportPeriod(new Date());
+
+    const { data: detalles, error: detallesError } = await supabase
+        .from('ic_situacion_bancaria_detalle')
+        .select('*')
+        .gte('fecha_pago', period.startISO)
+        .lte('fecha_pago', period.endISO)
+        .order('fecha_pago', { ascending: true });
+
+    if (detallesError) throw detallesError;
+
+    const transaccionIds = [...new Set((detalles || []).map(p => p.transaccion).filter(Boolean))];
+    if (!transaccionIds.length) return { pagos: [], period };
+
+    const { data: bancosInfo, error: bancosError } = await supabase
+        .from('ic_situacion_bancaria')
+        .select('id_transaccion, nombre_banco, tipo_transaccion, estado, a_nombre_de, logo_banco')
+        .in('id_transaccion', transaccionIds);
+
+    if (bancosError) throw bancosError;
+
+    const bancosMap = {};
+    (bancosInfo || []).forEach(banco => {
+        bancosMap[banco.id_transaccion] = banco;
+    });
+
+    const pagos = (detalles || [])
+        .map(pago => normalizeBancoMonthlyPayment(pago, bancosMap[pago.transaccion]))
+        .filter(pago => {
+            const banco = bancosMap[pago.transaccion];
+            const tipo = String(banco?.tipo_transaccion || '').toUpperCase();
+            const fechaPago = pago.fecha_obj ? formatBancoDateISO(pago.fecha_obj) : '';
+            const isCurrentMonthFirstDay = fechaPago === period.startISO;
+            return banco?.estado === 'ACTIVO'
+                && (tipo === 'CREDITO' || tipo === 'CRÉDITO')
+                && !isCurrentMonthFirstDay;
+        });
+
+    return { pagos, period };
+}
+
+async function buildBancoPaymentsPdfBase64(pagos, period) {
+    if (!window.jspdf?.jsPDF) throw new Error('jsPDF no esta disponible para generar el PDF.');
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pdfImages = await loadBancoPdfImages(pagos);
+    const generatedAt = new Date().toLocaleString('es-EC', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    const summary = calculateBancoPaymentSummary(pagos);
+
+    addBancoReportHeader(doc, period, summary, generatedAt, pdfImages);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(11, 78, 50);
+    doc.text('Analisis del calendario de pagos', 14, 92);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(51, 65, 85);
+    const analysisLines = doc.splitTextToSize(buildBancoWeekendAnalysis(pagos), 182);
+    doc.text(analysisLines, 14, 100);
+
+    const tableRows = pagos.map(pago => ({
+        banco: pago.banco,
+        titular: pago.a_nombre_de,
+        fecha: pago.fecha_obj ? pago.fecha_obj.toLocaleDateString('es-EC') : pago.fecha_pago,
+        valor: formatBancoMoney(pago.valor_num),
+        estado: pago.estado_reporte,
+        logo_url: pago.logo_url
+    }));
+
+    const tableStartY = Math.min(122, 110 + (analysisLines.length * 4));
+    addBancoPaymentsManualTable(doc, tableRows, tableStartY, pdfImages);
+
+    addBancoCalendarPage(doc, pagos, period, pdfImages);
+
+    const buffer = doc.output('arraybuffer');
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+    }
+
+    return btoa(binary);
+}
+
+async function enviarPdfPagosBancosAJose() {
+    const btn = document.getElementById('btn-enviar-pdf-pagos-bancos');
+    const originalHtml = btn?.innerHTML;
+
+    try {
+        const confirm = await Swal.fire({
+            title: 'Enviar PDF de pagos',
+            text: 'Se generara el reporte actualizado del mes actual mas el dia 1 del mes siguiente y se enviara a Jose.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Enviar PDF',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#0b4e32'
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="desktop-only">Enviando...</span>';
+        }
+        if (typeof window.enableLoader === 'function') window.enableLoader();
+        window.showLoader?.('Consultando pagos bancarios...');
+
+        const { pagos, period } = await fetchBancoMonthlyReportData();
+        if (!pagos.length) {
+            throw new Error(`No hay obligaciones bancarias activas entre ${period.reportStartISO} y ${period.endISO}.`);
+        }
+
+        window.showLoader?.('Generando PDF en base64...');
+        const pdfBase64 = await buildBancoPaymentsPdfBase64(pagos, period);
+        const pdfInspection = inspectBancoPdfBase64(pdfBase64);
+        console.info('[BANCOS] Validacion PDF pagos:', {
+            valid: pdfInspection.valid,
+            sizeBytes: pdfInspection.sizeBytes,
+            base64Length: pdfInspection.cleanBase64.length,
+            reason: pdfInspection.reason
+        });
+
+        if (!pdfInspection.valid) {
+            throw new Error(`No se envio el mensaje porque el PDF no es valido: ${pdfInspection.reason}`);
+        }
+        const pdfPayloadBase64 = pdfInspection.cleanBase64;
+        const fileName = `Pagos_a_bancos_${period.monthName}_${period.year}.pdf`.replace(/\s+/g, '_');
+        const summary = calculateBancoPaymentSummary(pagos);
+
+        const message = `JOSÉ KLEVER NISHVE CORO\n\n📄 Reporte actualizado de pagos bancarios ${period.monthName} ${period.year}.\n\nIncluye obligaciones del mes actual y el dia 1 del mes siguiente.\n\nTotal programado: ${formatBancoMoney(summary.totalProgramado)}\nPagado: ${formatBancoMoney(summary.amounts.PAGADO)} (${summary.counts.PAGADO || 0})\nPendiente: ${formatBancoMoney(summary.amounts.PENDIENTE)} (${summary.counts.PENDIENTE || 0})\nMoroso: ${formatBancoMoney(summary.amounts.MOROSO)} (${summary.counts.MOROSO || 0})\nTotal no pagado: ${formatBancoMoney(summary.totalNoPagado)}\nTotal para ponerse al día: ${formatBancoMoney(summary.totalPonerseAlDia)}`;
+
+        window.__ultimoPdfBancos = {
+            data: pdfPayloadBase64,
+            sizeBytes: pdfInspection.sizeBytes,
+            base64Length: pdfPayloadBase64.length,
+            fileName,
+            generatedAt: new Date().toISOString()
+        };
+
+        window.showLoader?.('Enviando PDF a Jose...');
+        const result = await sendBancoPdfNotificationWebhook({
+            whatsapp: '19175309618',
+            data: pdfPayloadBase64,
+            mime_type: 'application/pdf',
+            size_bytes: pdfInspection.sizeBytes,
+            base64_length: pdfPayloadBase64.length,
+            filename: fileName,
+            message,
+            module: 'situacion_bancaria_pc',
+            report_type: 'pagos_bancos',
+            period_start: period.reportStartISO,
+            period_end: period.endISO
+        });
+
+        if (!result.success) {
+            throw new Error(result.error || 'No se pudo confirmar el envio del PDF.');
+        }
+
+        await window.showAlert('El PDF de pagos bancarios fue enviado a José correctamente.', 'PDF enviado', 'success');
+    } catch (error) {
+        console.error('Error enviando PDF de pagos bancarios:', error);
+        await window.showFinancialError?.(error, 'No se pudo enviar el PDF de pagos bancarios.')
+            || window.showAlert(error.message, 'Error', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml || '<i class="fas fa-paper-plane"></i> <span class="desktop-only">Enviar PDF de pagos</span>';
+        }
+        window.hideLoader?.();
+        if (typeof window.disableLoader === 'function') window.disableLoader();
+    }
 }
 
 /**
