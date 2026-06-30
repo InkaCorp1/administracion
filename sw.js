@@ -1,10 +1,10 @@
 /**
  * INKA CORP - Service Worker
  * PWA Offline Support
- * Version 31.5.19 - Gastos administrativos editables en creditos normales
+ * Version 31.5.21 - Gastos administrativos editables en creditos normales
  */
 
-const SW_VERSION = '31.5.19';
+const SW_VERSION = '31.5.21';
 const CACHE_NAME = `inkacorp-v${SW_VERSION}`;
 const STATIC_CACHE = `inkacorp-static-v${SW_VERSION}`;
 const CHANGELOG_URL = `CHANGELOG.md?v=${encodeURIComponent(SW_VERSION)}`;
@@ -37,17 +37,17 @@ const MODULE_FILES = [
     'css/creditos.css',
     'mobile/js/modules/creditos.js',
     'js/modules/creditos_preferenciales.js',
-    'js/modules/creditos_emergentes.js?v=31.5.11',
-    'views/creditos_emergentes.html?v=31.5.11',
-    'css/creditos_emergentes.css?v=31.5.11',
+    'js/modules/creditos_emergentes.js?v=31.5.21',
+    'views/creditos_emergentes.html?v=31.5.21',
+    'css/creditos_emergentes.css?v=31.5.21',
     'js/modules/polizas.js',
     'js/modules/precancelaciones.js',
     'js/modules/ahorros.js',
     'js/modules/simulador.js',
     'js/modules/aportes.js',
-    'js/modules/bancos.js?v=31.5.18',
-    'views/bancos.html?v=31.5.18',
-    'css/bancos.css?v=31.5.18',
+    'js/modules/bancos.js?v=31.5.21',
+    'views/bancos.html?v=31.5.21',
+    'css/bancos.css?v=31.5.21',
     'js/modules/administrativos.js',
     'js/modules/contratos.js',
     'js/modules/control.js',
