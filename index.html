@@ -18,14 +18,14 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/creditos.css">
     <link rel="stylesheet" href="css/creditos_preferenciales.css">
-    <link rel="stylesheet" href="css/creditos_emergentes.css?v=31.5.11">
+    <link rel="stylesheet" href="css/creditos_emergentes.css?v=31.5.21">
     <link rel="stylesheet" href="css/creditos_preferenciales_hero.css">
-    <link rel="stylesheet" href="css/polizas.css?v=31.5.11">
+    <link rel="stylesheet" href="css/polizas.css?v=31.5.21">
     <link rel="stylesheet" href="css/socios.css">
     <link rel="stylesheet" href="css/solicitud_credito.css">
     <link rel="stylesheet" href="css/simulador.css">
     <link rel="stylesheet" href="css/aportes.css">
-    <link rel="stylesheet" href="css/bancos.css?v=31.5.18">
+    <link rel="stylesheet" href="css/bancos.css?v=31.5.21">
     <link rel="stylesheet" href="css/caja.css">
     <link rel="stylesheet" href="css/ahorros.css">
     <link rel="stylesheet" href="css/administrativos.css">
@@ -45,7 +45,7 @@
     <!-- Librería de Gráficos ApexCharts -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-    <script src="js/config.js?v=31.5.19"></script>
+    <script src="js/config.js?v=31.5.21"></script>
     <script src="js/auth.js"></script>
     <script>
         /**
@@ -369,7 +369,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/config.js?v=31.5.19"></script>
+    <script src="js/config.js?v=31.5.21"></script>
     <script src="js/auth.js"></script>
     <script src="js/app.js"></script>
     <script src="js/modules/socios.js"></script>
@@ -378,14 +378,14 @@
     <script src="js/image-utils.js"></script>
     <script src="js/modules/creditos.js"></script>
     <script src="js/modules/creditos_preferenciales.js"></script>
-    <script src="js/modules/creditos_emergentes.js?v=31.5.11"></script>
-    <script src="js/modules/polizas.js?v=31.5.11"></script>
+    <script src="js/modules/creditos_emergentes.js?v=31.5.21"></script>
+    <script src="js/modules/polizas.js?v=31.5.21"></script>
     <script src="js/modules/precancelaciones.js"></script>
     <script src="js/modules/resumen_general.js"></script>
     <script src="js/modules/ahorros.js"></script>
     <script src="js/modules/simulador.js"></script>
     <script src="js/modules/aportes.js"></script>
-    <script src="js/modules/bancos.js?v=31.5.18"></script>
+    <script src="js/modules/bancos.js?v=31.5.21"></script>
     <script src="js/modules/administrativos.js"></script>
     <script src="js/modules/agenda.js"></script>
     <script src="js/modules/contratos.js"></script>
@@ -396,7 +396,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                const serviceWorkerVersion = window.SW_VERSION || window.APP_VERSION || '31.5.19';
+                const serviceWorkerVersion = window.SW_VERSION || window.APP_VERSION || '31.5.21';
                 navigator.serviceWorker.register(`sw.js?v=${encodeURIComponent(serviceWorkerVersion)}`, { updateViaCache: 'none' })
                     .then((registration) => {
                         console.log('[PWA] Service Worker registrado');

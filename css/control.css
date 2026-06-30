@@ -265,7 +265,8 @@
 }
 
 .control-report-modal select,
-.control-report-modal input[type="search"] {
+.control-report-modal input[type="search"],
+.control-report-modal input[type="date"] {
     height: 44px;
     border-radius: 8px;
     border: 1px solid var(--border-color);
@@ -358,6 +359,33 @@
 
 .control-table strong {
     color: var(--white);
+}
+
+.control-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.control-table-action {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid rgba(242, 187, 58, 0.35);
+    background: rgba(242, 187, 58, 0.12);
+    color: var(--gold);
+    display: inline-grid;
+    place-items: center;
+    cursor: pointer;
+}
+
+.control-table-action:hover {
+    background: rgba(242, 187, 58, 0.22);
+}
+
+.control-table-action:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
 }
 
 .control-money-in {

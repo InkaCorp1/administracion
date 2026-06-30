@@ -1,6 +1,6 @@
 # CHANGELOG - INKA CORP
 
-## [31.5.11] - 2026-06-23
+## [31.5.21] - 2026-06-23
 ### Créditos Preferenciales
 - **Desembolso desde el sistema interno:** Los créditos preferenciales aprobados ahora pueden desembolsarse directamente desde INKA CORP, sin depender de una pantalla externa.
 - **Registro correcto en Caja:** Al confirmar el desembolso, el movimiento se descuenta de la caja abierta del usuario que realiza la operación.

@@ -233,9 +233,10 @@ function renderControlActiveTab() {
 }
 
 function updateControlCreditReportButton() {
-    const btn = document.getElementById('control-credit-report-btn');
-    if (!btn) return;
-    btn.classList.toggle('hidden', activeControlTab !== 'creditos');
+    const creditBtn = document.getElementById('control-credit-report-btn');
+    const movementBtn = document.getElementById('control-movement-report-btn');
+    if (creditBtn) creditBtn.classList.toggle('hidden', activeControlTab !== 'creditos');
+    if (movementBtn) movementBtn.classList.toggle('hidden', activeControlTab !== 'movimientos');
 }
 
 function filterControlRows(rows, dateField) {
@@ -487,6 +488,285 @@ function clearControlFilters() {
 function getControlFilteredRows(tab = activeControlTab) {
     const config = CONTROL_TABLE_CONFIG[tab] || CONTROL_TABLE_CONFIG.movimientos;
     return sortControlRows(filterControlRows(controlData[tab] || [], config.dateField));
+}
+
+async function generateControlMovementsReport() {
+    try {
+        const reportFilters = await openControlMovementReportFilters();
+        if (!reportFilters) return;
+
+        const rows = await fetchControlMovementReportRows(reportFilters);
+        const filteredRows = filterControlMovementReportRows(rows, reportFilters);
+
+        if (!filteredRows.length) {
+            await showControlReportNotice('Sin datos', 'No hay movimientos para generar con los filtros seleccionados.', 'info');
+            return;
+        }
+
+        if (!window.jspdf?.jsPDF) {
+            await showControlReportNotice('No se pudo generar', 'El generador de PDF no está disponible en este momento.', 'error');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a4');
+        if (typeof doc.autoTable !== 'function') {
+            await showControlReportNotice('No se pudo generar', 'El generador de tablas del PDF no está disponible en este momento.', 'error');
+            return;
+        }
+
+        buildControlMovementsPdf(doc, filteredRows, reportFilters);
+    } catch (error) {
+        console.error('[CONTROL] Error generando reporte de movimientos:', error);
+        await showControlReportNotice('No se pudo generar', error.message || 'Ocurrió un error al generar el reporte.', 'error');
+    }
+}
+
+async function openControlMovementReportFilters() {
+    const today = new Date().toISOString().slice(0, 10);
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    const defaultFrom = monthStart.toISOString().slice(0, 10);
+
+    if (typeof Swal === 'undefined') {
+        return {
+            dateFrom: defaultFrom,
+            dateTo: today,
+            user: controlFilters.usuario_nombre || 'all',
+            type: controlFilters.tipo_movimiento || 'all',
+            category: controlFilters.categoria || 'all',
+            search: ''
+        };
+    }
+
+    const userOptions = buildControlReportSelectOptions(controlData.movimientos, 'usuario_nombre', 'Sin usuario', controlFilters.usuario_nombre);
+    const categoryOptions = buildControlReportSelectOptions(controlData.movimientos, 'categoria', 'MANUAL', controlFilters.categoria);
+
+    const result = await Swal.fire({
+        title: 'Reporte de movimientos',
+        html: `
+            <div class="control-report-modal">
+                <label>
+                    <span>Desde</span>
+                    <input id="swal-control-mov-from" type="date" value="${escapeControlHtml(defaultFrom)}">
+                </label>
+                <label>
+                    <span>Hasta</span>
+                    <input id="swal-control-mov-to" type="date" value="${escapeControlHtml(today)}">
+                </label>
+                <label>
+                    <span>Usuario</span>
+                    <select id="swal-control-mov-user">
+                        <option value="all">General - todos los usuarios</option>
+                        ${userOptions}
+                    </select>
+                </label>
+                <label>
+                    <span>Tipo</span>
+                    <select id="swal-control-mov-type">
+                        <option value="all">Ingresos y egresos</option>
+                        <option value="INGRESO" ${controlFilters.tipo_movimiento === 'INGRESO' ? 'selected' : ''}>Solo ingresos</option>
+                        <option value="EGRESO" ${controlFilters.tipo_movimiento === 'EGRESO' ? 'selected' : ''}>Solo salidas</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Categoría</span>
+                    <select id="swal-control-mov-category">
+                        <option value="all">Todas las categorías</option>
+                        ${categoryOptions}
+                    </select>
+                </label>
+                <label class="control-report-modal-full">
+                    <span>Buscar</span>
+                    <input id="swal-control-mov-search" type="search" placeholder="Descripción, método o referencia">
+                </label>
+            </div>
+        `,
+        width: 720,
+        confirmButtonText: 'Generar PDF',
+        cancelButtonText: 'Cancelar',
+        showCancelButton: true,
+        focusConfirm: false,
+        customClass: {
+            popup: 'control-report-swal'
+        },
+        preConfirm: () => {
+            const dateFrom = document.getElementById('swal-control-mov-from')?.value || '';
+            const dateTo = document.getElementById('swal-control-mov-to')?.value || '';
+            if (dateFrom && dateTo && dateFrom > dateTo) {
+                Swal.showValidationMessage('La fecha desde no puede ser mayor que la fecha hasta.');
+                return false;
+            }
+
+            return {
+                dateFrom,
+                dateTo,
+                user: document.getElementById('swal-control-mov-user')?.value || 'all',
+                type: document.getElementById('swal-control-mov-type')?.value || 'all',
+                category: document.getElementById('swal-control-mov-category')?.value || 'all',
+                search: document.getElementById('swal-control-mov-search')?.value?.trim() || ''
+            };
+        }
+    });
+
+    return result.isConfirmed ? result.value : null;
+}
+
+async function fetchControlMovementReportRows(filters = {}) {
+    const sb = getSupabaseClient();
+    if (!sb) return [];
+
+    let query = sb
+        .from('ic_control_movimientos_dinero')
+        .select('*')
+        .order('fecha_movimiento', { ascending: true })
+        .limit(5000);
+
+    if (filters.dateFrom) query = query.gte('fecha_movimiento', `${filters.dateFrom}T00:00:00`);
+    if (filters.dateTo) query = query.lte('fecha_movimiento', `${filters.dateTo}T23:59:59.999`);
+    if (filters.type && filters.type !== 'all') query = query.eq('tipo_movimiento', filters.type);
+    if (filters.user && filters.user !== 'all') query = query.eq('usuario_nombre', filters.user);
+    if (filters.category && filters.category !== 'all') query = query.eq('categoria', filters.category);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+}
+
+function filterControlMovementReportRows(rows, filters = {}) {
+    const search = String(filters.search || '').trim().toLowerCase();
+    if (!search) return rows;
+
+    return rows.filter(row => [
+        row.descripcion,
+        row.metodo_pago,
+        row.tabla_referencia,
+        row.id_referencia,
+        row.usuario_nombre,
+        row.categoria
+    ].some(value => String(value || '').toLowerCase().includes(search)));
+}
+
+function buildControlMovementsPdf(doc, rows, filters = {}) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const verdeInka = [11, 78, 50];
+    const doradoInka = [242, 187, 58];
+    const slate = [71, 85, 105];
+    const currentUser = window.getCurrentUser?.() || {};
+    const generatedBy = currentUser.nombre || currentUser.email || 'Usuario de control';
+    const now = new Date();
+
+    try {
+        doc.addImage('https://i.ibb.co/3mC22Hc4/inka-corp.png', 'PNG', 14, 10, 17, 17);
+    } catch (error) {
+        console.warn('[CONTROL] No se pudo agregar logo al PDF:', error);
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(17);
+    doc.setTextColor(...verdeInka);
+    doc.text('INKA CORP', 36, 16);
+
+    doc.setFontSize(10);
+    doc.setTextColor(...slate);
+    doc.text('REPORTE DE MOVIMIENTOS DE DINERO', 36, 23);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text(`Generado: ${now.toLocaleDateString('es-EC')} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, pageWidth - 14, 15, { align: 'right' });
+    doc.text(`Registros: ${rows.length}`, pageWidth - 14, 21, { align: 'right' });
+
+    doc.setDrawColor(...doradoInka);
+    doc.setLineWidth(0.5);
+    doc.line(14, 31, pageWidth - 14, 31);
+
+    const ingresos = rows.filter(row => row.tipo_movimiento === 'INGRESO').reduce((sum, row) => sum + Number(row.monto || 0), 0);
+    const egresos = rows.filter(row => row.tipo_movimiento === 'EGRESO').reduce((sum, row) => sum + Number(row.monto || 0), 0);
+    const neto = ingresos - egresos;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...verdeInka);
+    doc.text('Resumen del filtro', 14, 39);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(20, 28, 38);
+    doc.text(`Ingresos: ${formatControlMoney(ingresos)}`, 14, 46);
+    doc.text(`Egresos: ${formatControlMoney(egresos)}`, 76, 46);
+    doc.text(`Neto: ${formatControlMoney(neto)}`, 138, 46);
+
+    const filterSummary = getControlMovementReportFilterSummary(filters);
+    if (filterSummary) {
+        doc.setFontSize(7.5);
+        doc.setTextColor(...slate);
+        doc.text(`Filtros: ${filterSummary}`, 14, 51);
+    }
+
+    doc.autoTable({
+        startY: filterSummary ? 58 : 54,
+        head: [[
+            'Fecha',
+            'Usuario',
+            'Tipo',
+            'Categoria',
+            'Descripcion',
+            'Metodo',
+            'Monto',
+            'Saldo',
+            'Comprobante'
+        ]],
+        body: rows.map(row => [
+            formatControlDateTime(row.fecha_movimiento),
+            row.usuario_nombre || 'Sin usuario',
+            row.tipo_movimiento || '---',
+            row.categoria || 'MANUAL',
+            row.descripcion || 'Sin descripcion',
+            row.metodo_pago || '---',
+            `${row.tipo_movimiento === 'EGRESO' ? '-' : '+'} ${formatControlMoney(row.monto)}`,
+            row.saldo !== null && row.saldo !== undefined ? formatControlMoney(row.saldo) : '---',
+            row.comprobante_url ? 'Registrado' : '---'
+        ]),
+        styles: {
+            ...getControlReportTableStyles(),
+            fontSize: 7,
+            overflow: 'linebreak'
+        },
+        headStyles: {
+            fillColor: verdeInka,
+            textColor: [255, 255, 255],
+            fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+        margin: { left: 14, right: 14 },
+        rowPageBreak: 'avoid',
+        columnStyles: {
+            0: { cellWidth: 30 },
+            1: { cellWidth: 34 },
+            2: { cellWidth: 20 },
+            3: { cellWidth: 28 },
+            4: { cellWidth: 62 },
+            5: { cellWidth: 24 },
+            6: { halign: 'right', cellWidth: 27 },
+            7: { halign: 'right', cellWidth: 27 },
+            8: { cellWidth: 22 }
+        }
+    });
+
+    const footerY = doc.internal.pageSize.getHeight() - 15;
+    doc.setDrawColor(220, 225, 232);
+    doc.line(14, footerY - 12, pageWidth - 14, footerY - 12);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...verdeInka);
+    doc.text(`Generado por: ${generatedBy}`, 14, footerY - 5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...slate);
+    doc.text('Panel de Control Operativo', 14, footerY);
+    doc.text('Documento generado desde INKA CORP', pageWidth - 14, footerY, { align: 'right' });
+
+    const from = filters.dateFrom || 'inicio';
+    const to = filters.dateTo || now.toISOString().slice(0, 10);
+    doc.save(`Reporte_Control_Movimientos_${from}_${to}.pdf`);
 }
 
 async function generateControlCreditsReport() {
@@ -1058,6 +1338,18 @@ function getControlCreditReportFilterSummary(filters = {}) {
     return parts.join(' | ');
 }
 
+function getControlMovementReportFilterSummary(filters = {}) {
+    const parts = [];
+    if (filters.dateFrom) parts.push(`Desde ${filters.dateFrom}`);
+    if (filters.dateTo) parts.push(`Hasta ${filters.dateTo}`);
+    parts.push(filters.user && filters.user !== 'all' ? `Usuario ${filters.user}` : 'General');
+    if (filters.type === 'INGRESO') parts.push('Solo ingresos');
+    if (filters.type === 'EGRESO') parts.push('Solo salidas');
+    if (filters.category && filters.category !== 'all') parts.push(`Categoria ${filters.category}`);
+    if (filters.search) parts.push(`Busqueda "${filters.search}"`);
+    return parts.join(' | ');
+}
+
 async function showControlReportNotice(title, text, icon = 'info') {
     if (typeof Swal !== 'undefined') {
         await Swal.fire(title, text, icon);
@@ -1097,6 +1389,7 @@ function renderControlMovimientosTable() {
                     <th>Monto</th>
                     <th>Saldo</th>
                     <th>Estado Caja</th>
+                    <th>Comprobante</th>
                 </tr>
             </thead>
             <tbody>
@@ -1111,6 +1404,7 @@ function renderControlMovimientosTable() {
                         </td>
                         <td><strong>${m.saldo !== null && m.saldo !== undefined ? formatControlMoney(m.saldo) : '---'}</strong></td>
                         <td>${controlBadge(m.estado_caja || '---', m.estado_caja === 'ABIERTA' ? 'ok' : '')}</td>
+                        <td>${renderControlReceiptActions(m.comprobante_url)}</td>
                     </tr>
                 `).join('')}
             </tbody>
@@ -1263,6 +1557,51 @@ function controlBadge(text, tone = '') {
     return `<span class="control-badge ${tone}">${escapeControlHtml(String(text || '---').replaceAll('_', ' '))}</span>`;
 }
 
+function renderControlReceiptActions(urls) {
+    const receiptUrls = String(urls || '')
+        .split('|')
+        .map(url => url.trim())
+        .filter(Boolean);
+
+    if (!receiptUrls.length) {
+        return '<button type="button" class="control-table-action" disabled title="Sin comprobante"><i class="fas fa-eye-slash"></i></button>';
+    }
+
+    return `
+        <div class="control-actions">
+            ${receiptUrls.map((url, index) => `
+                <button type="button" class="control-table-action" onclick="viewControlReceipt('${encodeURIComponent(url)}')" title="Ver comprobante${receiptUrls.length > 1 ? ` ${index + 1}` : ''}">
+                    <i class="fas fa-eye"></i>
+                </button>
+            `).join('')}
+        </div>
+    `;
+}
+
+function viewControlReceipt(encodedUrl) {
+    const url = decodeURIComponent(encodedUrl || '');
+    if (!url) return;
+
+    const isImage = /\.(png|jpe?g|webp|gif|bmp|svg)(\?.*)?$/i.test(url);
+    if (isImage && typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Comprobante',
+            imageUrl: url,
+            imageAlt: 'Comprobante',
+            showCancelButton: true,
+            confirmButtonText: 'Abrir original',
+            cancelButtonText: 'Cerrar',
+            background: '#0f172a',
+            color: '#fff'
+        }).then(result => {
+            if (result.isConfirmed) window.open(url, '_blank', 'noopener');
+        });
+        return;
+    }
+
+    window.open(url, '_blank', 'noopener');
+}
+
 function getControlMinDate(period) {
     if (period === 'all') return null;
 
@@ -1367,4 +1706,6 @@ window.refreshControlDashboard = refreshControlDashboard;
 window.renderControlActiveTab = renderControlActiveTab;
 window.applyControlSummaryCard = applyControlSummaryCard;
 window.clearControlFilters = clearControlFilters;
+window.viewControlReceipt = viewControlReceipt;
+window.generateControlMovementsReport = generateControlMovementsReport;
 window.generateControlCreditsReport = generateControlCreditsReport;
